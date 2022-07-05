@@ -3,7 +3,7 @@ from distutils.command.build import build
 from ast import literal_eval
 constraintsstring=""
 def constraints(A,S, counter, dummy,M,dic):
-    #wenn optimieren dann vllt dass die constraints als string returnt werden
+    #wenn optimieren dann vllt dass die constraints als einzigen string returnt werden
     erstes=A[31],"+",A[32],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
     "d"+str(dummy), "-",A[31],"=<0\n"
     "d"+str(dummy), "-",A[32],"=<0\n"
@@ -93,7 +93,10 @@ def constraints(A,S, counter, dummy,M,dic):
     #print(A)
     return A,S,counter,dummy
 
+
+
 counter=0
+#Array mit den Bits die momentan in der Cipher sind
 A=[]
 for e in range(34):
     A.append("x"+str(counter))
@@ -107,23 +110,14 @@ rounds=3
 M=[]
 dic={}
 
+#initialisieren der Matrix
 for i in range(37*rounds):
     M.append([])
     for e in range(34+19*rounds):
         M[i].append(0)
 
-"""if rounds ==1:
-    for i in range(37):
-        M.append([])
-        for e in range(53):
-            M[i].append(0)
-if rounds==3:
-    for i in range(37*3):
-        M.append([])
-        for e in range(91):
-            M[i].append(0)
-"""
 
+#In dem dictionary wird für jede Variable deren Position gespeichert
 c=0
 for a in range(34+19*rounds):
     if a<9*rounds:
@@ -132,33 +126,17 @@ for a in range(34+19*rounds):
         dic["x"+str(c)]=a
         c+=1
 
-"""if rounds==1:
-    for a in range(53):
-        if a<9:
-            dic["d"+str(a)]=a
-        else:
-            dic["x"+str(c)]=a
-            c+=1
-elif rounds==3:
-    for a in range(91):
-        if a<27:
-            dic["d"+str(a)]=a
-        else:
-            dic["x"+str(c)]=a
-            c+=1"""
 
-#print(dic) 
-
-#print(M)
+#hier wird das Array durch die Cipher gejagt für die jeweilige Anzahl an Runden
 for a in range(rounds):
     A,S,counter,dummy= constraints(A,S,counter, dummy,M,dic)
 
 
-#takes string of constraints and outputs the matrixlist
+#FROM HERE ON THE CODE IS (ALMOST) THE SAME AS FOR AES 
+
+#takes string of constraints and fills in the matrix
+#input: string of the constraints, dictionary of order of the variables, and the Matrix
 def buildmat(lala,dic,M):
-    print("tst")
-    items=dic.keys()
-    print(items)
     lal= lala.splitlines()
     for a in lal:
         if a=="":
@@ -173,16 +151,14 @@ def buildmat(lala,dic,M):
                 M[o][dic[key]]=-2
             elif "-3"+key+" " in i:
                 M[o][dic[key]]=-3
-            
             elif key+" " in i:
-                #print(dic[key])
                 M[o][dic[key]]=1
             
         o+=1
-    #print(M)
     return M
 
-
+#i am lowkey embarrassed by this mess, these are the sorted strings
+#TO DO: function that sorts the constraints by itself (hier nur lange constraints nach oben)
 #for 1 round
 stri="""x31 + x32 + x34 -2d0 =<0
 x32 + x2 + x35 -2d1 =<0
@@ -558,29 +534,33 @@ d35 -x73 =<0
 """
 #print(ma)
 
+#this function takes the the last part of the matrix (with 2 variables in a row, not more)
+#and takes the position of their second variable, puts it in a dictionary
+#then we sort the dictionary and turn the sorted rows into a matrix again
 def sortcon(ma):
     order={}
     for li in ma:
         indices = [i for i, x in enumerate(li) if x != 0]
-        #print(indices)
         order[str(li)]=indices[1]
     dic2=dict(sorted(order.items(),key= lambda x:x[1]))
-    print(dic2)
+    #print(dic2)
     mat= list(dic2.keys())
     for i in range(len(mat)):
         mat[i] = literal_eval(mat[i])
-    #print(mat)
     return mat
   
 ma= buildmat(stri3,dic,M)
 #print(ma)
-#wenn 1 runde dann 9
-malast=ma[(9*rounds):]
 
+#we sort only the last constraints, not the long ones 
+malast=ma[(9*rounds):]
 malast= sortcon(malast)
 
+#now we add them together and get the sorted matrix (which has a diagonal now)
 mat=ma[:(9*rounds)]+malast
 
+
+#this function just turns the Matrix into an output that can be used for latex
 def latex(matrix):
     input=""
     for i in matrix:
@@ -598,6 +578,4 @@ def latex(matrix):
 
 print(latex(mat))
 
-for i in range(34+19*3):
-    print("1 &",end=" ")
-print("1")
+
