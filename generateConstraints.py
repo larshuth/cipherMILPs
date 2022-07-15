@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.sparse import csr_matrix
 #im not sure if the functions for the ciphers also belong here
@@ -33,17 +32,12 @@ def generate_constraints(rounds, A, M, V, function=""):
     for r in range(rounds):
         if len(A)==4: #has to be changed to if its a twodimensional list
             #now we have to calculate with the matrix
-            
             for j in range(4):
                 for i in range(4):
                     #we take the first row and search the index for the variable
-                    #print(np.where(M.getrow(0).toarray()==A[i][j]))
-                    ##print("lala")
-                    #print(M.toarray())
                     ind= V.index(A[i][j])
                     M[line,ind]=1
                 for i in range(4):
-                    #inde= M.getrow(0).count_nonzero() #ist das richtig?
                     V.append("x"+str(next+i))
                     A[i][j]="x"+str(next+i)
                     M[line,len(V)-1]=1
@@ -52,7 +46,6 @@ def generate_constraints(rounds, A, M, V, function=""):
                 M[line,len(V)-1]=-5
                 M, line = generate_smallconstraints(M, line)
                 line+=1
-                #print(M.toarray())
             #hier mit getattr?
             A=shiftrows(A)
     return M
@@ -69,9 +62,30 @@ def shiftrows(a):
 
 def generate_smallconstraints(M, line):
     """
-    generates all the constraints with two variables
+    Generates all the constraint-inequalities that consist of a dummy and a x- variable.
+    Those constraints follow after a constraint that models going through a path in a cipher,
+    and they just indicate that if a x-variable is 1, then the dummy variable is also 1 and the path
+    is active.
+
+    Parameters:
+    ----------
+    M       :   scr_matrix
+                The matrix in which all the constraints are saved
+
+    line    :   int
+                The index of the row from which we want to generate the remaining constraints
+
+
+    Returns:
+    ----------
+    M       :   scr_matrix
+                The matrix with all new constraints in it
+
+    line    :   int
+                Index of the row that we last filled in
+
     """
-    dummyIndex=np.where(M.getrow(line).toarray()[0]==-5)[0][0]
+    dummyIndex=np.where((M.getrow(line).toarray()[0]!=0)&(M.getrow(line).toarray()[0]!=1))[0][0]
     for ind in np.where(M.getrow(line).toarray()[0]==1)[0]:
         line+=1
         M[line,ind]=-1
@@ -92,8 +106,10 @@ def aes(rounds):
     M = generate_constraints(rounds, A, M, V)
     return M
     
-print(aes(3).toarray())
+print(aes(3))
 
 test=csr_matrix((2,3),dtype=int)
 test[1,0]=7
 print(test.toarray())
+
+
