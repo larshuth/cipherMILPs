@@ -30,12 +30,10 @@ def generate_constraints(rounds, A, M, V, function=""):
     line = 0 #shows in which row we are
     next=16
     for r in range(rounds):
-        if len(A)==4: #has to be changed to if its a twodimensional list EDIT:IM SORRY SOFI BUT THIS IS BS!
-            #now we have to calculate with the matrix
-            A=shiftrows(A)
-            A, M, V, line, next = mix_column(A, M, V, line, next, r)
-            #hier mit getattr?
-            
+        #now we have to calculate with the matrix
+        A=shiftrows(A)
+        A, M, V, line, next = mix_column(A, M, V, line, next, r)
+        #hier mit getattr?
     return M
 
 
@@ -160,8 +158,77 @@ def aes(rounds):
             next=next+1
     M = generate_constraints(rounds, A, M, V)
     return M
-    
-print(aes(3))
+
+
+def enocoro(rounds):
+    next=0
+    #Array mit den Bits die momentan in der Cipher sind
+    M = csr_matrix((37*rounds,34+19*rounds),dtype=int)
+    V = []
+    A=[]
+    for e in range(34):
+        A.append("x"+str(next))
+        V.append("x"+str(next))
+        next+=1
+    S=[0,0,0,0]
+    line=0
+    usedvar=[[A[31],A[32],31],[A[32],A[2],"0"],[A[33],A[7],"1"],[S[0],S[1],"2","3"],[A[16],S[2],32],[A[29],S[3],33],[A[2],A[6],2],[A[7],A[15],7],[A[16],A[28],16]]
+    for r in range(rounds):
+        usedvar=[[A[31],A[32],31],[A[32],A[2],"0"],[A[33],A[7],"1"],[0,1,"2","3"],[A[16],"2",32],[A[29],"3",33],[A[2],A[6],2],[A[7],A[15],7],[A[16],A[28],16]]
+        for e in usedvar:
+            #dummy=9*rounds+usedvar.index(e)
+            
+            V.append("x"+str(next))
+            V.append("d"+ str(9*r+usedvar.index(e)))
+            if len(e)==3:
+                M[line,V.index(e[0])]=1
+                if e[1][0]=="x": M[line,V.index(e[1])]=1
+                else: M[line,V.index(S[int(e[1])])]=1
+                M[line,len(V)-2]=1
+                M[line,len(V)-1]=-2
+                if type(e[2])==int:
+                    A[e[2]]="x"+str(next)
+                else:
+                    S[int(e[2])]="x"+str(next)
+                """if type(e[0])==int:
+                    M[line,V.index(A[e[0]])]=1
+                else:
+                    M[line,V.index(S[int(e[0][1])])]=1
+                if type(e[1])==int:
+                    M[line,V.index(A[e[1]])]=1
+                else:
+                    M[line,V.index(S[int(e[1][1])])]=1
+                M[line,len(V)-2]=1
+                M[line,len(V)-1]=-2
+                if type(e[2])==int:
+                    A[e[2]]="x"+str(next)"""
+                next+=1
+            else:
+                V.append("x"+str(next+1))
+                print(123,e)
+                M[line,V.index(S[e[0]])]=1
+                M[line,V.index(S[e[1]])]=1
+                M[line,len(V)-3]=1
+                M[line,len(V)-1]=1
+                M[line,len(V)-2]=-3
+                #here we dont need to check if we assign it to S or A 
+                S[int(e[2])]="x"+str(next)
+                S[int(e[3])]="x"+str(next+1)
+                next=next+2
+            M, line= generate_smallconstraints(M,line)
+            line+=1
+        #here we just shift the bits
+        la=A[31]
+        for i in range(30,-1,-1):
+            temp = A[i]
+            A[i+1]=temp
+        A[0]=la
+    return M
+
+
+
+print(enocoro(1))
+#print(aes(3))
 
 test=csr_matrix((2,3),dtype=int)
 test[1,0]=7
