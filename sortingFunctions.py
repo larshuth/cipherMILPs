@@ -98,7 +98,41 @@ def full_columns_begin(M):
     M = permutate_columns(M, sortedcols)
     return M
 
-M =gc.new_generate_constraints(7,gc.Aes)
+def d_var_to_beginning(M, V):
+    #first we have to identify where the d-Variables are(knowing which cipher?oder einfach idex von der liste...
+    # aber wir wollen ja modular aber dann wie rausfinden welche cipher?
+    # vllt doch mit der Liste tbh weil die braucht man eh später zum Sachen ausgeben)
+    sortedindices=[]
+    orderofxvar=[]
+    for i in V:
+        if i[0]=="d":
+            sortedindices.append(V.index(i))
+        else:
+            orderofxvar.append(V.index(i))
+    sortedindices=sortedindices+orderofxvar
+    newV=[V[i] for i in sortedindices]
+    M = permutate_columns(M, sortedindices)
+    return M, V
+
+
+def creating_diagonal_in4block(M,V):
+    dic={}
+    #count how many dvar
+    count=0
+    for e in V:
+        if e[0]=="d":
+            count+=1
+    for i in range(M.get_shape()[0]):
+        if i>=count:
+            dic[i] = M.getrow(i).nonzero()[1][1]
+    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=False))
+    sortedrows = list(dic2.keys())
+    beginofrows=[i for i in range(count)]
+    sortedrows=beginofrows+sortedrows
+    M = permutate_rows(M, sortedrows)
+    return M
+
+M, V=gc.new_generate_constraints(7,gc.Aes)
 M=long_constraints_to_top(M)
 M=full_columns_begin(M)
 
