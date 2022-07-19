@@ -19,15 +19,15 @@ ax3 = axs[2]
 ax4= axs[3]
 
 
-A=gc.new_generate_constraints(14,gc.Aes)
-M=sf.long_constraints_to_top(A)
-B=sf.full_columns_begin(A)
-C=sf.full_columns_begin(M)
+A, V=gc.new_generate_constraints(14,gc.Aes)
+M, V=sf.d_var_to_beginning(A, V)
+B=sf.long_constraints_to_top(M)
+C=sf.creating_diagonal_in4block(B, V)
 
 axs[0].set_title('Native')
-axs[1].set_title('Long constraints at the top')
-axs[2].set_title('d-variables to the beginning')
-axs[3].set_title('mix of both')
+axs[1].set_title('d_variables to the beginning')
+axs[2].set_title('long constraints to the top')
+axs[3].set_title('creating the diagonal')
 
 ax1.spy(A, markersize=1, color="teal")
 ax2.spy(M, markersize=1, color="steelblue")

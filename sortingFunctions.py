@@ -132,6 +132,13 @@ def creating_diagonal_in4block(M,V):
     M = permutate_rows(M, sortedrows)
     return M
 
+def create_fourblock(M, V):
+    M, V=d_var_to_beginning(M, V)
+    B=long_constraints_to_top(M)
+    C=creating_diagonal_in4block(B, V)
+    return C
+
+
 M, V=gc.new_generate_constraints(7,gc.Aes)
 M=long_constraints_to_top(M)
 M=full_columns_begin(M)
