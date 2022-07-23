@@ -56,6 +56,7 @@ def long_constraints_to_top(M):
     """
     This function permutates the rows(constraints) in a way such that the constraints with 
     a lot nonzero entries are at the top. This way one could form a block at the top.
+    THIS FUNCTION IS DUMB BECAUSE IT DOESNT WORK RIGHT (CAUSE OF VARIABLES THAT ARE ONLY USED IN BEGINNING AND END)
 
     Parameters:
     --------
@@ -99,9 +100,26 @@ def full_columns_begin(M):
     return M
 
 def d_var_to_beginning(M, V):
-    #first we have to identify where the d-Variables are(knowing which cipher?oder einfach idex von der liste...
-    # aber wir wollen ja modular aber dann wie rausfinden welche cipher?
-    # vllt doch mit der Liste tbh weil die braucht man eh später zum Sachen ausgeben)
+    """
+    This function permutates the columns such that all the dummy variables are at the beginning, and then the
+    x variables follow.
+
+    Parameters:
+    --------
+    M   :   csr_matrix
+            Matrix that will be permutated
+
+    V   :   list
+            List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    
+    Returns:
+    --------
+    M   :   csr_matrix
+            Permutated matrix
+
+    newV:   list
+            List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    """
     sortedindices=[]
     orderofxvar=[]
     for i in V:
@@ -109,15 +127,35 @@ def d_var_to_beginning(M, V):
             sortedindices.append(V.index(i))
         else:
             orderofxvar.append(V.index(i))
-    sortedindices=sortedindices+orderofxvar
+    sortedindices = sortedindices + orderofxvar
     newV=[V[i] for i in sortedindices]
     M = permutate_columns(M, sortedindices)
-    return M, V
+    return M, newV
 
 
 def creating_diagonal_in4block(M,V):
+    """
+    This function permutates the rows of the matrix, but not the ones in the block at the top.
+    They are permutated in a way such that a diagonal will appear alongisde an vertical block on the left.
+
+    Parameters:
+    --------
+    M:  csr_matrix
+        Matrix that will be permutated
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    
+    Returns:
+    --------
+    M:  csr_matrix
+        Permutated matrix
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    """
     dic={}
-    #count how many dvar
+    #count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
     count=0
     for e in V:
         if e[0]=="d":
@@ -127,20 +165,32 @@ def creating_diagonal_in4block(M,V):
             dic[i] = M.getrow(i).nonzero()[1][1]
     dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=False))
     sortedrows = list(dic2.keys())
-    beginofrows=[i for i in range(count)]
-    sortedrows=beginofrows+sortedrows
+    beginofrows = [i for i in range(count)]
+    sortedrows = beginofrows + sortedrows
     M = permutate_rows(M, sortedrows)
     return M
 
 def create_fourblock(M, V):
+    """
+    Creates a four-block structure in the given matrix.
+
+    Parameters:
+    ---------
+    M:  csr_matrix
+        Matrix that will be permutated
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    
+    Returns:
+    --------
+    M:  csr_matrix
+        Permutated matrix
+    """
     M, V=d_var_to_beginning(M, V)
     B=long_constraints_to_top(M)
     C=creating_diagonal_in4block(B, V)
-    return C
+    return C, V
 
-
-M, V=gc.new_generate_constraints(7,gc.Aes)
-M=long_constraints_to_top(M)
-M=full_columns_begin(M)
 
 

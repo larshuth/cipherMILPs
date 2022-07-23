@@ -51,7 +51,7 @@ class Aes:
                     Column which is currently used for generating the constraint
 
         S       :   list of lists
-                    very unnecessary, I have to see if I can delete it
+                    Very unnecessary, I have to see if I can delete it
 
         Returns:
         --------
@@ -71,9 +71,7 @@ class Aes:
                     Number of next x-variable that will be generated
 
         S       :   list of lists
-                    very unnecessary, I have to see if I can delete it
-
-
+                    Very unnecessary, I have to see if I can delete it
         """
         for i in range(4):
             #evey element in column is added to the constraint
@@ -124,7 +122,7 @@ class Aes:
         Parameters:
         ---------
         rounds  :   int
-                    number of rounds for the cipher
+                    Number of rounds for the cipher
 
         Returns:
         ---------
@@ -132,13 +130,13 @@ class Aes:
                     4x4 matrix where the names of the current variables are saved
         
         M       :   scr_matrix
-                    the empty constraint matrix for the MILP
+                    The empty constraint matrix for the MILP
 
         V       :   list
-                    this list saves all the variables
+                    This list saves all the variables
 
         next    :   int 
-                    number for the next x-variable
+                    Number for the next x-variable
         """
         M = csr_matrix((36*rounds,16+20*rounds),dtype=int)
         V = []
@@ -162,12 +160,12 @@ class Enocoro:
         Parameters:
         ----------
         A   :   list
-                names of all variables in this current round
+                Names of all variables in this current round
 
         Returns:
         ----------
             :   list of lists
-                specifies which variables belong in the constraint
+                Specifies which variables belong in the constraint
         """
         return [[A[31],A[32],31],[A[32],A[2],"0"],[A[33],A[7],"1"],[0,1,"2","3"],[A[16],"2",32],[A[29],"3",33],[A[2],A[6],2],[A[7],A[15],7],[A[16],A[28],16]]
     
@@ -179,13 +177,13 @@ class Enocoro:
         Parameters:
         ----------
         A       :   list
-                    names of all variables in this current round
+                    Names of all variables in this current round
 
         M       :   scr_matrix
-                    the matrix in which all the constraints are saved
+                    The matrix in which all the constraints are saved
 
         V       :   list
-                    list of all the variablenames to date
+                    List of all the variablenames to date
 
         line    :   int
                     Index of row where we are currently
@@ -197,21 +195,21 @@ class Enocoro:
                     Number of the round in which we are currently
 
         j       :   list
-                    variables used for the new long constraint
+                    Variables used for the new long constraint
 
         S       :   list
-                    list in which variables are saved that are needed temporarily
+                    List in which variables are saved that are needed temporarily
 
         Returns:
         --------
         A       :   list
-                    names of all variables in this current round
+                    Names of all variables in this current round
 
         M       :   scr_matrix
-                    the matrix in which all the constraints are saved
+                    The matrix in which all the constraints are saved
 
         V       :   list
-                    list of all the variablenames to date
+                    List of all the variablenames to date
 
         line    :   int
                     Index of row where we are currently
@@ -220,7 +218,7 @@ class Enocoro:
                     Number of next x-variable that will be generated
 
         S       :   list
-                    list in which variables are saved that are needed temporarily
+                    List in which variables are saved that are needed temporarily
         """
         V.append("x"+str(next))
         V.append("d"+ str(9*r+Enocoro.rangenumber(A).index(e)))
@@ -261,12 +259,12 @@ class Enocoro:
         Parameters:
         ----------
         A   :   list
-                current variables
+                Current variables
             
         Returns:
         ---------
         A   :   list
-                shifted variables that can be used for the next round
+                Shifted variables that can be used for the next round
         """
         la=A[31]
         for i in range(30,-1,-1):
@@ -282,21 +280,21 @@ class Enocoro:
         Parameters:
         ---------
         rounds  :   int
-                    number of rounds for the cipher
+                    Number of rounds for the cipher
 
         Returns:
         ---------
         A       :   list
-                    names of all variables in this current round
+                    Names of all variables in this current round
         
         M       :   scr_matrix
-                    the empty constraint matrix for the MILP
+                    The empty constraint matrix for the MILP
 
         V       :   list
-                    this list saves all the variables
+                    This list saves all the variables
 
         next    :   int 
-                    number for the next x-variable
+                    Number for the next x-variable
         """
         next=0
         M = csr_matrix((37*rounds,34+19*rounds),dtype=int)
@@ -348,15 +346,15 @@ def new_generate_constraints(rounds, cipher):
     Parameters:
     ----------
     rounds  :   int
-                number of rounds the cipher should go through
+                Number of rounds the cipher should go through
 
     cipher  :   class  
-                cipher for which we generate the matrix
+                Cipher for which we generate the matrix
 
     Returns:
     -----------
     M       :   csr_matrix
-                generated constraint matrix for the MILP
+                Generated constraint matrix for the MILP
     """
     line=0
     A, M, V, next = cipher.initialize(rounds)
@@ -368,10 +366,10 @@ def new_generate_constraints(rounds, cipher):
             M, line = generate_smallconstraints(M, line)
             line+=1
         A = cipher.shift_after(A)
-    return M
+    return M, V
 
 
-print(new_generate_constraints(3,Aes))
 
-#print(enocoro(1))
-#print(aes(3))
+
+#print(new_generate_constraints(3,Aes))
+
