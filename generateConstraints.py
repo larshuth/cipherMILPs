@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 #im not sure if the functions for the ciphers also belong here
 
 class Aes:
@@ -32,7 +32,7 @@ class Aes:
         A       :   list of lists
                     4x4 matrix where the names of the current variables are saved
 
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The matrix in which all the constraints are saved
 
         V       :   list
@@ -58,7 +58,7 @@ class Aes:
         A       :   list of lists
                     4x4 matrix where the new names of the variables are saved
 
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The matrix in which all the constraints are saved
 
         V       :   list
@@ -129,7 +129,7 @@ class Aes:
         A       :   list of lists
                     4x4 matrix where the names of the current variables are saved
         
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The empty constraint matrix for the MILP
 
         V       :   list
@@ -138,7 +138,7 @@ class Aes:
         next    :   int 
                     Number for the next x-variable
         """
-        M = csr_matrix((36*rounds,16+20*rounds),dtype=int)
+        M = lil_matrix((36*rounds,16+20*rounds),dtype=int)
         V = []
         A = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
         next=0
@@ -179,7 +179,7 @@ class Enocoro:
         A       :   list
                     Names of all variables in this current round
 
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The matrix in which all the constraints are saved
 
         V       :   list
@@ -205,7 +205,7 @@ class Enocoro:
         A       :   list
                     Names of all variables in this current round
 
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The matrix in which all the constraints are saved
 
         V       :   list
@@ -287,7 +287,7 @@ class Enocoro:
         A       :   list
                     Names of all variables in this current round
         
-        M       :   scr_matrix
+        M       :   lil_matrix
                     The empty constraint matrix for the MILP
 
         V       :   list
@@ -297,7 +297,7 @@ class Enocoro:
                     Number for the next x-variable
         """
         next=0
-        M = csr_matrix((37*rounds,34+19*rounds),dtype=int)
+        M = lil_matrix((37*rounds,34+19*rounds),dtype=int)
         V = []
         #Array mit den Bits die momentan in der Cipher sind
         A=[]
@@ -316,7 +316,7 @@ def generate_smallconstraints(M, line):
 
     Parameters:
     ----------
-    M       :   scr_matrix
+    M       :   lil_matrix
                 The matrix in which all the constraints are saved
 
     line    :   int
@@ -366,6 +366,7 @@ def new_generate_constraints(rounds, cipher):
             M, line = generate_smallconstraints(M, line)
             line+=1
         A = cipher.shift_after(A)
+    M = M.tocsr()
     return M, V
 
 
