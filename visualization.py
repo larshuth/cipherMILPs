@@ -1,19 +1,18 @@
 from turtle import color
-import matplotlib.pylab as plt
+import matplotlib
 from scipy.sparse import csr_matrix
 import scipy.sparse as sparse
 import generateConstraints as gc
 import sortingFunctions as sf
+import cipher as cip
 import numpy as np
-from pylatex import Document, Section, Figure, NoEscape, NewPage, Matrix, Math, Alignat, Command
-#matplotlib.use('Agg')   Not to use X server. For TravisCI.
+from pylatex import Document, Section, Figure, NoEscape, NewPage, Matrix, Math, Alignat, Command, Subsection
+#matplotlib.use('Agg')  # Not to use X server. For TravisCI.
 import matplotlib.pyplot as plt  # noqa
-"""
-still in the making
-using this file to somehow visualize them (not final)
-"""
+import matplotlib.pylab as plt
+plt.rcParams.update({'font.size': 5})
 
-def matplotlibvis():
+def matplotlibvis(rounds, cipher):
     """
     Quick visualization without the hassle of generating the pdf file.
     """
@@ -25,7 +24,7 @@ def matplotlibvis():
     ax4 = axs[3]
 
 
-    A, V=gc.new_generate_constraints(2,gc.Aes)
+    A, V=gc.new_generate_constraints(rounds,cipher)
     M, v=sf.d_var_to_beginning(A, V)
     B=sf.long_constraints_to_top(M)
     C, W=sf.create_fourblock(A, V)
@@ -124,22 +123,26 @@ def constraints(A,V):
         cons.append(con)
     return cons
 
-def main(fname, width, A, V, *args, **kwargs):
+def mainly(fname, width, A, V, title, *args, **kwargs):
     """
     Generates the pdf with the matrix, the structure and the constraints.
     """
     geometry_options = {"right": "2cm", "left": "2cm"}
     doc = Document(fname, geometry_options=geometry_options)
     doc.preamble.append(Command("allowdisplaybreaks"))
-    doc.append(NoEscape("\setcounter{MaxMatrixCols}{1000}"))
-
-    with doc.create(Section('Sparse Matrix Structure')):
-        with doc.create(Figure(position='htbp')) as plot:
-            plot.add_plot(width=NoEscape(width), *args, **kwargs)
-            plot.add_caption('Created using matplotlib.')
+    doc.preamble.append(Command("usepackage[labelformat=empty]{caption}"))
+    doc.preamble.append(NoEscape("\setcounter{MaxMatrixCols}{10000}"))
+    #doc.append(NoEscape("\\thispagestyle{empty}"))
+    doc.preamble.append(NoEscape("\setlength{\headsep}{10pt}"))
+    #doc.append(NoEscape("\setlength{\\footskip}{0pt}"))
+    doc.preamble.append(NoEscape("\setlength{\\textheight}{650pt}"))
+    doc.append(NoEscape("\setlength{\\voffset}{-0.50in}"))
+    with doc.create(Section("Matrix Structure "+title[0]+", "+title[1]+" rounds")):
+        with doc.create(Figure(position='h!p')) as plot:
+            plot.add_plot(width=460, *args, **kwargs)
 
     doc.append(NewPage())
-    with doc.create(Section("MILP")):
+    with doc.create(Section("MILP")): #HERE ÄNDERN
         doc.append(NoEscape("\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0"))
     
     doc.append(NewPage())
@@ -148,24 +151,38 @@ def main(fname, width, A, V, *args, **kwargs):
         with doc.create(Alignat(numbering=False, escape=False)) as agn:
             for i in B:
                 agn.append(i+"\\\\")
-
+    
     doc.generate_pdf(clean_tex=False)
 
 
 
-if __name__ == '__main__':
+def gen_pdf(cipher, rounds):  
+    fig, axs = plt.subplots(2, 2, figsize=(6,8))
+    ax1 = axs[0][0]
+    ax2 = axs[0][1]
+    ax3 = axs[1][0]
+    ax4 = axs[1][1]
     
-    fig, axs = plt.subplots(1, 2)
-    ax1 = axs[0]
-    ax2 = axs[1]
-    A, V=gc.new_generate_constraints(4,gc.Aes)
-    M, W=sf.create_fourblock(A, V)
-    ax1.spy(A, markersize=1, color="teal")
-    ax2.spy(M, markersize=1, color="mediumturquoise")
-    axs[0].set_title('Native')
-    axs[1].set_title('Creating 4-block')
+    A, V=gc.new_generate_constraints(rounds,cipher)
+    M, v=sf.d_var_to_beginning(A, V)
+    B=sf.long_constraints_to_top(M)
+    C, W=sf.create_fourblock(A, V)
 
-    main('matplotlib_ex-dpi', r'1\textwidth', A=A, V=V, dpi=300)
-    #main('matplotlib_ex-facecolor', r'0.5\textwidth', facecolor='b')
+    ax1.set_title('native')
+    ax2.set_title('d_variables to the left')
+    ax3.set_title('long constraints to the top')
+    ax4.set_title('creating 4-block')
+
+    ax1.spy(A, markersize=1, color="teal")
+    ax2.spy(M, markersize=1, color="steelblue")
+    ax3.spy(B, markersize=1, color="mediumturquoise")
+    ax4.spy(C, markersize=1, color="skyblue") 
+
+    title=[str(cipher)[15:-2],str(rounds)]
+    mainly(title[0]+title[1]+'rounds', r'1\textwidth', A=A, V=V, title=title, dpi=300)
+    #main funktkion anders bennenen und das hier auch in eine Funktion rein
+    #jetzt noch die anderen Sachen mitrein (matrix und constraints und dann main funktion verändern)
+
+#gen_pdf(cip.Aes,20)
 
     
