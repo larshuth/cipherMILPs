@@ -14,7 +14,16 @@ plt.rcParams.update({'font.size': 5})
 
 def matplotlibvis(rounds, cipher):
     """
-    Quick visualization without the hassle of generating the pdf file.
+    Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
+    Generates 4 visualizations of the same sparse matrix.
+
+    Parameters:
+    -----------
+    rounds  :   int
+                number of rounds
+    
+    cipher  :   class
+                class of the wanted cipher
     """
     fig, axs = plt.subplots(1, 4)
     fig.canvas.manager.set_window_title('Mit schönen Farben vom Meer damit es für Leo wie Heimat ist (weil Nordsee und so)')
@@ -23,13 +32,12 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-
     A, V=gc.new_generate_constraints(rounds,cipher)
     M, v=sf.d_var_to_beginning(A, V)
     B=sf.long_constraints_to_top(M)
     C, W=sf.create_fourblock(A, V)
 
-    axs[0].set_title('Native')
+    axs[0].set_title('native')
     axs[1].set_title('d_variables to the beginning')
     axs[2].set_title('long constraints to the top')
     axs[3].set_title('creating 4-block')
@@ -41,7 +49,36 @@ def matplotlibvis(rounds, cipher):
 
     plt.show()
 
-#matplotlibvis()
+def matplot_scatterplot():
+    """
+    https://stackoverflow.com/questions/24013962/how-to-draw-a-matrix-sparsity-pattern-with-color-code-in-python
+    Function that visualizes not only the structure of the matrix but also the different values.
+    Not sure if it could be useful in the future.
+    """
+    A, V=gc.new_generate_constraints(5,cip.Aes)
+    A,V=sf.create_fourblock(A,V)
+    A = sf.block_structure(A,V)
+    mat=A.toarray()
+
+    fig,ax = plt.subplots(figsize=(8, 4), dpi= 80, facecolor='w', edgecolor='k')
+
+    # prepare x and y for scatter plot
+    plot_list = []
+    for rows,cols in zip(np.where(mat!=0)[0],np.where(mat!=0)[1]):
+        plot_list.append([cols,rows,mat[rows,cols]])
+    plot_list = np.array(plot_list)
+
+    # scatter plot with color bar, with rows on y axis
+    plt.scatter(plot_list[:,0],plot_list[:,1],c=plot_list[:,2], s=50)
+    cb = plt.colorbar()
+
+    # full range for x and y axes
+    plt.xlim(0,mat.shape[1])
+    plt.ylim(0,mat.shape[0])
+    # invert y axis to make it similar to imshow
+    plt.gca().invert_yaxis()
+
+    plt.show()
 
 def matrix_to_latex_nonzero(A):
     """
@@ -69,7 +106,6 @@ def matrix_to_latex_nonzero(A):
     matri+="\end{pmatrix}%\n"
     return matri
 
-
 def vectormilp(V):
     """
     Generates the code for the vector in the MILP.
@@ -92,7 +128,7 @@ def vectormilp(V):
     
 def constraints(A,V):
     """
-    Generates every constraint in a string.
+    Generates a string with every constraint (in Latexschreibweise).
 
     Parameters:
     ----------
@@ -125,26 +161,27 @@ def constraints(A,V):
 
 def mainly(fname, width, A, V, title, *args, **kwargs):
     """
-    Generates the pdf with the matrix, the structure and the constraints.
+    Generates the code for latex and generates the pdf.
+
     """
     geometry_options = {"right": "2cm", "left": "2cm"}
     doc = Document(fname, geometry_options=geometry_options)
+    doc.preamble.append(Command("usepackage{amsmath}"))
     doc.preamble.append(Command("allowdisplaybreaks"))
     doc.preamble.append(Command("usepackage[labelformat=empty]{caption}"))
     doc.preamble.append(NoEscape("\setcounter{MaxMatrixCols}{10000}"))
-    #doc.append(NoEscape("\\thispagestyle{empty}"))
     doc.preamble.append(NoEscape("\setlength{\headsep}{10pt}"))
-    #doc.append(NoEscape("\setlength{\\footskip}{0pt}"))
     doc.preamble.append(NoEscape("\setlength{\\textheight}{650pt}"))
     doc.append(NoEscape("\setlength{\\voffset}{-0.50in}"))
     with doc.create(Section("Matrix Structure "+title[0]+", "+title[1]+" rounds")):
         with doc.create(Figure(position='h!p')) as plot:
             plot.add_plot(width=460, *args, **kwargs)
 
-    doc.append(NewPage())
-    with doc.create(Section("MILP")): #HERE ÄNDERN
-        doc.append(NoEscape("\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0"))
-    
+    #Unfortunately creating the matrix does not work with bigger rounds
+    """doc.append(NewPage())
+    with doc.create(Section("MILP")): 
+        doc.append(NoEscape("\[\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0\]"))
+    """
     doc.append(NewPage())
     with doc.create(Section("Constraints")):
         B=constraints(A,V)
@@ -156,7 +193,18 @@ def mainly(fname, width, A, V, title, *args, **kwargs):
 
 
 
-def gen_pdf(cipher, rounds):  
+def gen_pdf(rounds, cipher):  
+    """
+    Generates the plots in matplotlib and calls the function to generate the pdf.
+
+    Parameters:
+    -----------
+    rounds  :   int
+                Number of rounds
+    
+    cipher  :   class
+                Class of the wanted cipher
+    """
     fig, axs = plt.subplots(2, 2, figsize=(6,8))
     ax1 = axs[0][0]
     ax2 = axs[0][1]
@@ -180,9 +228,5 @@ def gen_pdf(cipher, rounds):
 
     title=[str(cipher)[15:-2],str(rounds)]
     mainly(title[0]+title[1]+'rounds', r'1\textwidth', A=A, V=V, title=title, dpi=300)
-    #main funktkion anders bennenen und das hier auch in eine Funktion rein
-    #jetzt noch die anderen Sachen mitrein (matrix und constraints und dann main funktion verändern)
-
-#gen_pdf(cip.Aes,20)
 
     

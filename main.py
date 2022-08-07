@@ -4,7 +4,6 @@ import cipher as cip
 import visualization as vis
 
 
-
 def main (rounds, cipher, viz):
     '''
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
@@ -12,54 +11,23 @@ def main (rounds, cipher, viz):
     Parameters:
     -----------
     rounds      :   int
-                    Number of rounds used for network
+                    Number of rounds used for cipher
     
-    ciphers     :   list of strings
-                    Indicates the names of the ciphers used for the encryption
+    cipher      :   class
+                    Class that represents the wanted cipher
     
-    constraints :   list of strings
-                    Indicates the names of the methods used to generate the constraints
-    
-    structures  :   list
-                    Indicates the names of the functions used to examine the structures of the constraint matrices
-
-    dir         :   string
-                    The name of the directory in which the results should be saved
+    viz         :   int
+                    Indicates the desired visualization
 
     Returns:
     ----------
-                :   files
-                    Contains the constraints as a string and corresponding structured constraint matrices as tikz code (??)
+    Opens a new window or creates a new pdf file in the same directory of this file.         
     '''
     if viz == 1:
         vis.matplotlibvis(rounds, cipher)
     elif viz == 2:
-        vis.gen_pdf(cipher, rounds) #UNGREGELMÄ?GITEIT FIXEN
-    """
-    # For every used cipher repeat the following three steps
-    for c in ciphers:
-        cipher = getattr(cip, c) #-- should this be a function or just a parameter for the constraint generating function?
+        vis.gen_pdf(rounds, cipher)
 
-        # 1. Generate constraints and corresponding matrix 
-        for constraint in constraints:
-            
-            generatedConstraints, matrix = cipher(constraint) 
-            
-            # Save constraints to file in given directory
-            fileName = c + constraint + rounds + ".txt"
-            #-- Add save to file
-        
-            #-- Question: how to properly store the matrices?
-
-            # 2. Try different sorting techniques 
-            for struc in structures:
-                structure = getattr(vism, struc)
-                structuredMatrix = structure(matrix)
-        
-                # 3. Save sorted matrix to file
-                #-- Add save to file, ensure that the current content is not overwritten every time
-
-"""
 
 if __name__ == "__main__":
     print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
@@ -72,6 +40,7 @@ if __name__ == "__main__":
         cipher=cip.Aes
     else: cipher = cip.Enocoro
     main(rounds, cipher, viz)
+
 
 ###### Structure #####
 

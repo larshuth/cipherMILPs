@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 import generateConstraints as gc
+import cipher as cip
 
 #https://stackoverflow.com/questions/28334719/swap-rows-csr-matrix-scipy
 
@@ -56,7 +57,7 @@ def long_constraints_to_top(M):
     """
     This function permutates the rows(constraints) in a way such that the constraints with 
     a lot nonzero entries are at the top. This way one could form a block at the top.
-    THIS FUNCTION IS DUMB BECAUSE IT DOESNT WORK RIGHT (CAUSE OF VARIABLES THAT ARE ONLY USED IN BEGINNING AND END)
+    This function could be optimized (especially for Enocoro)
 
     Parameters:
     --------
@@ -132,7 +133,6 @@ def d_var_to_beginning(M, V):
     M = permutate_columns(M, sortedindices)
     return M, newV
 
-
 def creating_diagonal_in4block(M,V):
     """
     This function permutates the rows of the matrix, but not the ones in the block at the top.
@@ -192,5 +192,19 @@ def create_fourblock(M, V):
     C=creating_diagonal_in4block(B, V)
     return C, V
 
-
+def block_structure(M, V):
+    """
+    This function should create multiple blocks for the matrix
+    NOT FINISHED
+    """
+    count=0
+    for e in V:
+        if e[0]=="d":
+            count+=1
+        else: break
+    ind= [i for i in range(count)]
+    out1 = M.tocsc()[:,ind]
+    blockA = out1.tocsr()[ind,:]
+    #Block A has to be AT LEAST this big
+    
 

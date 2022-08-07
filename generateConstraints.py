@@ -65,7 +65,3 @@ def new_generate_constraints(rounds, cipher):
     return M, V
 
 
-
-
-#print(new_generate_constraints(3,Aes))
-
