@@ -148,6 +148,14 @@ class Aes:
                 next=next+1
         return A, M, V, next
 
+    def input_sbox(rounds):
+        """
+        all variable indices of variables that are input of an sbox
+        """
+        inputsbox=[] #wo fangen variablen nochmal an? kontrollieren!
+        for i in range((rounds*16)):
+            inputsbox.append(i)
+        return inputsbox
 
 class Enocoro:
     """
@@ -306,3 +314,34 @@ class Enocoro:
             V.append("x"+str(next))
             next+=1
         return A, M, V, next
+
+    def input_sbox(rounds):
+        inputsbox=[]
+        for i in range(rounds):
+            #first sbox
+            if i <3:
+                inputsbox.append((2-i))
+            else:
+                inputsbox.append(34+(i-3)*10)
+            #second sbox
+            if i< 5:
+                inputsbox.append(7-i)
+            else:
+                inputsbox.append(41+(i-5)*10)
+            #third sbox
+            if i< 9:
+                inputsbox.append(16-i)
+            else:
+                inputsbox.append(42+(i-9)*10)
+            #fourth sbox
+            if i< 13:
+                inputsbox.append(29-i)
+            else:
+                inputsbox.append(43+(i-13)*10)
+        return inputsbox
+
+
+la=Enocoro.input_sbox(96)
+print(la)
+for i in range(0, len(la),4):
+    print(la[i],la[i+1],la[i+2],la[i+3])
