@@ -156,7 +156,7 @@ def creating_diagonal_in4block(M,V):
     """
     dic={}
     #count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
-    count=0
+    count=1 #begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
         if e[0]=="d":
             count+=1

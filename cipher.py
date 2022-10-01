@@ -76,6 +76,7 @@ class Aes:
             #evey element in column is added to the constraint
             ind = V.index(A[i][j])
             M[line,ind] = 1
+            M[M.get_shape()[0]-1, ind]=1
         for i in range(4):
             #every new variable added to the constraint and to V
             V.append("x"+str(next+i))
@@ -137,7 +138,7 @@ class Aes:
         next    :   int 
                     Number for the next x-variable
         """
-        M = lil_matrix((36*rounds,16+20*rounds),dtype=int)
+        M = lil_matrix((36*rounds+1,16+20*rounds),dtype=int)
         V = []
         A = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
         next=0
@@ -252,6 +253,11 @@ class Enocoro:
             S[int(e[2])]="x"+str(next)
             S[int(e[3])]="x"+str(next+1)
             next=next+2
+
+        #updating the last constraint
+        indicesofsboxinput=Enocoro.input_sbox(r)
+        for i in indicesofsboxinput:
+            M[M.get_shape()[0]-1, V.index("x"+str(i))]=1
         return A, M, V, line, next, S
 
     def shift_before(A):
@@ -305,13 +311,16 @@ class Enocoro:
                     Number for the next x-variable
         """
         next=0
-        M = lil_matrix((37*rounds,34+19*rounds),dtype=int)
+        M = lil_matrix((37*rounds+1,34+19*rounds),dtype=int)
         V = []
         #Array mit den Bits die momentan in der Cipher sind
         A=[]
+        indicesofsboxinput=Enocoro.input_sbox(rounds)
         for e in range(34):
             A.append("x"+str(next))
             V.append("x"+str(next))
+            if next in indicesofsboxinput:
+                M[M.get_shape()[0]-1, next]=1
             next+=1
         return A, M, V, next
 
@@ -340,8 +349,3 @@ class Enocoro:
                 inputsbox.append(43+(i-13)*10)
         return inputsbox
 
-
-la=Enocoro.input_sbox(96)
-print(la)
-for i in range(0, len(la),4):
-    print(la[i],la[i+1],la[i+2],la[i+3])
