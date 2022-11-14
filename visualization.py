@@ -144,22 +144,34 @@ def constraints(A,V):
                 Every element is the latexcode for the corresponding constraint
     """
     cons=[]
+    linebreak = 0
     for i in range(A.get_shape()[0]):
+        if i == A.get_shape()[0]:
+            linebreak = 1
         #getting the indizes of the nonzero elements
         positions=A.getrow(i).nonzero()[1]
         con=""
         for e in positions:
-            con=con+str(A[i,e])+V[e][0]+"_{"+V[e][1:]+"}+"
+            if (linebreak == 0 and np.where(positions==e)[0][0]%10 != 0) or np.where(positions==e)[0][0]==0:
+                con=con+str(A[i,e])+V[e][0]+"_{"+V[e][1:]+"}+"
+            else:
+                con=con+str(A[i,e])+V[e][0]+"_{"+V[e][1:]+"}+\\\\"
+
         #remove the last +
-        con = con[:-1]
+        if con[-4:] == "\\\\":
+            con = con[:-5]
+        else: con = con[:-1]
         con = con.replace("1x", "x")
         con = con.replace("1d", "d")
         con = con.replace("+-", "-")
-        con+= "\geq 0"
+        con+= " \geq 0"
+
+        #having -1 instead of -11 in the last constraint (idea: in V "s" anstatt "1" adden und das dann eliminieren)
+        con = con.replace("-11", "-1")
         cons.append(con)
     return cons
 
-def mainly(fname, width, A, V, title, *args, **kwargs):
+def mainly(fname, A, V, title, *args, **kwargs):
     """
     Generates the code for latex and generates the pdf.
 
@@ -168,6 +180,7 @@ def mainly(fname, width, A, V, title, *args, **kwargs):
     doc = Document(fname, geometry_options=geometry_options)
     doc.preamble.append(Command("usepackage{amsmath}"))
     doc.preamble.append(Command("allowdisplaybreaks"))
+    doc.preamble.append(Command("textwidth15cm"))
     doc.preamble.append(Command("usepackage[labelformat=empty]{caption}"))
     doc.preamble.append(NoEscape("\setcounter{MaxMatrixCols}{10000}"))
     doc.preamble.append(NoEscape("\setlength{\headsep}{10pt}"))
@@ -227,6 +240,8 @@ def gen_pdf(rounds, cipher):
     ax4.spy(C, markersize=1, color="skyblue") 
 
     title=[str(cipher)[15:-2],str(rounds)]
-    mainly(title[0]+title[1]+'rounds', r'1\textwidth', A=A, V=V, title=title, dpi=300)
+    print(type(A))
+    print("lala") #r'1\textwidth',
+    mainly(title[0]+title[1]+'rounds', A=A, V=V, title=title, dpi=300)
 
     

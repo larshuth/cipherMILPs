@@ -50,6 +50,10 @@ def new_generate_constraints(rounds, cipher):
     -----------
     M       :   csr_matrix
                 Generated constraint matrix for the MILP
+
+    V       :   list
+                List that constains the variables. When multiplying the matrix with this
+                list one gets the constraints.
     """
     line=0
     A, M, V, next = cipher.initialize(rounds)
@@ -62,6 +66,7 @@ def new_generate_constraints(rounds, cipher):
             line+=1
         A = cipher.shift_after(A)
     M = M.tocsr()
+    V.append("1")
     return M, V
 
 
