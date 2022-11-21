@@ -148,6 +148,7 @@ class Aes:
                 A[i][j]="x"+str(next)
                 V.append("x"+str(next))
                 next=next+1
+        M[M.get_shape()[0]-1, M.get_shape()[1]-1]=-1
         return A, M, V, next
 
     def input_sbox(rounds):

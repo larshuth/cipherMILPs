@@ -34,6 +34,37 @@ def generate_smallconstraints(M, line):
         M[line,dummyIndex]=1
     return M, line
     
+def removezerocols(M,V):
+    """
+    Removes all Columns that have no non-zero value.
+
+    Parameters:
+    ---------
+    M:  csr_matrix
+        Matrix where the Columns will be deleted
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    
+    Returns:
+    --------
+    M:  csr_matrix
+        New matrix that has only columns with an non zero entry.
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    """
+    colszero=[]
+    newV=[]
+    M.tocsc()
+    for i in range(M.get_shape()[1]):
+        if M.getcol(i).count_nonzero() != 0:
+            colszero.append(i)
+            newV.append(V[i])
+    colszero=np.array(colszero)
+    M = M[:,colszero]
+    return M,newV
+
 def new_generate_constraints(rounds, cipher):
     """
     This function generates the constraint matrix for a number of rounds of a given cipher.
@@ -67,6 +98,7 @@ def new_generate_constraints(rounds, cipher):
         A = cipher.shift_after(A)
     M = M.tocsr()
     V.append("1")
+    M,V = removezerocols(M,V)
     return M, V
 
 
