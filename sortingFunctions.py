@@ -370,19 +370,74 @@ def showfirststruc(M,V):
         plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
     plt.show()
 
+def showsecstruc(M,V):
+    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    for e in V:
+        if e[0]!="x":
+            count+=1
+    num = M.getcol(M.get_shape()[1]-1).count_nonzero()
+    leng= M.get_shape()[1]-count
+    for i in range(count, M.get_shape()[1]):
+        if M.getcol(i).count_nonzero() == num:
+            siz=M.get_shape()[1]-i
+            break
+    print(leng,siz)
+    c=1
+    while True:
+        if leng %(siz/c) ==0:
+            break
+        c+=1
+    siz=int(siz/c)
+    numofb=leng/siz
+    print(numofb,siz)
+    for e in range(int(numofb)):
+        #print(M.getcol(count+siz*e).nonzero()[0][-1])
+        if e ==0: anfang=0
+        elif M.getcol(count+siz*(e-1)).nonzero()[0][-1]-M.getcol(count+siz*(e-1)).nonzero()[0][-2]==1:
+            anfang=M.getcol(count+siz*(e-1)).nonzero()[0][-2]
+        else: anfang= M.getcol(count+siz*(e-1)).nonzero()[0][-1]
+        
+        if e==numofb-1 or e==0: ende= M.get_shape()[0]
+        else: 
+            ende=M.getcol(count+siz*(e+1)-1).nonzero()[0][-1]
+            print(M.getcol(count+siz*(e+1)-1).nonzero()[0])
+        plt.plot([count+siz*e-0.5 for i in range(anfang,ende+1)],[i for i in range(anfang,ende+1)],linewidth = 0.5)
+        plt.plot([count+siz*e-0.5 for i in range(count)],[i for i in range(count)],linewidth = 0.5)
+        
+        #horizontal
+        if M.getcol(count+siz*e).nonzero()[0][-1]-M.getcol(count+siz*e).nonzero()[0][-2]== 1:
+            eintrag= M.getcol(count+siz*e).nonzero()[0][-2]
+        else: eintrag =M.getcol(count+siz*e).nonzero()[0][-1]
+        if e==0:
+            plt.plot([i for i in range(M.get_shape()[1])],[eintrag-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+        else:
+            plt.plot([i for i in range(count)],[eintrag-0.5 for i in range(count)],linewidth = 0.5)
+            plt.plot([i for i in range(count+siz*(e-1),count+siz*(e+1))],[eintrag-0.5 for i in range(count+siz*(e-1),count+siz*(e+1))],linewidth = 0.5)
+         
 
-aes = cip.Enocoro
-A, V=gc.new_generate_constraints(3, aes)
+        #hier gucken von der jeweilien column wo das größte
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    data2D = M.toarray()
+    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    im = plt.imshow(data2D, cmap=cmap)
+    plt.colorbar(im)
+    plt.show()
+    
+
+aes = cip.Aes
+A, V=gc.new_generate_constraints(4, aes)
 M, v=d_var_to_beginning(A, V)
 B=long_constraints_to_top(M)
 C, W=create_fourblock(A, V)
 #block_structure(C,W)
-#C =twodiag(C,W)
+C =twodiag(C,W)
 #changedvar(C,W)
-C,W =changediag(C,W)
-C=creating_diagonal_in4block(C,W)
-C,W = changediag(C,W)
-print(W)
+#C,W =changediag(C,W)
+#C=creating_diagonal_in4block(C,W)
+#C,W = changediag(C,W)
+
 #C,W =deletecolszero(C,W)
-showmat(C)
+# showmat(C)
 #showfirststruc(C,W)
+showsecstruc(C,W)
