@@ -393,7 +393,7 @@ def showsecstruc(M,V):
     for e in range(int(numofb)):
         #print(M.getcol(count+siz*e).nonzero()[0][-1])
         if e ==0: anfang=0
-        elif M.getcol(count+siz*(e-1)).nonzero()[0][-1]-M.getcol(count+siz*(e-1)).nonzero()[0][-2]==1:
+        elif len(M.getcol(count+siz*(e-1)).nonzero()[0])>4:
             anfang=M.getcol(count+siz*(e-1)).nonzero()[0][-2]
         else: anfang= M.getcol(count+siz*(e-1)).nonzero()[0][-1]
         
@@ -405,7 +405,7 @@ def showsecstruc(M,V):
         plt.plot([count+siz*e-0.5 for i in range(count)],[i for i in range(count)],linewidth = 0.5)
         
         #horizontal
-        if M.getcol(count+siz*e).nonzero()[0][-1]-M.getcol(count+siz*e).nonzero()[0][-2]== 1:
+        if len(M.getcol(count+siz*e).nonzero()[0])>4:
             eintrag= M.getcol(count+siz*e).nonzero()[0][-2]
         else: eintrag =M.getcol(count+siz*e).nonzero()[0][-1]
         if e==0:
@@ -414,8 +414,32 @@ def showsecstruc(M,V):
             plt.plot([i for i in range(count)],[eintrag-0.5 for i in range(count)],linewidth = 0.5)
             plt.plot([i for i in range(count+siz*(e-1),count+siz*(e+1))],[eintrag-0.5 for i in range(count+siz*(e-1),count+siz*(e+1))],linewidth = 0.5)
          
-
         #hier gucken von der jeweilien column wo das größte
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    data2D = M.toarray()
+    cmap = colors.ListedColormap(['#00315F','#00315F','#00315F', '#00618F','#00618F','white','#00A1CF'])
+    im = plt.imshow(data2D, cmap=cmap)
+    cb =plt.colorbar(im)
+    #cb.remove()
+    plt.savefig("test",dpi=300,bbox_inches='tight')
+    plt.show()
+    
+
+def enostruc(M,V):
+    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    for e in V:
+        if e[0]!="x":
+            count+=1
+    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+
+    la=[i for i in range(count,M.get_shape()[0])]
+    C=M[la,:]
+    for i in range(count,M.get_shape()[1]-1):
+        if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
+            plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
+
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
@@ -423,21 +447,63 @@ def showsecstruc(M,V):
     im = plt.imshow(data2D, cmap=cmap)
     plt.colorbar(im)
     plt.show()
-    
 
-aes = cip.Aes
-A, V=gc.new_generate_constraints(4, aes)
+def enonewshape(M,V):
+    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    for e in V:
+        if e[0]!="x":
+            count+=1
+    #plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+
+    la=[i for i in range(count,M.get_shape()[0])]
+    C=M[la,:]
+    colInterval=[]
+    colInterval.append(count)
+    for i in range(count,M.get_shape()[1]-1):
+        if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
+            plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
+            colInterval.append(i)
+    rowInter=[count]
+    plt.plot([e for e in range(M.get_shape()[1])],[count for e in range(M.get_shape()[1])],linewidth = 0.5)
+    for i in colInterval[1:]:
+        rowInter.append(M.getcol(i).nonzero()[0][-1])
+        plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
+    
+    order=[i for i in range(0,rowInter[-3]+1)]        
+    neworder=[]
+    s=3
+    for e in range(rowInter[-3]+1,rowInter[-2]+1):
+        if e %s == 1:
+            order.append(e)
+        else:  neworder.append(e)
+    order= order+[i for i in range(rowInter[-2]+1,M.get_shape()[0])]
+    order= neworder+order
+    M=permutate_rows(M,order)
+    plt.rcParams["figure.figsize"] = [7.00, 3.50]
+    plt.rcParams["figure.autolayout"] = True
+    data2D = M.toarray()
+    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    im = plt.imshow(data2D, cmap=cmap)
+    plt.colorbar(im)
+    plt.show()
+
+aes = cip.Enocoro
+A, V=gc.new_generate_constraints(5, aes)
+#showmat(A)
 M, v=d_var_to_beginning(A, V)
 B=long_constraints_to_top(M)
 C, W=create_fourblock(A, V)
 #block_structure(C,W)
-C =twodiag(C,W)
+#C =twodiag(C,W)
 #changedvar(C,W)
-#C,W =changediag(C,W)
-#C=creating_diagonal_in4block(C,W)
+C,W =changediag(C,W)
+C=creating_diagonal_in4block(C,W)
 #C,W = changediag(C,W)
 
 #C,W =deletecolszero(C,W)
-# showmat(C)
+#showmat(C)
 #showfirststruc(C,W)
-showsecstruc(C,W)
+#showsecstruc(C,W)
+#enostruc(C,W)
+enonewshape(C,W)
