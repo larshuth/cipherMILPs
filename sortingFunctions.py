@@ -209,33 +209,34 @@ def changedvar(M,V):
             count+=1
     M=M.tocsc()
     for i in range(M.get_shape()[1]):
-        if i<count:
-            dic[i] = list(M.getcol(i).nonzero()[0])[-1]
-            #print((dic[i]))
+        if i<count and i!=0:
+            dic[i] = list(M.getcol(i).nonzero()[0])[0]
+            #hier letzte Zahl ändern und .inke spalte wird anders sortiert
+            print(M.getcol(i).nonzero())
     dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=False))
-    sortedrows = list(dic2.keys())
+    sortedrows = [0]+list(dic2.keys())
     beginofrows = [i for i in range(count,M.get_shape()[1])]
     sortedrows =sortedrows + beginofrows
-    #M = permutate_columns(M, sortedrows)
+    M = permutate_columns(M, sortedrows)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
     im = plt.imshow(data2D, cmap="GnBu_r")
     plt.colorbar(im)
-    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    #plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
     
     #vertikale striche
     leng= (M.get_shape()[1])-17-count
     teil = leng/16
-    for e in range(int(teil)+2):
-        plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+    #for e in range(int(teil)+2):
+        #plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
 
     #horizontale linien
     leng2=(M.get_shape()[0])-1-count
     teil2 = leng2 / 32
-    for e in range(int(teil2)+1):
-        plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    plt.show()
+    #for e in range(int(teil2)+1):
+        #plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    #plt.show()
     return M
     #idee: da wo die diagonale gemacht wird die sachen die auf der gleichen höhe sind so lassen und nicht tauschen nach dem ersten element
 
@@ -454,31 +455,33 @@ def enonewshape(M,V):
         if e[0]!="x":
             count+=1
     #plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
-
+    ##plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
     la=[i for i in range(count,M.get_shape()[0])]
     C=M[la,:]
     colInterval=[]
     colInterval.append(count)
     for i in range(count,M.get_shape()[1]-1):
         if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
-            plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
+            #plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
             colInterval.append(i)
     rowInter=[count]
-    plt.plot([e for e in range(M.get_shape()[1])],[count for e in range(M.get_shape()[1])],linewidth = 0.5)
+    #plt.plot([e for e in range(M.get_shape()[1])],[count-1 for e in range(M.get_shape()[1])],linewidth = 0.5)
     for i in colInterval[1:]:
         rowInter.append(M.getcol(i).nonzero()[0][-1])
-        plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
+        #plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
     
-    order=[i for i in range(0,rowInter[-3]+1)]        
+    order=[i for i in range(0,count+1)] 
+    print(order)       
     neworder=[]
-    s=3
-    for e in range(rowInter[-3]+1,rowInter[-2]+1):
-        if e %s == 1:
-            order.append(e)
-        else:  neworder.append(e)
-    order= order+[i for i in range(rowInter[-2]+1,M.get_shape()[0])]
+    for i in range(len(rowInter)*-1,-1):
+        s=i*-1
+        for e in range(rowInter[i]+1,rowInter[i+1]+1):
+            if e %s == 1:
+                order.append(e)
+            else:  neworder.append(e)
+    order= order+[i for i in range(rowInter[-1]+1,M.get_shape()[0])]
     order= neworder+order
+
     M=permutate_rows(M,order)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
@@ -489,18 +492,18 @@ def enonewshape(M,V):
     plt.show()
 
 aes = cip.Enocoro
-A, V=gc.new_generate_constraints(5, aes)
+A, V=gc.new_generate_constraints(6, aes)
 #showmat(A)
 M, v=d_var_to_beginning(A, V)
 B=long_constraints_to_top(M)
 C, W=create_fourblock(A, V)
 #block_structure(C,W)
 #C =twodiag(C,W)
-#changedvar(C,W)
+
 C,W =changediag(C,W)
 C=creating_diagonal_in4block(C,W)
 #C,W = changediag(C,W)
-
+##C =changedvar(C,W)
 #C,W =deletecolszero(C,W)
 #showmat(C)
 #showfirststruc(C,W)
