@@ -428,7 +428,7 @@ def showsecstruc(M,V):
     
 
 def enostruc(M,V):
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    count=0 
     for e in V:
         if e[0]!="x":
             count+=1
@@ -437,9 +437,16 @@ def enostruc(M,V):
 
     la=[i for i in range(count,M.get_shape()[0])]
     C=M[la,:]
+    lengthofblocks=[0,count]#for test
     for i in range(count,M.get_shape()[1]-1):
         if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
             plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
+            #horizontal
+            plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1]+0.5 for e in range(M.get_shape()[1])],linewidth = 0.5)
+            lengthofblocks.append(M.getcol(i).nonzero()[0][-1]+1)
+    lengthofblocks.append(M.get_shape()[0])
+    for i in range(len(lengthofblocks)-1):
+        print(lengthofblocks[i+1]-lengthofblocks[i])
 
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
@@ -464,18 +471,16 @@ def enonewshape(M,V):
         if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
             #plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
             colInterval.append(i)
-    rowInter=[count]
+    rowInter=[count-1]
     #plt.plot([e for e in range(M.get_shape()[1])],[count-1 for e in range(M.get_shape()[1])],linewidth = 0.5)
     for i in colInterval[1:]:
-        rowInter.append(M.getcol(i).nonzero()[0][-1])
+        rowInter.append(M.getcol(i).nonzero()[0][-1]) 
         #plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
-    
-    order=[i for i in range(0,count+1)] 
-    print(order)       
+    order=[i for i in range(0,count)]       
     neworder=[]
     for i in range(len(rowInter)*-1,-1):
         s=i*-1
-        for e in range(rowInter[i]+1,rowInter[i+1]+1):
+        for e in range(rowInter[i]+1,rowInter[i+1]+1): #+1 weggemacht
             if e %s == 1:
                 order.append(e)
             else:  neworder.append(e)
@@ -492,7 +497,7 @@ def enonewshape(M,V):
     plt.show()
 
 aes = cip.Enocoro
-A, V=gc.new_generate_constraints(6, aes)
+A, V=gc.new_generate_constraints(11, aes)
 #showmat(A)
 M, v=d_var_to_beginning(A, V)
 B=long_constraints_to_top(M)
@@ -503,10 +508,13 @@ C, W=create_fourblock(A, V)
 C,W =changediag(C,W)
 C=creating_diagonal_in4block(C,W)
 #C,W = changediag(C,W)
-##C =changedvar(C,W)
+C =changedvar(C,W)
 #C,W =deletecolszero(C,W)
 #showmat(C)
 #showfirststruc(C,W)
 #showsecstruc(C,W)
-#enostruc(C,W)
-enonewshape(C,W)
+print(W)
+enostruc(C,W)
+#enonewshape(C,W)
+
+#was es alles gibt:
