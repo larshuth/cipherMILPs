@@ -327,19 +327,35 @@ def changediag(M,V):
     newV=[V[i] for i in sortedcols]
     return M,newV
 
-def showmat(M):
+def showmat(M,V):
     """
     Visualizes the matrix.
     """
+    count=0 
+    for e in V:
+        if e[0]!="x":
+            count+=1
+
+    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color="black")
+    for e in range(count,M.get_shape()[0],28):
+        plt.plot([i for i in range(M.get_shape()[1])],[e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color="black")
+    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    cmap = colors.ListedColormap(['#00315F','#00315F','#00315F', '#00618F','#00618F','white','#00A1CF'])
     #bounds=[-10,-1,-0.5,0.5,1]
     #norm = colors.BoundaryNorm(bounds, cmap.N)
     im = plt.imshow(data2D, cmap=cmap)
-    plt.colorbar(im)
+    cb =plt.colorbar(im)
+    
     #cmap=cmap, norm=norm, boundaries=bounds, ticks=[-5,-1,0, 1]
+    cb.remove()
+    ax = plt.gca()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    #plt.savefig("AES3rnative",dpi=400,bbox_inches='tight')
     plt.show()
 
 def showfirststruc(M,V):
@@ -402,19 +418,22 @@ def showsecstruc(M,V):
         else: 
             ende=M.getcol(count+siz*(e+1)-1).nonzero()[0][-1]
             print(M.getcol(count+siz*(e+1)-1).nonzero()[0])
-        plt.plot([count+siz*e-0.5 for i in range(anfang,ende+1)],[i for i in range(anfang,ende+1)],linewidth = 0.5)
-        plt.plot([count+siz*e-0.5 for i in range(count)],[i for i in range(count)],linewidth = 0.5)
+        plt.plot([count+siz*e-0.5 for i in range(anfang,ende+2)],[i-0.5 for i in range(anfang,ende+2)],linewidth = 0.5,color="grey")
+        plt.plot([count+siz*e-0.5 for i in range(count+1)],[i-0.5 for i in range(count+1)],linewidth = 0.5, color="grey")
         
         #horizontal
         if len(M.getcol(count+siz*e).nonzero()[0])>4:
             eintrag= M.getcol(count+siz*e).nonzero()[0][-2]
         else: eintrag =M.getcol(count+siz*e).nonzero()[0][-1]
         if e==0:
-            plt.plot([i for i in range(M.get_shape()[1])],[eintrag-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+            plt.plot([i-0.5 for i in range(M.get_shape()[1]+1)],[eintrag-0.5 for i in range(M.get_shape()[1]+1)],linewidth = 0.5,color="grey")
         else:
-            plt.plot([i for i in range(count)],[eintrag-0.5 for i in range(count)],linewidth = 0.5)
-            plt.plot([i for i in range(count+siz*(e-1),count+siz*(e+1))],[eintrag-0.5 for i in range(count+siz*(e-1),count+siz*(e+1))],linewidth = 0.5)
+            plt.plot([i-0.5 for i in range(count+1)],[eintrag-0.5 for i in range(count+1)],linewidth = 0.5,color="grey")
+            plt.plot([i-0.5 for i in range(count+siz*(e-1),count+siz*(e+1)+1)],[eintrag-0.5 for i in range(count+siz*(e-1),count+siz*(e+1)+1)],linewidth = 0.5,color="grey")
          
+        #für beispiel generieren
+        #plt.plot([i for i in range(M.get_shape()[1])],[4.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
+        #plt.plot([i for i in range(M.get_shape()[1])],[8.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
         #hier gucken von der jeweilien column wo das größte
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
@@ -422,8 +441,11 @@ def showsecstruc(M,V):
     cmap = colors.ListedColormap(['#00315F','#00315F','#00315F', '#00618F','#00618F','white','#00A1CF'])
     im = plt.imshow(data2D, cmap=cmap)
     cb =plt.colorbar(im)
-    #cb.remove()
-    plt.savefig("test",dpi=300,bbox_inches='tight')
+    cb.remove()
+    ax = plt.gca()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    plt.savefig("AES3rblock",dpi=400,bbox_inches='tight')
     plt.show()
     
 
@@ -497,24 +519,23 @@ def enonewshape(M,V):
     plt.show()
 
 aes = cip.Enocoro
-A, V=gc.new_generate_constraints(11, aes)
+A, V=gc.new_generate_constraints(7, aes)
 #showmat(A)
 M, v=d_var_to_beginning(A, V)
 B=long_constraints_to_top(M)
 C, W=create_fourblock(A, V)
 #block_structure(C,W)
 #C =twodiag(C,W)
-
-C,W =changediag(C,W)
-C=creating_diagonal_in4block(C,W)
+#C,W =changediag(C,W)
+#C=creating_diagonal_in4block(C,W)
 #C,W = changediag(C,W)
-C =changedvar(C,W)
+#C =changedvar(C,W)
 #C,W =deletecolszero(C,W)
-#showmat(C)
+showmat(B,v)
 #showfirststruc(C,W)
 #showsecstruc(C,W)
-print(W)
-enostruc(C,W)
+#print(W)
+#enostruc(C,W)
 #enonewshape(C,W)
 
 #was es alles gibt:
