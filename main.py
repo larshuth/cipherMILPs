@@ -1,6 +1,9 @@
+import cipher
 import generateConstraints as gc
 import cipher as cip
 import visualization as vis
+
+DEBUG = False
 
 
 def main(rounds, cipher, viz):
@@ -29,31 +32,26 @@ def main(rounds, cipher, viz):
 
 
 if __name__ == "__main__":
-    print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
-    viz = int(input())
-    print("How many rounds do you want to generate?")
-    rounds = int(input())
-    print("Which cipher do you want to use? AES(1) or Enocoro(2)?")
-    ciphelp = int(input())
-    if ciphelp == 1:
-        cipher = cip.Aes
+    if not DEBUG:
+        # Asking the user what to generate
+        print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
+        viz = int(input())
+        print("How many rounds do you want to generate?")
+        rounds = int(input())
+
+        # generalizing the cipher question for the possible addition of more ciphers
+        dict_of_ciphers = zip(range(len(cip.AVAILABLE)), cip.AVAILABLE)
+        cipher_question = "Which cipher do you want to use? "
+        for c in dict_of_ciphers:
+            cipher_question += " %s (%s)" % (
+                c[1].__name__, c[0]) + " or"  # I am aware that using private var is bad style
+        cipher_question = cipher_question[:-3] + "?"
+
+        print(cipher_question)
+        ciphelp = int(input())
+        cipher = cipher.AVAILABLE[ciphelp]
+
     else:
-        cipher = cip.Enocoro
+        rounds, cipher, viz = 1, 1, 0
+
     main(rounds, cipher, viz)
-
-###### Structure #####
-
-# def aes(....)
-#   matrix = generateConstraints( dummy, rounds, variablesPerRound, shift )
-
-# def enocoro(....)
-#   matrix = generateConstraints( dummy, rounds, variablesPerRound, shiftBit )
-
-
-# def generateConstraints( dummy, rounds, variablesPerRound, function="" )
-#  Code for one round
-#  After each round, execute function, e.g. shift or shiftBit
-#  if function != ""
-#       func = getattr(, function)
-#       
-#       func(matrix)

@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
+# If a new cipher is added, do not forget to add it to the list stored in the AVAILABLE variable at the end of the file.
+
 
 class Aes:
     """
@@ -554,3 +556,6 @@ class Enocorolin:
             # fourth sbox
             inputsbox.append(36 + (i) * 10)
         return inputsbox
+
+
+AVAILABLE = [Enocoro, Aes]
