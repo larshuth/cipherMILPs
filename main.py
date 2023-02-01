@@ -1,5 +1,4 @@
 import generateConstraints as gc
-import visualizeMatrices as vism
 import cipher as cip
 import visualization as vis
 
