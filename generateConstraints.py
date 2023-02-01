@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 import cipher as cip
 
+
 def generate_smallconstraints(M, line):
     """
     Generates all the constraint-inequalities that consist of a dummy and a x- variable.
@@ -27,14 +28,15 @@ def generate_smallconstraints(M, line):
                 Index of the row that we last filled in
 
     """
-    dummyIndex=np.where((M.getrow(line).toarray()[0]!=0)&(M.getrow(line).toarray()[0]!=1))[0][0]
-    for ind in np.where(M.getrow(line).toarray()[0]==1)[0]:
-        line+=1
-        M[line,ind]=-1
-        M[line,dummyIndex]=1
+    dummyIndex = np.where((M.getrow(line).toarray()[0] != 0) & (M.getrow(line).toarray()[0] != 1))[0][0]
+    for ind in np.where(M.getrow(line).toarray()[0] == 1)[0]:
+        line += 1
+        M[line, ind] = -1
+        M[line, dummyIndex] = 1
     return M, line
-    
-def removezerocols(M,V):
+
+
+def removezerocols(M, V):
     """
     Removes all Columns that have no non-zero value.
 
@@ -45,7 +47,7 @@ def removezerocols(M,V):
 
     V:  list
         List of all variable names. Also vector with which the matrix will be multiplied for the MILP
-    
+
     Returns:
     --------
     M:  csr_matrix
@@ -54,16 +56,17 @@ def removezerocols(M,V):
     V:  list
         List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
-    colszero=[]
-    newV=[]
+    colszero = []
+    newV = []
     M.tocsc()
     for i in range(M.get_shape()[1]):
         if M.getcol(i).count_nonzero() != 0:
             colszero.append(i)
             newV.append(V[i])
-    colszero=np.array(colszero)
-    M = M[:,colszero]
-    return M,newV
+    colszero = np.array(colszero)
+    M = M[:, colszero]
+    return M, newV
+
 
 def new_generate_constraints(rounds, cipher):
     """
@@ -74,7 +77,7 @@ def new_generate_constraints(rounds, cipher):
     rounds  :   int
                 Number of rounds the cipher should go through
 
-    cipher  :   class  
+    cipher  :   class
                 Cipher for which we generate the matrix
 
     Returns:
@@ -83,22 +86,20 @@ def new_generate_constraints(rounds, cipher):
                 Generated constraint matrix for the MILP
 
     V       :   list
-                List that constains the variables. When multiplying the matrix with this
+                List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    line=0
+    line = 0
     A, M, V, next = cipher.initialize(rounds)
     for r in range(rounds):
-        A=cipher.shift_before(A)
-        S = [0,0,0,0]
+        A = cipher.shift_before(A)
+        S = [0, 0, 0, 0]
         for j in cipher.rangenumber(A):
             A, M, V, line, next, S = cipher.gen_long_constraint(A, M, V, line, next, r, j, S)
             M, line = generate_smallconstraints(M, line)
-            line+=1
+            line += 1
         A = cipher.shift_after(A)
     M = M.tocsr()
     V.append("1")
-    M,V = removezerocols(M,V)
+    M, V = removezerocols(M, V)
     return M, V
-
-

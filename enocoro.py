@@ -1,166 +1,176 @@
-
 from distutils.command.build import build
 from ast import literal_eval
-constraintsstring=""
-def constraints(A,S, counter, dummy,M,dic):
-    #wenn optimieren dann vllt dass die constraints als einzigen string returnt werden
-    erstes=A[31],"+",A[32],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[31],"=<0\n"
-    "d"+str(dummy), "-",A[32],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n"
-    print(A[31],"+",A[32],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[31],"=<0\n"
-    "d"+str(dummy), "-",A[32],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[31]="x"+str(counter)
-    counter+=1
-    dummy+=1
 
-    print(A[32],"+",A[2],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[32],"=<0\n"
-    "d"+str(dummy), "-",A[2],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    S[0]="x"+str(counter)
-    counter+=1
-    dummy+=1
+constraintsstring = ""
 
-    print(A[33],"+",A[7],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[33],"=<0\n"
-    "d"+str(dummy), "-",A[7],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    S[1]="x"+str(counter)
-    counter+=1
-    dummy+=1
 
-    print(S[0],"+",S[1],"+ x"+str(counter),"+x"+str(counter+1),"-3d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",S[0],"=<0\n"
-    "d"+str(dummy), "-",S[1],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n"
-    "d"+str(dummy), "-x"+str(counter+1),"=<0\n")
-    S[2]="x"+str(counter)
-    counter+=1
-    S[3]="x"+str(counter)
-    counter+=1
-    dummy+=1
+def constraints(A, S, counter, dummy, M, dic):
+    # wenn optimieren dann vllt dass die constraints als einzigen string returnt werden
+    erstes = A[31], "+", A[32], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+    "d" + str(dummy), "-", A[31], "=<0\n"
+    "d" + str(dummy), "-", A[32], "=<0\n"
+    "d" + str(dummy), "-x" + str(counter), "=<0\n"
+    print(A[31], "+", A[32], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                       "d" + str(dummy), "-", A[31], "=<0\n"
+                                                                                                     "d" + str(dummy),
+          "-", A[32], "=<0\n"
+                      "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[31] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    print(A[16],"+",S[2],"+ x"+str(counter),"-2d"+ str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[16],"=<0\n"
-    "d"+str(dummy), "-",S[2],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[32]="x"+str(counter)
-    counter+=1
-    dummy+=1
+    print(A[32], "+", A[2], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                      "d" + str(dummy), "-", A[32], "=<0\n"
+                                                                                                    "d" + str(dummy),
+          "-", A[2], "=<0\n"
+                     "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    S[0] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    print(A[29],"+",S[3],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[29],"=<0\n"
-    "d"+str(dummy), "-",S[3],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[33]="x"+str(counter)
-    counter+=1
-    dummy+=1
+    print(A[33], "+", A[7], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                      "d" + str(dummy), "-", A[33], "=<0\n"
+                                                                                                    "d" + str(dummy),
+          "-", A[7], "=<0\n"
+                     "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    S[1] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    print(A[2],"+",A[6],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[2],"=<0\n"
-    "d"+str(dummy), "-",A[6],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[2]="x"+str(counter)
-    counter+=1
-    dummy+=1
+    print(S[0], "+", S[1], "+ x" + str(counter), "+x" + str(counter + 1), "-3d" + str(dummy), "=<0\n"
+                                                                                              "d" + str(dummy), "-",
+          S[0], "=<0\n"
+                "d" + str(dummy), "-", S[1], "=<0\n"
+                                             "d" + str(dummy), "-x" + str(counter), "=<0\n"
+                                                                                    "d" + str(dummy),
+          "-x" + str(counter + 1), "=<0\n")
+    S[2] = "x" + str(counter)
+    counter += 1
+    S[3] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    print(A[7],"+",A[15],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[7],"=<0\n"
-    "d"+str(dummy), "-",A[15],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[7]="x"+str(counter)
-    counter+=1
-    dummy+=1
+    print(A[16], "+", S[2], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                      "d" + str(dummy), "-", A[16], "=<0\n"
+                                                                                                    "d" + str(dummy),
+          "-", S[2], "=<0\n"
+                     "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[32] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    print(A[16],"+",A[28],"+ x"+str(counter),"-2d"+str(dummy),"=<0\n"
-    "d"+str(dummy), "-",A[16],"=<0\n"
-    "d"+str(dummy), "-",A[28],"=<0\n"
-    "d"+str(dummy), "-x"+str(counter),"=<0\n")
-    A[16]="x"+str(counter)
-    counter+=1
-    dummy+=1
+    print(A[29], "+", S[3], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                      "d" + str(dummy), "-", A[29], "=<0\n"
+                                                                                                    "d" + str(dummy),
+          "-", S[3], "=<0\n"
+                     "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[33] = "x" + str(counter)
+    counter += 1
+    dummy += 1
 
-    #Verschieben
-    la=A[31]
-    for i in range(30,-1,-1):
+    print(A[2], "+", A[6], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                     "d" + str(dummy), "-", A[2], "=<0\n"
+                                                                                                  "d" + str(dummy), "-",
+          A[6], "=<0\n"
+                "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[2] = "x" + str(counter)
+    counter += 1
+    dummy += 1
+
+    print(A[7], "+", A[15], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                      "d" + str(dummy), "-", A[7], "=<0\n"
+                                                                                                   "d" + str(dummy),
+          "-", A[15], "=<0\n"
+                      "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[7] = "x" + str(counter)
+    counter += 1
+    dummy += 1
+
+    print(A[16], "+", A[28], "+ x" + str(counter), "-2d" + str(dummy), "=<0\n"
+                                                                       "d" + str(dummy), "-", A[16], "=<0\n"
+                                                                                                     "d" + str(dummy),
+          "-", A[28], "=<0\n"
+                      "d" + str(dummy), "-x" + str(counter), "=<0\n")
+    A[16] = "x" + str(counter)
+    counter += 1
+    dummy += 1
+
+    # Verschieben
+    la = A[31]
+    for i in range(30, -1, -1):
         temp = A[i]
-        A[i+1]=temp
-    A[0]=la
+        A[i + 1] = temp
+    A[0] = la
 
-    #print(A)
-    return A,S,counter,dummy
+    # print(A)
+    return A, S, counter, dummy
 
 
-
-counter=0
-#Array mit den Bits die momentan in der Cipher sind
-A=[]
+counter = 0
+# Array mit den Bits die momentan in der Cipher sind
+A = []
 for e in range(34):
-    A.append("x"+str(counter))
-    counter+=1
+    A.append("x" + str(counter))
+    counter += 1
 
-S=[0,0,0,0]
+S = [0, 0, 0, 0]
 
-dummy=0
+dummy = 0
 
-rounds=3
-M=[]
-dic={}
+rounds = 3
+M = []
+dic = {}
 
-#initialisieren der Matrix
-for i in range(37*rounds):
+# initialisieren der Matrix
+for i in range(37 * rounds):
     M.append([])
-    for e in range(34+19*rounds):
+    for e in range(34 + 19 * rounds):
         M[i].append(0)
 
-
-#In dem dictionary wird für jede Variable deren Position gespeichert
-c=0
-for a in range(34+19*rounds):
-    if a<9*rounds:
-        dic["d"+str(a)]=a
+# In dem dictionary wird für jede Variable deren Position gespeichert
+c = 0
+for a in range(34 + 19 * rounds):
+    if a < 9 * rounds:
+        dic["d" + str(a)] = a
     else:
-        dic["x"+str(c)]=a
-        c+=1
+        dic["x" + str(c)] = a
+        c += 1
 
-
-#hier wird das Array durch die Cipher gejagt für die jeweilige Anzahl an Runden
+# hier wird das Array durch die Cipher gejagt für die jeweilige Anzahl an Runden
 for a in range(rounds):
-    A,S,counter,dummy= constraints(A,S,counter, dummy,M,dic)
+    A, S, counter, dummy = constraints(A, S, counter, dummy, M, dic)
 
 
-#FROM HERE ON THE CODE IS (ALMOST) THE SAME AS FOR AES 
+# FROM HERE ON THE CODE IS (ALMOST) THE SAME AS FOR AES
 
-#takes string of constraints and fills in the matrix
-#input: string of the constraints, dictionary of order of the variables, and the Matrix
-def buildmat(lala,dic,M):
-    lal= lala.splitlines()
+# takes string of constraints and fills in the matrix
+# input: string of the constraints, dictionary of order of the variables, and the Matrix
+def buildmat(lala, dic, M):
+    lal = lala.splitlines()
     for a in lal:
-        if a=="":
+        if a == "":
             lal.remove(a)
     print(lal)
-    o=0
+    o = 0
     for i in lal:
         for key in dic.keys():
-            if "- "+key+" " in i or "-"+key+" " in i:
-                M[o][dic[key]]=-1
-            elif "-2"+key+" " in i:
-                M[o][dic[key]]=-2
-            elif "-3"+key+" " in i:
-                M[o][dic[key]]=-3
-            elif key+" " in i:
-                M[o][dic[key]]=1
-            
-        o+=1
+            if "- " + key + " " in i or "-" + key + " " in i:
+                M[o][dic[key]] = -1
+            elif "-2" + key + " " in i:
+                M[o][dic[key]] = -2
+            elif "-3" + key + " " in i:
+                M[o][dic[key]] = -3
+            elif key + " " in i:
+                M[o][dic[key]] = 1
+
+        o += 1
     return M
 
-#i am lowkey embarrassed by this mess, these are the sorted strings
-#TO DO: function that sorts the constraints by itself (hier nur lange constraints nach oben)
-#for 1 round
-stri="""x31 + x32 + x34 -2d0 =<0
+
+# i am lowkey embarrassed by this mess, these are the sorted strings
+# TO DO: function that sorts the constraints by itself (hier nur lange constraints nach oben)
+# for 1 round
+stri = """x31 + x32 + x34 -2d0 =<0
 x32 + x2 + x35 -2d1 =<0
 x33 + x7 + x36 -2d2 =<0
 x35 + x36 + x37 +x38 -3d3 =<0
@@ -206,8 +216,8 @@ d8 - x16 =<0
 d8 - x28 =<0
 d8 -x43 =<0"""
 
-#for 3 rounds:
-stri3="""x31 + x32 + x34 -2d0 =<0
+# for 3 rounds:
+stri3 = """x31 + x32 + x34 -2d0 =<0
 x32 + x2 + x35 -2d1 =<0
 x33 + x7 + x36 -2d2 =<0
 x35 + x36 + x37 +x38 -3d3 =<0
@@ -346,8 +356,8 @@ d26 - x14 =<0
 d26 - x26 =<0
 d26 -x63 =<0"""
 
-#for 4 rounds:
-stri4="""x31 + x32 + x34 -2d0 =<0
+# for 4 rounds:
+stri4 = """x31 + x32 + x34 -2d0 =<0
 x32 + x2 + x35 -2d1 =<0
 x33 + x7 + x36 -2d2 =<0
 x35 + x36 + x37 +x38 -3d3 =<0
@@ -532,50 +542,52 @@ d35 - x13 =<0
 d35 - x25 =<0
 d35 -x73 =<0
 """
-#print(ma)
 
-#this function takes the the last part of the matrix (with 2 variables in a row, not more)
-#and takes the position of their second variable, puts it in a dictionary
-#then we sort the dictionary and turn the sorted rows into a matrix again
+
+# print(ma)
+
+# this function takes the the last part of the matrix (with 2 variables in a row, not more)
+# and takes the position of their second variable, puts it in a dictionary
+# then we sort the dictionary and turn the sorted rows into a matrix again
 def sortcon(ma):
-    order={}
+    order = {}
     for li in ma:
         indices = [i for i, x in enumerate(li) if x != 0]
-        order[str(li)]=indices[1]
-    dic2=dict(sorted(order.items(),key= lambda x:x[1]))
-    #print(dic2)
-    mat= list(dic2.keys())
+        order[str(li)] = indices[1]
+    dic2 = dict(sorted(order.items(), key=lambda x: x[1]))
+    # print(dic2)
+    mat = list(dic2.keys())
     for i in range(len(mat)):
         mat[i] = literal_eval(mat[i])
     return mat
-  
-ma= buildmat(stri3,dic,M)
-#print(ma)
-
-#we sort only the last constraints, not the long ones 
-malast=ma[(9*rounds):]
-malast= sortcon(malast)
-
-#now we add them together and get the sorted matrix (which has a diagonal now)
-mat=ma[:(9*rounds)]+malast
 
 
-#this function just turns the Matrix into an output that can be used for latex
+ma = buildmat(stri3, dic, M)
+# print(ma)
+
+# we sort only the last constraints, not the long ones
+malast = ma[(9 * rounds):]
+malast = sortcon(malast)
+
+# now we add them together and get the sorted matrix (which has a diagonal now)
+mat = ma[:(9 * rounds)] + malast
+
+
+# this function just turns the Matrix into an output that can be used for latex
 def latex(matrix):
-    input=""
+    input = ""
     for i in matrix:
-        zahl= 0
+        zahl = 0
         for j in i:
-            if zahl!=0:
-                input+=" & "
-            if j!=0:
-                input= input+str(j)
-            zahl+=1
-        input+="\\\ \n"
+            if zahl != 0:
+                input += " & "
+            if j != 0:
+                input = input + str(j)
+            zahl += 1
+        input += "\\\ \n"
     return input
-    
-#print(mat)
+
+
+# print(mat)
 
 print(latex(mat))
-
-

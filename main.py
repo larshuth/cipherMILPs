@@ -4,7 +4,7 @@ import cipher as cip
 import visualization as vis
 
 
-def main (rounds, cipher, viz):
+def main(rounds, cipher, viz):
     '''
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
 
@@ -35,12 +35,12 @@ if __name__ == "__main__":
     print("How many rounds do you want to generate?")
     rounds = int(input())
     print("Which cipher do you want to use? AES(1) or Enocoro(2)?")
-    ciphelp= int(input())
+    ciphelp = int(input())
     if ciphelp == 1:
-        cipher=cip.Aes
-    else: cipher = cip.Enocoro
+        cipher = cip.Aes
+    else:
+        cipher = cip.Enocoro
     main(rounds, cipher, viz)
-
 
 ###### Structure #####
 

@@ -3,62 +3,63 @@ from ast import literal_eval
 rounds = 4
 
 next = 0
-dummy =0 
+dummy = 0
 
 
 def shiftrows(a):
-    tmp = [0,0,0,0]
-    for i in range (0,4):
-        for j in range(0,4):
-            tmp[j]= a[i][(j+i)%4]
-        for j in range(0,4):
-            a[i][j] = tmp[j]    
+    tmp = [0, 0, 0, 0]
+    for i in range(0, 4):
+        for j in range(0, 4):
+            tmp[j] = a[i][(j + i) % 4]
+        for j in range(0, 4):
+            a[i][j] = tmp[j]
+
 
 def mixcolumn(a):
     global next
     global dummy
-    for j in range(0,4):
+    for j in range(0, 4):
         for i in range(4):
-            print("x"+ str(a[i][j])+" +", end = " ")
+            print("x" + str(a[i][j]) + " +", end=" ")
         for i in range(3):
-            print("x"+str(next+i)+" +", end = " ")
-        print("x"+str((next+3))+" - 5d"+str(dummy)+" >= 0")
+            print("x" + str(next + i) + " +", end=" ")
+        print("x" + str((next + 3)) + " - 5d" + str(dummy) + " >= 0")
 
         for i in range(4):
-            print("d"+str(dummy)+"-x"+str(a[i][j])+" >= 0")
+            print("d" + str(dummy) + "-x" + str(a[i][j]) + " >= 0")
         for i in range(4):
-            print("d"+str(dummy)+"-x"+str(next)+" >= 0")
-            a[i][j]= next
-            next= next+1
-        dummy= dummy+1
-        
-    #for i in range(4):
+            print("d" + str(dummy) + "-x" + str(next) + " >= 0")
+            a[i][j] = next
+            next = next + 1
+        dummy = dummy + 1
+
+    # for i in range(4):
     #    for j in range(4):
     #        print(a[i][j], end=" ")
     #    print("\n")
 
 
-a = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+a = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
 
 for i in range(4):
     for j in range(4):
-        a[i][j]=next
-        next=next+1
+        a[i][j] = next
+        next = next + 1
 
 print("minimize")
-for i in range(rounds*16-1):
-    print("x"+str(i)+" +", end=" ")
-print("x"+str(rounds*16-1))
+for i in range(rounds * 16 - 1):
+    print("x" + str(i) + " +", end=" ")
+print("x" + str(rounds * 16 - 1))
 
 print("subject to")
 for r in range(rounds):
     shiftrows(a)
     mixcolumn(a)
 
-#for i in range(4,12):
+# for i in range(4,12):
 #    print("d_{",i,"}\\\\")
 
-stri4= """
+stri4 = """
 x0 + x5 + x10 + x15 + x16 + x17 + x18 + x19 - 5d0 >= 0
 d0-x0 >= 0
 d0-x5 >= 0
@@ -204,8 +205,7 @@ d15-x77 >= 0
 d15-x78 >= 0
 d15-x79 >= 0"""
 
-
-stri3= """
+stri3 = """
 x0 + x5 + x10 + x15 + x16 + x17 + x18 + x19 - 5d0 >= 0
 x1 + x6 + x11 + x12 + x20 + x21 + x22 + x23 - 5d1 >= 0
 x2 + x7 + x8 + x13 + x24 + x25 + x26 + x27 - 5d2 >= 0
@@ -318,86 +318,91 @@ d11-x62 >= 0
 d11-x63 >= 0
 """
 
-M=[]
-dic={}
+M = []
+dic = {}
 
-for i in range(36*3):
+for i in range(36 * 3):
     M.append([])
-    for e in range(16+20*3):
+    for e in range(16 + 20 * 3):
         M[i].append(0)
 
-c=0
-for a in range(16+20*3):
-    if a<4*3:
-        dic["d"+str(a)]=a
+c = 0
+for a in range(16 + 20 * 3):
+    if a < 4 * 3:
+        dic["d" + str(a)] = a
     else:
-        dic["x"+str(c)]=a
-        c+=1
+        dic["x" + str(c)] = a
+        c += 1
 
-def buildmat(lala,dic,M):
+
+def buildmat(lala, dic, M):
     print("tst")
-    items=dic.keys()
+    items = dic.keys()
     print(items)
-    lal= lala.splitlines()
+    lal = lala.splitlines()
     for a in lal:
-        if a=="":
+        if a == "":
             lal.remove(a)
     print(lal)
     print(len(lal))
-    o=0
+    o = 0
     for i in lal:
         for key in dic.keys():
-            if "- "+key+" " in i or "-"+key+" " in i:
-                M[o][dic[key]]=-1
-            elif "-2"+key+" " in i:
-                M[o][dic[key]]=-2
-            elif "- 5"+key+" " in i:
-                M[o][dic[key]]=-5
-            
-            elif key+" " in i or key+"-" in i:
-                #print(dic[key])
-                M[o][dic[key]]=1
-            
-        o+=1
-    #print(M)
+            if "- " + key + " " in i or "-" + key + " " in i:
+                M[o][dic[key]] = -1
+            elif "-2" + key + " " in i:
+                M[o][dic[key]] = -2
+            elif "- 5" + key + " " in i:
+                M[o][dic[key]] = -5
+
+            elif key + " " in i or key + "-" in i:
+                # print(dic[key])
+                M[o][dic[key]] = 1
+
+        o += 1
+    # print(M)
     return M
 
+
 def sortcon(ma):
-    order={}
+    order = {}
     for li in ma:
         indices = [i for i, x in enumerate(li) if x != 0]
-        #print(indices)
-        order[str(li)]=indices[1]
-    dic2=dict(sorted(order.items(),key= lambda x:x[1]))
+        # print(indices)
+        order[str(li)] = indices[1]
+    dic2 = dict(sorted(order.items(), key=lambda x: x[1]))
     print(dic2)
-    mat= list(dic2.keys())
+    mat = list(dic2.keys())
     for i in range(len(mat)):
         mat[i] = literal_eval(mat[i])
-    #print(mat)
+    # print(mat)
     return mat
-  
-ma= buildmat(stri3,dic,M)
-#print(ma)
-#wenn 1 runde dann 9
-malast=ma[(4*3):]
 
-malast= sortcon(malast)
 
-mat=ma[:(4*3)]+malast
+ma = buildmat(stri3, dic, M)
+# print(ma)
+# wenn 1 runde dann 9
+malast = ma[(4 * 3):]
+
+malast = sortcon(malast)
+
+mat = ma[:(4 * 3)] + malast
+
 
 def latex(matrix):
-    input=""
+    input = ""
     for i in matrix:
-        zahl= 0
+        zahl = 0
         for j in i:
-            if zahl!=0:
-                input+=" & "
-            if j!=0:
-                input= input+str(j)
-            zahl+=1
-        input+="\\\ \n"
+            if zahl != 0:
+                input += " & "
+            if j != 0:
+                input = input + str(j)
+            zahl += 1
+        input += "\\\ \n"
     return input
-    
-#print(mat)
+
+
+# print(mat)
 
 print(latex(mat))

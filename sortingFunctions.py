@@ -6,7 +6,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import colors
 
-#https://stackoverflow.com/questions/28334719/swap-rows-csr-matrix-scipy
+
+# https://stackoverflow.com/questions/28334719/swap-rows-csr-matrix-scipy
 
 def permutate_rows(H, idenRows):
     """
@@ -32,6 +33,7 @@ def permutate_rows(H, idenRows):
     H = x.tocsr()
     return H
 
+
 def permutate_columns(H, idenCols):
     """
     This function permutates the columns in the order that is given.
@@ -56,6 +58,7 @@ def permutate_columns(H, idenCols):
     H = x.tocsr()
     return H
 
+
 def long_constraints_to_top(M):
     """
     This function permutates the rows(constraints) in a way such that the constraints with 
@@ -72,13 +75,14 @@ def long_constraints_to_top(M):
     M:  csr_matrix
         Permutated matrix
         """
-    dic={}
+    dic = {}
     for i in range(M.get_shape()[0]):
         dic[i] = M.getrow(i).count_nonzero()
-    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=True))
+    dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=True))
     sortedrows = list(dic2.keys())
     M = permutate_rows(M, sortedrows)
     return M
+
 
 def full_columns_begin(M):
     """
@@ -98,10 +102,11 @@ def full_columns_begin(M):
     dic = {}
     for i in range(M.get_shape()[1]):
         dic[i] = M.getcol(i).count_nonzero()
-    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=True))
+    dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=True))
     sortedcols = list(dic2.keys())
     M = permutate_columns(M, sortedcols)
     return M
+
 
 def d_var_to_beginning(M, V):
     """
@@ -124,21 +129,22 @@ def d_var_to_beginning(M, V):
     newV:   list
             List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
-    sortedindices=[]
-    orderofxvar=[]
+    sortedindices = []
+    orderofxvar = []
     for i in V:
-        if i[0]=="d":
+        if i[0] == "d":
             sortedindices.append(V.index(i))
-        elif i[0]=="x":
+        elif i[0] == "x":
             orderofxvar.append(V.index(i))
         else:
             first = [V.index(i)]
     sortedindices = first + sortedindices + orderofxvar
-    newV=[V[i] for i in sortedindices]
+    newV = [V[i] for i in sortedindices]
     M = permutate_columns(M, sortedindices)
     return M, newV
 
-def creating_diagonal_in4block(M,V):
+
+def creating_diagonal_in4block(M, V):
     """
     This function permutates the rows of the matrix, but not the ones in the block at the top.
     They are permutated in a way such that a diagonal will appear alongisde an vertical block on the left.
@@ -159,21 +165,22 @@ def creating_diagonal_in4block(M,V):
     V:  list
         List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
-    dic={}
-    #count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
-    count=1 #begins at 1 because of the constraint that ensures that there is one active sbox
+    dic = {}
+    # count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
+    count = 1  # begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
-        if e[0]=="d":
-            count+=1
+        if e[0] == "d":
+            count += 1
     for i in range(M.get_shape()[0]):
-        if i>=count:
+        if i >= count:
             dic[i] = M.getrow(i).nonzero()[1][1]
-    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=False))
+    dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=False))
     sortedrows = list(dic2.keys())
     beginofrows = [i for i in range(count)]
     sortedrows = beginofrows + sortedrows
     M = permutate_rows(M, sortedrows)
     return M
+
 
 def create_fourblock(M, V):
     """
@@ -192,53 +199,55 @@ def create_fourblock(M, V):
     M:  csr_matrix
         Permutated matrix
     """
-    M, V=d_var_to_beginning(M, V)
-    B=long_constraints_to_top(M)
-    C=creating_diagonal_in4block(B, V)
+    M, V = d_var_to_beginning(M, V)
+    B = long_constraints_to_top(M)
+    C = creating_diagonal_in4block(B, V)
     return C, V
 
-def changedvar(M,V):
+
+def changedvar(M, V):
     """
     changes the columns of the d-variables in order to get a better structure (does not work)
     """
-    dic={}
-    #count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    dic = {}
+    # count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
+    count = 0  # begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
-        if e[0]!="x":
-            count+=1
-    M=M.tocsc()
+        if e[0] != "x":
+            count += 1
+    M = M.tocsc()
     for i in range(M.get_shape()[1]):
-        if i<count and i!=0:
+        if i < count and i != 0:
             dic[i] = list(M.getcol(i).nonzero()[0])[0]
-            #hier letzte Zahl ändern und .inke spalte wird anders sortiert
+            # hier letzte Zahl ändern und .inke spalte wird anders sortiert
             print(M.getcol(i).nonzero())
-    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=False))
-    sortedrows = [0]+list(dic2.keys())
-    beginofrows = [i for i in range(count,M.get_shape()[1])]
-    sortedrows =sortedrows + beginofrows
+    dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=False))
+    sortedrows = [0] + list(dic2.keys())
+    beginofrows = [i for i in range(count, M.get_shape()[1])]
+    sortedrows = sortedrows + beginofrows
     M = permutate_columns(M, sortedrows)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
     im = plt.imshow(data2D, cmap="GnBu_r")
     plt.colorbar(im)
-    #plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    
-    #vertikale striche
-    leng= (M.get_shape()[1])-17-count
-    teil = leng/16
-    #for e in range(int(teil)+2):
-        #plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+    # plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
 
-    #horizontale linien
-    leng2=(M.get_shape()[0])-1-count
+    # vertikale striche
+    leng = (M.get_shape()[1]) - 17 - count
+    teil = leng / 16
+    # for e in range(int(teil)+2):
+    # plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+
+    # horizontale linien
+    leng2 = (M.get_shape()[0]) - 1 - count
     teil2 = leng2 / 32
-    #for e in range(int(teil2)+1):
-        #plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    #plt.show()
+    # for e in range(int(teil2)+1):
+    # plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    # plt.show()
     return M
-    #idee: da wo die diagonale gemacht wird die sachen die auf der gleichen höhe sind so lassen und nicht tauschen nach dem ersten element
+    # idee: da wo die diagonale gemacht wird die sachen die auf der gleichen höhe sind so lassen und nicht tauschen nach dem ersten element
+
 
 def block_structure(M, V):
     """
@@ -247,295 +256,319 @@ def block_structure(M, V):
     This function should create multiple blocks for the matrix
     NOT FINISHED
     """
-    #idee: oberer block hat Länge Anzahl(lange constraints)+1
-    count=0
+    # idee: oberer block hat Länge Anzahl(lange constraints)+1
+    count = 0
     for e in V:
-        if e[0]=="d":
-            count+=1
-        else: break
-    ind= [i for i in range(count)]
-    out1 = M.tocsc()[:,ind]
-    blockC = out1.tocsr()[ind,:]
-    #Block C (tc) has to be AT LEAST this big
+        if e[0] == "d":
+            count += 1
+        else:
+            break
+    ind = [i for i in range(count)]
+    out1 = M.tocsc()[:, ind]
+    blockC = out1.tocsr()[ind, :]
+    # Block C (tc) has to be AT LEAST this big
 
-    #jetzt: wie höhe von Block A und B bestimmen? eig nur rundenanzahl aber wie findet man die raus?
-    #vllt einfach alle langen constraints nehmen, also ab wenn weniger sachen in constraints sind.
-    #liste die zählt wie viele constraints in jeder row sind? und dann gucken wann die größte abstufung ist?
-    #alles was mehr als 2 in der reihe hat ist nicht mehr in den oberen blöcken drin
-    numofvarinrow=[]
+    # jetzt: wie höhe von Block A und B bestimmen? eig nur rundenanzahl aber wie findet man die raus?
+    # vllt einfach alle langen constraints nehmen, also ab wenn weniger sachen in constraints sind.
+    # liste die zählt wie viele constraints in jeder row sind? und dann gucken wann die größte abstufung ist?
+    # alles was mehr als 2 in der reihe hat ist nicht mehr in den oberen blöcken drin
+    numofvarinrow = []
     print(M.count_nonzero())
     for i in range(M.get_shape()[0]):
-            numofvarinrow.append(len(list(M.getrow(i).nonzero()[1])))
+        numofvarinrow.append(len(list(M.getrow(i).nonzero()[1])))
     print(numofvarinrow)
     a = np.array(numofvarinrow)
-    num = (np.where(a == 2)[0][0]) #row of first constraint that contains 2 elements
-    sc = num-0.5
-    test =M.toarray()
+    num = (np.where(a == 2)[0][0])  # row of first constraint that contains 2 elements
+    sc = num - 0.5
+    test = M.toarray()
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
     im = plt.imshow(data2D, cmap="GnBu_r")
     plt.colorbar(im)
-    plt.plot([i for i in range(M.get_shape()[1])],[sc for i in range(M.get_shape()[1])])
-    plt.plot([count for i in range(int(sc+0.5))],[i for i in range(int(sc+0.5))])
+    plt.plot([i for i in range(M.get_shape()[1])], [sc for i in range(M.get_shape()[1])])
+    plt.plot([count for i in range(int(sc + 0.5))], [i for i in range(int(sc + 0.5))])
     plt.show()
-    
-def twodiag(M,V):
+
+
+def twodiag(M, V):
     """
     Changes the diagonal that consists of two variables on top of each other into two diagonals that have only one line
     """
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
-    oldorder=[]
+    count = 0  # begins at 1 because of the constraint that ensures that there is one active sbox
+    oldorder = []
     for i in range(M.get_shape()[0]):
         oldorder.append(i)
     for e in V:
-        if e[0]=="d":
-            count+=1
-    neworder=[]
-    for i in range(count+17):
+        if e[0] == "d":
+            count += 1
+    neworder = []
+    for i in range(count + 17):
         neworder.append(i)
-    leng2=(M.get_shape()[0])-1-count
+    leng2 = (M.get_shape()[0]) - 1 - count
     teil2 = leng2 / 32
-    for e in range(int(teil2)-1):
-        for i in range(count+17+32*e,count+17+32*(e+1)):
-            if i %2 == 1:
+    for e in range(int(teil2) - 1):
+        for i in range(count + 17 + 32 * e, count + 17 + 32 * (e + 1)):
+            if i % 2 == 1:
                 neworder.append(i)
-        for i in range(count+17+32*e,count+17+32*(e+1)):
-            if i %2 == 0:
+        for i in range(count + 17 + 32 * e, count + 17 + 32 * (e + 1)):
+            if i % 2 == 0:
                 neworder.append(i)
-    for i in range(16,0,-1):
-        neworder.append(M.get_shape()[0]-i)
-    C = permutate_rows(M,neworder)
+    for i in range(16, 0, -1):
+        neworder.append(M.get_shape()[0] - i)
+    C = permutate_rows(M, neworder)
     return C
 
-def changediag(M,V):
+
+def changediag(M, V):
     """
     Changes the columns of the diagonal (the A-blocks) so that the columns with the most non-zero values
     are at the beginning.
     """
-    dic={}
-    count=0
+    dic = {}
+    count = 0
     for e in V:
-        if e[0]!="x":
-            count+=1
+        if e[0] != "x":
+            count += 1
     M.tocsc()
     for i in range(count, M.get_shape()[1]):
         dic[i] = M.getcol(i).count_nonzero()
-    dic2 = dict(sorted(dic.items(),key= lambda x:x[1],reverse=True))
-    sortedcols = [i for i in range(count)]+list(dic2.keys())
+    dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=True))
+    sortedcols = [i for i in range(count)] + list(dic2.keys())
     M = permutate_columns(M, sortedcols)
-    newV=[V[i] for i in sortedcols]
-    return M,newV
+    newV = [V[i] for i in sortedcols]
+    return M, newV
 
-def showmat(M,V):
+
+def showmat(M, V):
     """
     Visualizes the matrix.
     """
-    count=0 
+    count = 0
     for e in V:
-        if e[0]!="x":
-            count+=1
+        if e[0] != "x":
+            count += 1
 
-    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color="black")
-    for e in range(count,M.get_shape()[0],28):
-        plt.plot([i for i in range(M.get_shape()[1])],[e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color="black")
-    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+    plt.plot([i for i in range(M.get_shape()[1])], [count - 0.5 for i in range(M.get_shape()[1])], linewidth=0.5,
+             color="black")
+    for e in range(count, M.get_shape()[0], 28):
+        plt.plot([i for i in range(M.get_shape()[1])], [e - 0.5 for i in range(M.get_shape()[1])], linewidth=0.5,
+                 color="black")
+    plt.plot([count - 0.5 for i in range(M.get_shape()[0])], [i for i in range(M.get_shape()[0])], linewidth=0.5)
 
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['#00315F','#00315F','#00315F', '#00618F','#00618F','white','#00A1CF'])
-    #bounds=[-10,-1,-0.5,0.5,1]
-    #norm = colors.BoundaryNorm(bounds, cmap.N)
+    cmap = colors.ListedColormap(['#00315F', '#00315F', '#00315F', '#00618F', '#00618F', 'white', '#00A1CF'])
+    # bounds=[-10,-1,-0.5,0.5,1]
+    # norm = colors.BoundaryNorm(bounds, cmap.N)
     im = plt.imshow(data2D, cmap=cmap)
-    cb =plt.colorbar(im)
-    
-    #cmap=cmap, norm=norm, boundaries=bounds, ticks=[-5,-1,0, 1]
+    cb = plt.colorbar(im)
+
+    # cmap=cmap, norm=norm, boundaries=bounds, ticks=[-5,-1,0, 1]
     cb.remove()
     ax = plt.gca()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    #plt.savefig("AES3rnative",dpi=400,bbox_inches='tight')
+    # plt.savefig("AES3rnative",dpi=400,bbox_inches='tight')
     plt.show()
 
-def showfirststruc(M,V):
+
+def showfirststruc(M, V):
     """
     shows a structure for AES when it has a special form.
     """
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+    count = 0  # begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
-        if e[0]!="x":
-            count+=1
+        if e[0] != "x":
+            count += 1
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    cmap = colors.ListedColormap(['teal', 'teal', 'teal', 'lightseagreen', 'lightseagreen', 'white', 'turquoise'])
     im = plt.imshow(data2D, cmap=cmap)
     plt.colorbar(im)
-    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    
-    #vertikale striche
-    leng= (M.get_shape()[1])-17-count
-    teil = leng/16
-    for e in range(int(teil)+2):
-        plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+    plt.plot([i for i in range(M.get_shape()[1])], [count - 0.5 for i in range(M.get_shape()[1])], linewidth=0.5)
 
-    #horizontale linien
-    leng2=(M.get_shape()[0])-1-count
+    # vertikale striche
+    leng = (M.get_shape()[1]) - 17 - count
+    teil = leng / 16
+    for e in range(int(teil) + 2):
+        plt.plot([count + 16 * e - 0.5 for i in range(M.get_shape()[0])], [i for i in range(M.get_shape()[0])],
+                 linewidth=0.5)
+
+    # horizontale linien
+    leng2 = (M.get_shape()[0]) - 1 - count
     teil2 = leng2 / 32
-    for e in range(int(teil2)+1):
-        plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+    for e in range(int(teil2) + 1):
+        plt.plot([i for i in range(M.get_shape()[1])], [count + 16 + 32 * e - 0.5 for i in range(M.get_shape()[1])],
+                 linewidth=0.5)
     plt.show()
 
-def showsecstruc(M,V):
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+
+def showsecstruc(M, V):
+    count = 0  # begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
-        if e[0]!="x":
-            count+=1
-    num = M.getcol(M.get_shape()[1]-1).count_nonzero()
-    leng= M.get_shape()[1]-count
+        if e[0] != "x":
+            count += 1
+    num = M.getcol(M.get_shape()[1] - 1).count_nonzero()
+    leng = M.get_shape()[1] - count
     for i in range(count, M.get_shape()[1]):
         if M.getcol(i).count_nonzero() == num:
-            siz=M.get_shape()[1]-i
+            siz = M.get_shape()[1] - i
             break
-    print(leng,siz)
-    c=1
+    print(leng, siz)
+    c = 1
     while True:
-        if leng %(siz/c) ==0:
+        if leng % (siz / c) == 0:
             break
-        c+=1
-    siz=int(siz/c)
-    numofb=leng/siz
-    print(numofb,siz)
+        c += 1
+    siz = int(siz / c)
+    numofb = leng / siz
+    print(numofb, siz)
     for e in range(int(numofb)):
-        #print(M.getcol(count+siz*e).nonzero()[0][-1])
-        if e ==0: anfang=0
-        elif len(M.getcol(count+siz*(e-1)).nonzero()[0])>4:
-            anfang=M.getcol(count+siz*(e-1)).nonzero()[0][-2]
-        else: anfang= M.getcol(count+siz*(e-1)).nonzero()[0][-1]
-        
-        if e==numofb-1 or e==0: ende= M.get_shape()[0]
-        else: 
-            ende=M.getcol(count+siz*(e+1)-1).nonzero()[0][-1]
-            print(M.getcol(count+siz*(e+1)-1).nonzero()[0])
-        plt.plot([count+siz*e-0.5 for i in range(anfang,ende+2)],[i-0.5 for i in range(anfang,ende+2)],linewidth = 0.5,color="grey")
-        plt.plot([count+siz*e-0.5 for i in range(count+1)],[i-0.5 for i in range(count+1)],linewidth = 0.5, color="grey")
-        
-        #horizontal
-        if len(M.getcol(count+siz*e).nonzero()[0])>4:
-            eintrag= M.getcol(count+siz*e).nonzero()[0][-2]
-        else: eintrag =M.getcol(count+siz*e).nonzero()[0][-1]
-        if e==0:
-            plt.plot([i-0.5 for i in range(M.get_shape()[1]+1)],[eintrag-0.5 for i in range(M.get_shape()[1]+1)],linewidth = 0.5,color="grey")
+        # print(M.getcol(count+siz*e).nonzero()[0][-1])
+        if e == 0:
+            anfang = 0
+        elif len(M.getcol(count + siz * (e - 1)).nonzero()[0]) > 4:
+            anfang = M.getcol(count + siz * (e - 1)).nonzero()[0][-2]
         else:
-            plt.plot([i-0.5 for i in range(count+1)],[eintrag-0.5 for i in range(count+1)],linewidth = 0.5,color="grey")
-            plt.plot([i-0.5 for i in range(count+siz*(e-1),count+siz*(e+1)+1)],[eintrag-0.5 for i in range(count+siz*(e-1),count+siz*(e+1)+1)],linewidth = 0.5,color="grey")
-         
-        #für beispiel generieren
-        #plt.plot([i for i in range(M.get_shape()[1])],[4.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
-        #plt.plot([i for i in range(M.get_shape()[1])],[8.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
-        #hier gucken von der jeweilien column wo das größte
+            anfang = M.getcol(count + siz * (e - 1)).nonzero()[0][-1]
+
+        if e == numofb - 1 or e == 0:
+            ende = M.get_shape()[0]
+        else:
+            ende = M.getcol(count + siz * (e + 1) - 1).nonzero()[0][-1]
+            print(M.getcol(count + siz * (e + 1) - 1).nonzero()[0])
+        plt.plot([count + siz * e - 0.5 for i in range(anfang, ende + 2)], [i - 0.5 for i in range(anfang, ende + 2)],
+                 linewidth=0.5, color="grey")
+        plt.plot([count + siz * e - 0.5 for i in range(count + 1)], [i - 0.5 for i in range(count + 1)], linewidth=0.5,
+                 color="grey")
+
+        # horizontal
+        if len(M.getcol(count + siz * e).nonzero()[0]) > 4:
+            eintrag = M.getcol(count + siz * e).nonzero()[0][-2]
+        else:
+            eintrag = M.getcol(count + siz * e).nonzero()[0][-1]
+        if e == 0:
+            plt.plot([i - 0.5 for i in range(M.get_shape()[1] + 1)],
+                     [eintrag - 0.5 for i in range(M.get_shape()[1] + 1)], linewidth=0.5, color="grey")
+        else:
+            plt.plot([i - 0.5 for i in range(count + 1)], [eintrag - 0.5 for i in range(count + 1)], linewidth=0.5,
+                     color="grey")
+            plt.plot([i - 0.5 for i in range(count + siz * (e - 1), count + siz * (e + 1) + 1)],
+                     [eintrag - 0.5 for i in range(count + siz * (e - 1), count + siz * (e + 1) + 1)], linewidth=0.5,
+                     color="grey")
+
+        # für beispiel generieren
+        # plt.plot([i for i in range(M.get_shape()[1])],[4.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
+        # plt.plot([i for i in range(M.get_shape()[1])],[8.5 for i in range(M.get_shape()[1])],linewidth = 0.5,color='#00315F')
+        # hier gucken von der jeweilien column wo das größte
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['#00315F','#00315F','#00315F', '#00618F','#00618F','white','#00A1CF'])
+    cmap = colors.ListedColormap(['#00315F', '#00315F', '#00315F', '#00618F', '#00618F', 'white', '#00A1CF'])
     im = plt.imshow(data2D, cmap=cmap)
-    cb =plt.colorbar(im)
+    cb = plt.colorbar(im)
     cb.remove()
     ax = plt.gca()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    plt.savefig("AES3rblock",dpi=400,bbox_inches='tight')
+    plt.savefig("AES3rblock", dpi=400, bbox_inches='tight')
     plt.show()
-    
 
-def enostruc(M,V):
-    count=0 
+
+def enostruc(M, V):
+    count = 0
     for e in V:
-        if e[0]!="x":
-            count+=1
-    plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
-    plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
+        if e[0] != "x":
+            count += 1
+    plt.plot([i for i in range(M.get_shape()[1])], [count - 0.5 for i in range(M.get_shape()[1])], linewidth=0.5)
+    plt.plot([count - 0.5 for i in range(M.get_shape()[0])], [i for i in range(M.get_shape()[0])], linewidth=0.5)
 
-    la=[i for i in range(count,M.get_shape()[0])]
-    C=M[la,:]
-    lengthofblocks=[0,count]#for test
-    for i in range(count,M.get_shape()[1]-1):
-        if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
-            plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
-            #horizontal
-            plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1]+0.5 for e in range(M.get_shape()[1])],linewidth = 0.5)
-            lengthofblocks.append(M.getcol(i).nonzero()[0][-1]+1)
+    la = [i for i in range(count, M.get_shape()[0])]
+    C = M[la, :]
+    lengthofblocks = [0, count]  # for test
+    for i in range(count, M.get_shape()[1] - 1):
+        if C.getcol(i).count_nonzero() != C.getcol(i + 1).count_nonzero():
+            plt.plot([i + 0.5 for e in range(M.get_shape()[0])], [e for e in range(M.get_shape()[0])], linewidth=0.5)
+            # horizontal
+            plt.plot([e for e in range(M.get_shape()[1])],
+                     [M.getcol(i).nonzero()[0][-1] + 0.5 for e in range(M.get_shape()[1])], linewidth=0.5)
+            lengthofblocks.append(M.getcol(i).nonzero()[0][-1] + 1)
     lengthofblocks.append(M.get_shape()[0])
-    for i in range(len(lengthofblocks)-1):
-        print(lengthofblocks[i+1]-lengthofblocks[i])
+    for i in range(len(lengthofblocks) - 1):
+        print(lengthofblocks[i + 1] - lengthofblocks[i])
 
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    cmap = colors.ListedColormap(['teal', 'teal', 'teal', 'lightseagreen', 'lightseagreen', 'white', 'turquoise'])
     im = plt.imshow(data2D, cmap=cmap)
     plt.colorbar(im)
     plt.show()
 
-def enonewshape(M,V):
-    count=0 #begins at 1 because of the constraint that ensures that there is one active sbox
+
+def enonewshape(M, V):
+    count = 0  # begins at 1 because of the constraint that ensures that there is one active sbox
     for e in V:
-        if e[0]!="x":
-            count+=1
-    #plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
+        if e[0] != "x":
+            count += 1
+    # plt.plot([i for i in range(M.get_shape()[1])],[count-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
     ##plt.plot([count-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
-    la=[i for i in range(count,M.get_shape()[0])]
-    C=M[la,:]
-    colInterval=[]
+    la = [i for i in range(count, M.get_shape()[0])]
+    C = M[la, :]
+    colInterval = []
     colInterval.append(count)
-    for i in range(count,M.get_shape()[1]-1):
-        if C.getcol(i).count_nonzero()!=C.getcol(i+1).count_nonzero():
-            #plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
+    for i in range(count, M.get_shape()[1] - 1):
+        if C.getcol(i).count_nonzero() != C.getcol(i + 1).count_nonzero():
+            # plt.plot([i+0.5 for e in range(M.get_shape()[0])],[e for e in range(M.get_shape()[0])],linewidth = 0.5)
             colInterval.append(i)
-    rowInter=[count-1]
-    #plt.plot([e for e in range(M.get_shape()[1])],[count-1 for e in range(M.get_shape()[1])],linewidth = 0.5)
+    rowInter = [count - 1]
+    # plt.plot([e for e in range(M.get_shape()[1])],[count-1 for e in range(M.get_shape()[1])],linewidth = 0.5)
     for i in colInterval[1:]:
-        rowInter.append(M.getcol(i).nonzero()[0][-1]) 
-        #plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
-    order=[i for i in range(0,count)]       
-    neworder=[]
-    for i in range(len(rowInter)*-1,-1):
-        s=i*-1
-        for e in range(rowInter[i]+1,rowInter[i+1]+1): #+1 weggemacht
-            if e %s == 1:
+        rowInter.append(M.getcol(i).nonzero()[0][-1])
+        # plt.plot([e for e in range(M.get_shape()[1])],[M.getcol(i).nonzero()[0][-1] for e in range(M.get_shape()[1])],linewidth = 0.5)
+    order = [i for i in range(0, count)]
+    neworder = []
+    for i in range(len(rowInter) * -1, -1):
+        s = i * -1
+        for e in range(rowInter[i] + 1, rowInter[i + 1] + 1):  # +1 weggemacht
+            if e % s == 1:
                 order.append(e)
-            else:  neworder.append(e)
-    order= order+[i for i in range(rowInter[-1]+1,M.get_shape()[0])]
-    order= neworder+order
+            else:
+                neworder.append(e)
+    order = order + [i for i in range(rowInter[-1] + 1, M.get_shape()[0])]
+    order = neworder + order
 
-    M=permutate_rows(M,order)
+    M = permutate_rows(M, order)
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
-    cmap = colors.ListedColormap(['teal','teal','teal', 'lightseagreen','lightseagreen','white','turquoise'])
+    cmap = colors.ListedColormap(['teal', 'teal', 'teal', 'lightseagreen', 'lightseagreen', 'white', 'turquoise'])
     im = plt.imshow(data2D, cmap=cmap)
     plt.colorbar(im)
     plt.show()
+
 
 aes = cip.Enocoro
-A, V=gc.new_generate_constraints(7, aes)
-#showmat(A)
-M, v=d_var_to_beginning(A, V)
-B=long_constraints_to_top(M)
-C, W=create_fourblock(A, V)
-#block_structure(C,W)
-#C =twodiag(C,W)
-#C,W =changediag(C,W)
-#C=creating_diagonal_in4block(C,W)
-#C,W = changediag(C,W)
-#C =changedvar(C,W)
-#C,W =deletecolszero(C,W)
-showmat(B,v)
-#showfirststruc(C,W)
-#showsecstruc(C,W)
-#print(W)
-#enostruc(C,W)
-#enonewshape(C,W)
+A, V = gc.new_generate_constraints(7, aes)
+# showmat(A)
+M, v = d_var_to_beginning(A, V)
+B = long_constraints_to_top(M)
+C, W = create_fourblock(A, V)
+# block_structure(C,W)
+# C =twodiag(C,W)
+# C,W =changediag(C,W)
+# C=creating_diagonal_in4block(C,W)
+# C,W = changediag(C,W)
+# C =changedvar(C,W)
+# C,W =deletecolszero(C,W)
+showmat(B, v)
+# showfirststruc(C,W)
+# showsecstruc(C,W)
+# print(W)
+# enostruc(C,W)
+# enonewshape(C,W)
 
-#was es alles gibt:
+# was es alles gibt:
