@@ -90,16 +90,44 @@ def new_generate_constraints(rounds, cipher):
                 list one gets the constraints.
     """
     line = 0
-    A, M, V, next = cipher.initialize(rounds)
-    for r in range(rounds):
-        A = cipher.shift_before(A)
-        S = [0, 0, 0, 0]
-        for j in cipher.rangenumber(A):
-            A, M, V, line, next, S = cipher.gen_long_constraint(A, M, V, line, next, r, j, S)
-            M, line = generate_smallconstraints(M, line)
+    cipher_instance = cipher(rounds)
+    for r in range(cipher_instance.rounds):
+        cipher_instance.shift_before()
+        for j in cipher_instance.rangenumber():
+            line = cipher_instance.gen_long_constraint(line, r, j)
+            cipher_instance.generate_smallconstraints(line)
             line += 1
-        A = cipher.shift_after(A)
-    M = M.tocsr()
-    V.append("1")
-    M, V = removezerocols(M, V)
+        cipher_instance.shift_after()
+    cipher_instance.M = cipher_instance.M.tocsr()
+    cipher_instance.V.append("1")
+    cipher_instance.M, cipher_instance.V = removezerocols(cipher_instance.M, cipher_instance.V)
+    return cipher_instance.M, cipher_instance.V
+
+
+def generate_additional_bit_oriented_constraints(sbox):
+    # for every S-box in the schematic diagram, including the encryption process and the key schedule algorithm, we introduce a new 0-1 variable A_j such that
+
+    return 0
+
+
+def generate_convex_hull_constraints(sbox, selection_style="greedy"):
+    """
+        This function generates the constraint matrix for a number of rounds of a given cipher.
+
+        Parameters:
+        ----------
+        sbox  :   dict (int to int)
+                    The s-box, one is looking to model in
+
+        selection_style  :   string
+                    "greedy"    ->  Sun et al. 2013 Greedy approach
+
+        Returns:
+        -----------
+        M       :   csr_matrix
+                    Generated constraint matrix for the MILP representing the convex hull of the given s-box
+
+        V       :   list
+                    List constraining the variables. Multiplying the matrix with this list results in the constraints.
+        """
     return M, V

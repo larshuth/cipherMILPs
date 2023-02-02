@@ -4,19 +4,24 @@ from scipy.sparse import csr_matrix, lil_matrix
 # If a new cipher is added, do not forget to add it to the list stored in the AVAILABLE variable at the end of the file.
 
 
-class Aes:
+class Cipher:
+    """
+    Superclass for better readability in code
+    """
+
+    def __init__(self):
+        self.S = [0, 0, 0, 0]
+        return
+
+
+class Aes(Cipher):
     """
     Class in which all functions for AES are defined.
     """
 
-    def rangenumber(A):
+    def rangenumber(self):
         """
         Defines how often we need to call gen_long_constraint.
-
-        Parameters:
-        ----------
-        A   :   list of lists
-                needed because other ciphers need this input
 
         Returns:
         ----------
@@ -24,7 +29,7 @@ class Aes:
         """
         return range(4)
 
-    def gen_long_constraint(A, M, V, line, next, r, j, S):
+    def gen_long_constraint(self, line, r, j):
         """
         Generates a long constraint depending on which variable is currently j.
         For AES, it is just the current column and the new variables.
@@ -32,21 +37,9 @@ class Aes:
 
         Parameters:
         ----------
-        A       :   list of lists
-                    4x4 matrix where the names of the current variables are saved
-
-        M       :   lil_matrix
-                    The matrix in which all the constraints are saved
-
-        V       :   list
-                    List of all the variablenames to date
-
         line    :   int
                     Index of row where we are currently
 
-        next    :   int 
-                    Number of next x-variable that will be generated
-        
         r       :   int
                     Number of the round in which we are currently
 
@@ -78,21 +71,21 @@ class Aes:
         """
         for i in range(4):
             # evey element in column is added to the constraint
-            ind = V.index(A[i][j])
-            M[line, ind] = 1
+            ind = self.V.index(self.A[i][j])
+            self.M[line, ind] = 1
             # last constraint
-            M[M.get_shape()[0] - 1, ind] = 1
+            self.M[self.M.get_shape()[0] - 1, ind] = 1
         for i in range(4):
             # every new variable added to the constraint and to V
-            V.append("x" + str(next + i))
-            A[i][j] = "x" + str(next + i)
-            M[line, len(V) - 1] = 1
-        next = next + 4
-        V.append("d" + str(r * 4 + j))
-        M[line, len(V) - 1] = -5
-        return A, M, V, line, next, S
+            self.V.append("x" + str(self.next + i))
+            self.A[i][j] = "x" + str(self.next + i)
+            self.M[line, len(self.V) - 1] = 1
+        self.next = self.next + 4
+        self.V.append("d" + str(r * 4 + j))
+        self.M[line, len(self.V) - 1] = -5
+        return line
 
-    def shift_before(A):
+    def shift_before(self):
         """
         This functions performs the shiftrows operation that is executed after each round in AES.
 
@@ -109,18 +102,19 @@ class Aes:
         tmp = [0, 0, 0, 0]
         for i in range(0, 4):
             for j in range(0, 4):
-                tmp[j] = A[i][(j + i) % 4]
+                tmp[j] = self.A[i][(j + i) % 4]
             for j in range(0, 4):
-                A[i][j] = tmp[j]
-        return A
+                self.A[i][j] = tmp[j]
+        return
 
-    def shift_after(A):
+    def shift_after(self):
         """
-        In AES the bits dont change after one round so this function does nothing.
+        In AES the bits do not change after one round so this function does nothing.
         """
-        return A
+        pass
+        return
 
-    def initialize(rounds):
+    def __init__(self, rounds):
         """
         Generates initialization and all neded structures for AES and specified number of rounds.
 
@@ -131,29 +125,20 @@ class Aes:
 
         Returns:
         ---------
-        A       :   list of lists
-                    4x4 matrix where the names of the current variables are saved
-        
-        M       :   lil_matrix
-                    The empty constraint matrix for the MILP
-
-        V       :   list
-                    This list saves all the variables
-
-        next    :   int 
-                    Number for the next x-variable
+        Creates Instance, no return value
         """
-        M = lil_matrix((36 * rounds + 1, (16 + 20 * rounds) + 1), dtype=int)
-        V = []
-        A = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        next = 0
+        # TODO: Generalization of numbers in self.M definition to take it into class cipher
+        self.M = lil_matrix((36 * rounds + 1, (16 + 20 * rounds) + 1), dtype=int)
+        self.V = []
+        self.A = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        self.next = 0
         for i in range(4):
             for j in range(4):
-                A[i][j] = "x" + str(next)
-                V.append("x" + str(next))
-                next = next + 1
-        M[M.get_shape()[0] - 1, M.get_shape()[1] - 1] = -1
-        return A, M, V, next
+                self.A[i][j] = "x" + str(next)
+                self.V.append("x" + str(next))
+                self.next = next + 1
+        self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
+        return
 
     def input_sbox(rounds):
         """

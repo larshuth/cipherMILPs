@@ -40,18 +40,17 @@ if __name__ == "__main__":
         rounds = int(input())
 
         # generalizing the cipher question for the possible addition of more ciphers
-        dict_of_ciphers = zip(range(len(cip.AVAILABLE)), cip.AVAILABLE)
         cipher_question = "Which cipher do you want to use? "
-        for c in dict_of_ciphers:
+        for index, cipher in enumerate(cip.AVAILABLE):
             cipher_question += " %s (%s)" % (
-                c[1].__name__, c[0]) + " or"  # I am aware that using private var is bad style
+                cipher.__name__, index) + " or"  # Adds e.g. "SKINNY-128 (1)" to the list of all options
         cipher_question = cipher_question[:-3] + "?"
 
         print(cipher_question)
         ciphelp = int(input())
-        cipher = cipher.AVAILABLE[ciphelp]
+        chosen_cipher = cip.AVAILABLE[ciphelp]
 
     else:
-        rounds, cipher, viz = 1, 1, 0
+        rounds, chosen_cipher, viz = 1, 1, 0
 
-    main(rounds, cipher, viz)
+    main(rounds, chosen_cipher, viz)
