@@ -101,7 +101,7 @@ def new_generate_constraints(rounds, cipher):
     cipher_instance.M = cipher_instance.M.tocsr()
     cipher_instance.V.append("1")
     cipher_instance.M, cipher_instance.V = removezerocols(cipher_instance.M, cipher_instance.V)
-    return cipher_instance.M, cipher_instance.V
+    return cipher_instance
 
 
 def generate_additional_bit_oriented_constraints(sbox):
