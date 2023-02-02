@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
+
 # If a new cipher is added, do not forget to add it to the list stored in the AVAILABLE variable at the end of the file.
 
 
@@ -9,8 +10,9 @@ class Cipher:
     Superclass for better readability in code
     """
 
-    def __init__(self):
+    def __init__(self, rounds=1):
         self.S = [0, 0, 0, 0]
+        self.rounds = rounds
         return
 
 
@@ -80,7 +82,7 @@ class Aes(Cipher):
             self.V.append("x" + str(self.next + i))
             self.A[i][j] = "x" + str(self.next + i)
             self.M[line, len(self.V) - 1] = 1
-        self.next = self.next + 4
+        self.next += 4
         self.V.append("d" + str(r * 4 + j))
         self.M[line, len(self.V) - 1] = -5
         return line
@@ -114,7 +116,7 @@ class Aes(Cipher):
         pass
         return
 
-    def __init__(self, rounds):
+    def __init__(self, rounds=1):
         """
         Generates initialization and all neded structures for AES and specified number of rounds.
 
@@ -128,34 +130,35 @@ class Aes(Cipher):
         Creates Instance, no return value
         """
         # TODO: Generalization of numbers in self.M definition to take it into class cipher
-        self.M = lil_matrix((36 * rounds + 1, (16 + 20 * rounds) + 1), dtype=int)
+        super().__init__(rounds)
+        self.M = lil_matrix((36 * self.rounds + 1, (16 + 20 * self.rounds) + 1), dtype=int)
         self.V = []
         self.A = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
         self.next = 0
         for i in range(4):
             for j in range(4):
-                self.A[i][j] = "x" + str(next)
-                self.V.append("x" + str(next))
-                self.next = next + 1
+                self.A[i][j] = "x" + str(self.next)
+                self.V.append("x" + str(self.next))
+                self.next += 1
         self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
         return
 
-    def input_sbox(rounds):
+    def input_sbox(self, rounds):
         """
         all variable indices of variables that are input of an sbox
         """
         inputsbox = []  # wo fangen variablen nochmal an? kontrollieren!
-        for i in range((rounds * 16)):
+        for i in range((self.rounds * 16)):
             inputsbox.append(i)
         return inputsbox
 
 
-class Enocoro:
+class Enocoro(Cipher):
     """
     Class in which all functions for Enocoro are defined.
     """
 
-    def rangenumber(A):
+    def rangenumber(self):
         """
         Defines what to go through in the for loop for gen_long_constraint.
 
@@ -169,10 +172,11 @@ class Enocoro:
             :   list of lists
                 Specifies which variables belong in the constraint
         """
-        return [[A[31], A[32], 31], [A[32], A[2], "0"], [A[33], A[7], "1"], [0, 1, "2", "3"], [A[16], "2", 32],
-                [A[29], "3", 33], [A[2], A[6], 2], [A[7], A[15], 7], [A[16], A[28], 16]]
+        return [[self.A[31], self.A[32], 31], [self.A[32], self.A[2], "0"], [self.A[33], self.A[7], "1"],
+                [0, 1, "2", "3"], [self.A[16], "2", 32], [self.A[29], "3", 33], [self.A[2], self.A[6], 2],
+                [self.A[7], self.A[15], 7], [self.A[16], self.A[28], 16]]
 
-    def gen_long_constraint(A, M, V, line, next, r, e, S):
+    def gen_long_constraint(self, line, r, e):
         """
         Generates a long constraint depending on which variable is currently j.
         For Enocoro we take the first variables in j. With the last one, we use it to define it new 
@@ -223,47 +227,48 @@ class Enocoro:
         S       :   list
                     List in which variables are saved that are needed temporarily
         """
-        V.append("x" + str(next))
-        V.append("d" + str(9 * r + Enocoro.rangenumber(A).index(e)))
+        self.V.append("x" + str(next))
+        self.V.append("d" + str(9 * r + self.rangenumber().index(e)))
         if len(e) == 3:
-            M[line, V.index(e[0])] = 1
+            self.M[line, self.V.index(e[0])] = 1
             if e[1][0] == "x":
-                M[line, V.index(e[1])] = 1
+                self.M[line, self.V.index(e[1])] = 1
             else:
-                M[line, V.index(S[int(e[1])])] = 1
-            M[line, len(V) - 2] = 1
-            M[line, len(V) - 1] = -2
+                self.M[line, self.V.index(self.S[int(e[1])])] = 1
+            self.M[line, len(self.V) - 2] = 1
+            self.M[line, len(self.V) - 1] = -2
             if type(e[2]) == int:
-                A[e[2]] = "x" + str(next)
+                self.A[e[2]] = "x" + str(next)
             else:
-                S[int(e[2])] = "x" + str(next)
+                self.S[int(e[2])] = "x" + str(next)
             next += 1
         else:
-            V.append("x" + str(next + 1))
-            M[line, V.index(S[e[0]])] = 1
-            M[line, V.index(S[e[1]])] = 1
-            M[line, len(V) - 3] = 1
-            M[line, len(V) - 1] = 1
-            M[line, len(V) - 2] = -3
+            self.V.append("x" + str(self.next + 1))
+            self.M[line, self.V.index(self.S[e[0]])] = 1
+            self.M[line, self.V.index(self.S[e[1]])] = 1
+            self.M[line, len(self.V) - 3] = 1
+            self.M[line, len(self.V) - 1] = 1
+            self.M[line, len(self.V) - 2] = -3
             # here we dont need to check if we assign it to S or A
-            S[int(e[2])] = "x" + str(next)
-            S[int(e[3])] = "x" + str(next + 1)
-            next = next + 2
+            self.S[int(e[2])] = "x" + str(self.next)
+            self.S[int(e[3])] = "x" + str(self.next + 1)
+            self.next += 2
 
         # updating the last constraint
-        indicesofsboxinput = Enocoro.input_sbox(r + 1)
+        indicesofsboxinput = self.input_sbox(r + 1)
         for i in indicesofsboxinput:
-            if "x" + str(i) in V:
-                M[M.get_shape()[0] - 1, V.index("x" + str(i))] = 1
-        return A, M, V, line, next, S
+            if "x" + str(i) in self.V:
+                self.M[self.M.get_shape()[0] - 1, self.V.index("x" + str(i))] = 1
+        return line
 
-    def shift_before(A):
+    def shift_before(self):
         """
         In Enocoro, at the beginning of a round the bits are not shifted so this does nothing
         """
-        return A
+        pass
+        return
 
-    def shift_after(A):
+    def shift_after(self):
         """"
         This function shifts all the bits used in the current round to the right.
 
@@ -277,14 +282,14 @@ class Enocoro:
         A   :   list
                 Shifted variables that can be used for the next round
         """
-        la = A[31]
+        la = self.A[31]
         for i in range(30, -1, -1):
-            temp = A[i]
-            A[i + 1] = temp
-        A[0] = la
-        return A
+            temp = self.A[i]
+            self.A[i + 1] = temp
+        self.A[0] = la
+        return
 
-    def initialize(rounds):
+    def __init__(self, rounds=1):
         """
         Generates initialization and all neded structures for Enocoro and specified number of rounds.
 
@@ -307,24 +312,26 @@ class Enocoro:
         next    :   int 
                     Number for the next x-variable
         """
-        next = 0
-        M = lil_matrix((37 * rounds + 1, (34 + 19 * rounds) + 1), dtype=int)
-        V = []
-        # Array mit den Bits die momentan in der Cipher sind
-        A = []
-        indicesofsboxinput = Enocoro.input_sbox(rounds)
-        for e in range(34):
-            A.append("x" + str(next))
-            V.append("x" + str(next))
-            if next in indicesofsboxinput:
-                M[M.get_shape()[0] - 1, next] = 1
-            next += 1
-        M[M.get_shape()[0] - 1, M.get_shape()[1] - 1] = -1
-        return A, M, V, next
+        super().__init__(rounds)
 
-    def input_sbox(rounds):
+        self.next = 0
+        self.M = lil_matrix((37 * self.rounds + 1, (34 + 19 * self.rounds) + 1), dtype=int)
+        self.V = []
+        # Array mit den Bits die momentan in der Cipher sind
+        self.A = []
+        indicesofsboxinput = self.input_sbox()
+        for e in range(34):
+            self.A.append("x" + str(self.next))
+            self.V.append("x" + str(self.next))
+            if self.next in indicesofsboxinput:
+                self.M[self.M.get_shape()[0] - 1, self.next] = 1
+            self.next += 1
+        self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
+        return
+
+    def input_sbox(self):
         inputsbox = []
-        for i in range(rounds):
+        for i in range(self.rounds):
             # first sbox
             if i < 3:
                 inputsbox.append((2 - i))
@@ -345,201 +352,6 @@ class Enocoro:
                 inputsbox.append(29 - i)
             else:
                 inputsbox.append(43 + (i - 13) * 10)
-        return inputsbox
-
-
-class Enocorolin:
-    """
-    Class in which all functions for Enocoro are defined.
-    """
-
-    def rangenumber(A):
-        """
-        Defines what to go through in the for loop for gen_long_constraint.
-
-        Parameters:
-        ----------
-        A   :   list
-                Names of all variables in this current round
-
-        Returns:
-        ----------
-            :   list of lists
-                Specifies which variables belong in the constraint
-        """
-        return [[A[31], A[32], "0"], [0, A[33], "2", "3"], [A[2], "0", 2], [A[6], 2, 6], [A[7], A[33], 7],
-                [A[15], 7, 15], [A[16], "2", 16], [A[28], 16, 28], [A[29], "3", 29]]
-
-    def gen_long_constraint(A, M, V, line, next, r, e, S):
-        """
-        Generates a long constraint depending on which variable is currently j.
-        For Enocoro we take the first variables in j. With the last one, we use it to define it new 
-
-        Parameters:
-        ----------
-        A       :   list
-                    Names of all variables in this current round
-
-        M       :   lil_matrix
-                    The matrix in which all the constraints are saved
-
-        V       :   list
-                    List of all the variablenames to date
-
-        line    :   int
-                    Index of row where we are currently
-
-        next    :   int 
-                    Number of next x-variable that will be generated
-        
-        r       :   int
-                    Number of the round in which we are currently
-
-        j       :   list
-                    Variables used for the new long constraint
-
-        S       :   list
-                    List in which variables are saved that are needed temporarily
-
-        Returns:
-        --------
-        A       :   list
-                    Names of all variables in this current round
-
-        M       :   lil_matrix
-                    The matrix in which all the constraints are saved
-
-        V       :   list
-                    List of all the variablenames to date
-
-        line    :   int
-                    Index of row where we are currently
-
-        next    :   int 
-                    Number of next x-variable that will be generated
-
-        S       :   list
-                    List in which variables are saved that are needed temporarily
-        """
-        V.append("x" + str(next))
-        V.append("d" + str(9 * r + Enocorolin.rangenumber(A).index(e)))
-        if Enocorolin.rangenumber(A).index(e) == 8:
-            A[32] = S[2]
-            A[33] = S[3]
-        if len(e) == 3:
-            M[line, V.index(e[0])] = 1
-            if type(e[1]) == int:
-                M[line, V.index(A[e[1]])] = 1
-            elif e[1][0] == "x":
-                M[line, V.index(e[1])] = 1
-            else:
-                M[line, V.index(S[int(e[1])])] = 1
-            M[line, len(V) - 2] = 1
-            M[line, len(V) - 1] = -2
-            if type(e[2]) == int:
-                A[e[2]] = "x" + str(next)
-            else:
-                S[int(e[2])] = "x" + str(next)
-            next += 1
-        else:
-            V.append("x" + str(next + 1))
-            M[line, V.index(S[e[0]])] = 1
-            M[line, V.index(e[1])] = 1
-            M[line, len(V) - 3] = 1
-            M[line, len(V) - 1] = 1
-            M[line, len(V) - 2] = -3
-            # here we dont need to check if we assign it to S or A
-            S[int(e[2])] = "x" + str(next)
-            S[int(e[3])] = "x" + str(next + 1)
-            next = next + 2
-
-        # updating the last constraint
-        indicesofsboxinput = Enocorolin.input_sbox(r + 1)  # plus one so that the last round isnt missing
-
-        for i in indicesofsboxinput:
-            if "x" + str(i) in V:
-                M[M.get_shape()[0] - 1, V.index("x" + str(i))] = 1
-        return A, M, V, line, next, S
-
-    def shift_before(A):
-        """
-        In Enocoro, at the beginning of a round the bits are not shifted so this does nothing
-        """
-        return A
-
-    def shift_after(A):
-        """"
-        This function shifts all the bits used in the current round to the right.
-
-        Parameters:
-        ----------
-        A   :   list
-                Current variables
-            
-        Returns:
-        ---------
-        A   :   list
-                Shifted variables that can be used for the next round
-        """
-        la = A[31]
-        for i in range(30, -1, -1):
-            temp = A[i]
-            A[i + 1] = temp
-        A[0] = la
-        return A
-
-    def initialize(rounds):
-        """
-        Generates initialization and all neded structures for Enocoro and specified number of rounds.
-
-        Parameters:
-        ---------
-        rounds  :   int
-                    Number of rounds for the cipher
-
-        Returns:
-        ---------
-        A       :   list
-                    Names of all variables in this current round
-        
-        M       :   lil_matrix
-                    The empty constraint matrix for the MILP
-
-        V       :   list
-                    This list saves all the variables
-
-        next    :   int 
-                    Number for the next x-variable
-        """
-        next = 0
-        M = lil_matrix((37 * rounds + 1, (34 + 19 * rounds) + 1), dtype=int)
-        V = []
-        # Array mit den Bits die momentan in der Cipher sind
-        A = []
-        indicesofsboxinput = Enocorolin.input_sbox(rounds)
-        for e in range(34):
-            A.append("x" + str(next))
-            V.append("x" + str(next))
-            if next in indicesofsboxinput:
-                M[M.get_shape()[0] - 1, next] = 1
-            next += 1
-        M[M.get_shape()[0] - 1, M.get_shape()[1] - 1] = -1
-        return A, M, V, next
-
-    def input_sbox(rounds):
-        inputsbox = []
-        for i in range(rounds):
-            # first sbox
-            inputsbox.append(34 + (i) * 10)
-            # second sbox
-            if i == 0:
-                inputsbox.append(33)
-            else:
-                inputsbox.append(36 + (i - 1) * 10)
-            # third sbox
-            inputsbox.append(35 + (i) * 10)
-            # fourth sbox
-            inputsbox.append(36 + (i) * 10)
         return inputsbox
 
 
