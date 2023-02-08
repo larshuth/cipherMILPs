@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix, lil_matrix
 import cipher as cip
 
 
-def generate_smallconstraints(M, line):
+def generate_smallconstraints(cipher_instance, line):
     """
     Generates all the constraint-inequalities that consist of a dummy and a x- variable.
     Those constraints follow after a constraint that models going through a path in a cipher,
@@ -28,12 +28,12 @@ def generate_smallconstraints(M, line):
                 Index of the row that we last filled in
 
     """
-    dummyIndex = np.where((M.getrow(line).toarray()[0] != 0) & (M.getrow(line).toarray()[0] != 1))[0][0]
-    for ind in np.where(M.getrow(line).toarray()[0] == 1)[0]:
+    dummyIndex = np.where((cipher_instance.M.getrow(line).toarray()[0] != 0) & (cipher_instance.M.getrow(line).toarray()[0] != 1))[0][0]
+    for ind in np.where(cipher_instance.M.getrow(line).toarray()[0] == 1)[0]:
         line += 1
-        M[line, ind] = -1
-        M[line, dummyIndex] = 1
-    return M, line
+        cipher_instance.M[line, ind] = -1
+        cipher_instance.M[line, dummyIndex] = 1
+    return line
 
 
 def removezerocols(M, V):
@@ -95,13 +95,12 @@ def new_generate_constraints(rounds, cipher):
         cipher_instance.shift_before()
         for j in cipher_instance.rangenumber():
             line = cipher_instance.gen_long_constraint(line, r, j)
-            cipher_instance.generate_smallconstraints(line)
+            line = generate_smallconstraints(cipher_instance, line)
             line += 1
         cipher_instance.shift_after()
     cipher_instance.M = cipher_instance.M.tocsr()
     cipher_instance.V.append("1")
-    cipher_instance.M, cipher_instance.V = removezerocols(cipher_instance.M, cipher_instance.V)
-    return cipher_instance
+    return removezerocols(cipher_instance.M, cipher_instance.V)
 
 
 def generate_additional_bit_oriented_constraints(sbox):
@@ -130,4 +129,4 @@ def generate_convex_hull_constraints(sbox, selection_style="greedy"):
         V       :   list
                     List constraining the variables. Multiplying the matrix with this list results in the constraints.
         """
-    return M, V
+    return

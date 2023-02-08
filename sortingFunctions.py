@@ -550,25 +550,25 @@ def enonewshape(M, V):
     plt.colorbar(im)
     plt.show()
 
+if False:
+    aes = cip.Enocoro
+    A, V = gc.new_generate_constraints(7, aes)
+    # showmat(A)
+    M, v = d_var_to_beginning(A, V)
+    B = long_constraints_to_top(M)
+    C, W = create_fourblock(A, V)
+    # block_structure(C,W)
+    # C =twodiag(C,W)
+    # C,W =changediag(C,W)
+    # C=creating_diagonal_in4block(C,W)
+    # C,W = changediag(C,W)
+    # C =changedvar(C,W)
+    # C,W =deletecolszero(C,W)
+    showmat(B, v)
+    # showfirststruc(C,W)
+    # showsecstruc(C,W)
+    # print(W)
+    # enostruc(C,W)
+    # enonewshape(C,W)
 
-aes = cip.Enocoro
-A, V = gc.new_generate_constraints(7, aes)
-# showmat(A)
-M, v = d_var_to_beginning(A, V)
-B = long_constraints_to_top(M)
-C, W = create_fourblock(A, V)
-# block_structure(C,W)
-# C =twodiag(C,W)
-# C,W =changediag(C,W)
-# C=creating_diagonal_in4block(C,W)
-# C,W = changediag(C,W)
-# C =changedvar(C,W)
-# C,W =deletecolszero(C,W)
-showmat(B, v)
-# showfirststruc(C,W)
-# showsecstruc(C,W)
-# print(W)
-# enostruc(C,W)
-# enonewshape(C,W)
-
-# was es alles gibt:
+    # was es alles gibt:

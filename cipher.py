@@ -227,7 +227,7 @@ class Enocoro(Cipher):
         S       :   list
                     List in which variables are saved that are needed temporarily
         """
-        self.V.append("x" + str(next))
+        self.V.append("x" + str(self.next))
         self.V.append("d" + str(9 * r + self.rangenumber().index(e)))
         if len(e) == 3:
             self.M[line, self.V.index(e[0])] = 1
@@ -238,10 +238,10 @@ class Enocoro(Cipher):
             self.M[line, len(self.V) - 2] = 1
             self.M[line, len(self.V) - 1] = -2
             if type(e[2]) == int:
-                self.A[e[2]] = "x" + str(next)
+                self.A[e[2]] = "x" + str(self.next)
             else:
-                self.S[int(e[2])] = "x" + str(next)
-            next += 1
+                self.S[int(e[2])] = "x" + str(self.next)
+            self.next += 1
         else:
             self.V.append("x" + str(self.next + 1))
             self.M[line, self.V.index(self.S[e[0]])] = 1
@@ -255,7 +255,7 @@ class Enocoro(Cipher):
             self.next += 2
 
         # updating the last constraint
-        indicesofsboxinput = self.input_sbox(r + 1)
+        indicesofsboxinput = self.input_sbox()
         for i in indicesofsboxinput:
             if "x" + str(i) in self.V:
                 self.M[self.M.get_shape()[0] - 1, self.V.index("x" + str(i))] = 1

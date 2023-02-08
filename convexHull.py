@@ -20,5 +20,3 @@ def sbox_modeling_as_vectors(sbox):
     Polyhedron_base(vertices=sbox).Hrepresentation_str(style="<=")
 
     return False
-
-def

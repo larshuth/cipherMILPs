@@ -35,8 +35,7 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    cipherinstance = gc.new_generate_constraints(rounds, cipher)
-    A, V = cipherinstance.A, cipherinstance.V
+    A, V = gc.new_generate_constraints(rounds, cipher)
     M, V = sf.d_var_to_beginning(A, V)
     B = sf.long_constraints_to_top(M)
     C, W = sf.create_fourblock(A, V)
