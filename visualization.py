@@ -38,7 +38,7 @@ def matplotlibvis(rounds, cipher):
     A, V = gc.new_generate_constraints(rounds, cipher)
     M, V = sf.d_var_to_beginning(A, V)
     B = sf.long_constraints_to_top(M)
-    C, W = sf.create_fourblock(A, V)
+    C, _ = sf.create_fourblock(A, V)
 
     axs[0].set_title('native')
     axs[1].set_title('d_variables to the beginning')
