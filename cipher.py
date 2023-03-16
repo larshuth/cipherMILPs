@@ -130,7 +130,6 @@ class Aes(Cipher):
         ---------
         Creates Instance, no return value
         """
-        # TODO: Generalization of numbers in self.M definition to take it into class cipher
         super().__init__(rounds, orientation=8)
         self.M = lil_matrix((36 * self.rounds + 1, (16 + 20 * self.rounds) + 1), dtype=int)
         self.V = []
@@ -231,6 +230,7 @@ class Enocoro(Cipher):
         self.V.append("x" + str(self.next))
         self.V.append("d" + str(9 * r + self.rangenumber().index(e)))
         if len(e) == 3:
+            #
             self.M[line, self.V.index(e[0])] = 1
             if e[1][0] == "x":
                 self.M[line, self.V.index(e[1])] = 1
@@ -363,7 +363,7 @@ class LBlock(Cipher):
 
     def rangenumber(self):
         """
-        Defines what to go through in the for loop for gen_long_constraint.
+        Defines what happens in a round.
 
         Parameters:
         ----------
@@ -375,9 +375,21 @@ class LBlock(Cipher):
             :   list of lists
                 Specifies which variables belong in the constraint
         """
-        return [[self.A[31], self.A[32], 31], [self.A[32], self.A[2], "0"], [self.A[33], self.A[7], "1"],
-                [0, 1, "2", "3"], [self.A[16], "2", 32], [self.A[29], "3", 33], [self.A[2], self.A[6], 2],
-                [self.A[7], self.A[15], 7], [self.A[16], self.A[28], 16]]
+        # actions contain lists of either xors ['xor', input 1, input 2, output, dummy var],
+        # 3-way forks ['3wf', input, output 1, output 2, dummy var], sboxes ['sbox', input 1-4, output 1-4, dummy var]
+        if self.cryptanalysis_type == 'differential':
+            actions = [['xor', self.A[i], self.K[i], self.round_number] for i in range(int(64/self.orientation))]
+        elif self.cryptanalysis_type == 'linear':
+            # TODO:
+            actions = [['3wf', self.A[i], self.round_number] for i in range(int(64/self.orientation))]
+
+        if self.orientation == 1:
+            # sboxes are now rewuired
+            actions += [['sbox', input 1-4, output 1-4, dummy var] for i in range(int(64/self.orientation))]
+        else:
+            pass
+
+        return actions
 
     def gen_long_constraint(self, line, r, e):
         """
@@ -430,8 +442,6 @@ class LBlock(Cipher):
         S       :   list
                     List in which variables are saved that are needed temporarily
         """
-        self.V.append("x" + str(self.next))
-        self.V.append("d" + str(9 * r + self.rangenumber().index(e)))
         if len(e) == 3:
             self.M[line, self.V.index(e[0])] = 1
             if e[1][0] == "x":
@@ -490,10 +500,14 @@ class LBlock(Cipher):
         return inputsbox
 
     def shift_before(self):
-        """
-        In Enocoro, at the beginning of a round the bits are not shifted so this does nothing
-        """
-        pass
+        # in X0, there is a 8 bit shift to the left
+        # pos is a short function to return  the proper position depending on whether we model LBlock as 4-bit word oriented of just bit oriented
+        pos = lambda x: int(x/self.orientation)
+        tmp = [self.A[pos(32+i)] for i in range(pos(32))]
+        for i in range(pos(32), pos(56)):
+            self.A[i] = self.A[i + pos(8)]
+        for i, index in enumerate(range(pos(56), pos(64))):
+            self.A[i] = tmp[index]
         return
 
     def shift_after(self):
@@ -545,6 +559,10 @@ class LBlock(Cipher):
         else:
             super().__init__(rounds, orientation=4)
 
+        inputsize = 64
+
+        self.cryptanalysis_type = 'differential'
+
         # Summary of what's happening in LBlock:
         #   1. Teile Input in vordere Hälfte X_1, hintere Hälfte X_0
         #   2. Get subkey K_1 von K, bitshift X_0 <<< 8
@@ -569,18 +587,6 @@ class LBlock(Cipher):
         #   2 more are needed if the sbox is symmetric
         #   w + v + 1 more, redundant if the sbox invertible with branch number 2
 
-        # TODO: Find out LBLOCK SBox Branch Number
-        sbox_branch_number_equals_2 = True
-
-        if self.orientation == 1:
-            sboxes_per_round = 8
-            sbox_dummy_variables_per_round = sboxes_per_round
-            sbox_constraints_per_round = 7 * sboxes_per_round + sbox_branch_number_equals_2 * 9
-        else:
-            sboxes_per_round = 8
-            sbox_dummy_variables_per_round = 0
-            sbox_constraints_per_round = 0
-
         # we could implement different fine-graining of the xors, right now we are treating them as 4-bit word xors
         xors_per_round = 16
         xor_variables_per_round = xors_per_round
@@ -591,16 +597,34 @@ class LBlock(Cipher):
         lt_variables_per_round = xors_per_round
         lt_constraints_per_round = 7 * xors_per_round
 
+        # TODO: Find out LBLOCK SBox Branch Number
+        sbox_branch_number_equals_2 = True
+
+        sboxes_per_round = 8
+
+        if self.orientation == 1:
+            sbox_dummy_variables_per_round = sboxes_per_round
+            sbox_constraints_per_round = 7 * sboxes_per_round + sbox_branch_number_equals_2 * 9
+
+        else:
+            sbox_dummy_variables_per_round = 0
+            sbox_constraints_per_round = 0
+
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # linear transformation dummy variables, the 1 constant
         # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
         self.M = lil_matrix((
-            (xor_constraints_per_round + sbox_constraints_per_round + lt_constraints_per_round) * self.rounds + 1, (64 + (64 + xor_variables_per_round + sbox_dummy_variables_per_round + lt_variables_per_round) * self.rounds) + 1), dtype=int)
+            (xor_constraints_per_round + sbox_constraints_per_round + lt_constraints_per_round) * self.rounds + 1, (
+                    inputsize/self.orientation + (
+                    inputsize / self.orientation + xor_variables_per_round + sbox_dummy_variables_per_round + lt_variables_per_round) * self.rounds) + 1),
+            dtype=int)
+
         # self.V = dict of all variables mapping names to entry in self.M
-        self.V = {'constant': self.M.get_shape()[1] - 1}
+        self.V = {'x'+str(i): i for i in range(int(inputsize/self.orientation) * (self.rounds + 1))}
+        self.V['constant'] = self.M.get_shape()[1] - 1
 
         # list mit den Bits die momentan in der Cipher sind
-        self.A = []
+        self.A = ['x' + str(i) for i in range(int(inputsize / self.orientation))]
 
         if model_as_bit_oriented:
             sbox_dummy_variables = ["a" + str(i) for i in range(sboxes_per_round * self.rounds)]
@@ -610,22 +634,19 @@ class LBlock(Cipher):
             for round in range(1, self.rounds+1):
                 sbox_dummy_variables = ["x" + str(i) for i in range(16*round, 16 * (round+1))]
 
-        # create variable for input (plaintext) bits
-        for e in range(64):
-            self.A.append("x" + str(self.next))
-            self.V.append("x" + str(self.next))
-            self.next += 1
-
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
-        self.X_1 = list(range(32))
-        self.X_0 = [i+32 for i in range(32)]
+
+        self.X_1 = ['x'+str(i) for i in range(32)]
+        self.X_0 = ['x'+str(i+32) for i in range(32)]
+
+        self.round_number = 0
         return
 
 
-class Cipher_template(Cipher):
+class CipherTemplate(Cipher):
     def __init__(self, rounds=1):
         super().__init__(rounds)
         # self.next = number of currently used (x) variable
