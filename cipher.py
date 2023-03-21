@@ -582,11 +582,11 @@ class LBlock(Cipher):
                 new_x_variables_per_round = words_total  # 32 var for xor (1st half plaintext, key)
                 new_xor_dummies_per_round = words_total  # 32 var for xor (1st half plaintext, key)
                 actions = [
-                    ['xor',     # category
+                    ['xor',  # category
                      'x' + str(new_x_variables_per_round * self.round_number + i),
                      self.A[words_half + index],  # input var
-                     'x' + str(int(self.A[i][1:]) + words_total),    # output var
-                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + 32 + i)    # dummy var
+                     'x' + str(int(self.A[i][1:]) + words_total),  # output var
+                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + 32 + i)  # dummy var
                      ] for i, index in enumerate(range(words_half))]
 
         elif self.cryptanalysis_type == 'linear':
@@ -725,7 +725,7 @@ class LBlock(Cipher):
         """
         if self.orientation == 1:
             for i in range(32, 64):
-                self.A[i] = self.A[i-32]
+                self.A[i] = self.A[i - 32]
 
             if self.round_number == 1:
                 bonus = 32
@@ -742,22 +742,14 @@ class LBlock(Cipher):
 
         Parameters:
         ---------
-        rounds  :   int
-                    Number of rounds for the cipher
+        rounds                  :   int
+                                    Number of rounds for the cipher
 
-        Returns:
-        ---------
-        A       :   list
-                    Names of all variables in this current round
+        model_as_bit_oriented   :   bool
+                                    Argument on whether or not LBlock should be modeled as a bit-oriented cipher instead
+                                    of as a 4-bit word-oriented cipher.
 
-        M       :   lil_matrix
-                    The empty constraint matrix for the MILP
-
-        V       :   list
-                    This list saves all the variables
-
-        next    :   int
-                    Number for the next x-variable
+                                    TODO: 4-bit word-oriented cipher not supported as of now
         """
         if model_as_bit_oriented:
             super().__init__(rounds, orientation=1)
@@ -793,57 +785,100 @@ class LBlock(Cipher):
         #   2 more are needed if the sbox is symmetric
         #   w + v + 1 more, redundant if the sbox invertible with branch number 2
 
-        # we could implement different fine-graining of the xors, right now we are treating them as 4-bit word xors
-        xors_per_round = 16
-        xor_variables_per_round = xors_per_round
-        xor_constraints_per_round = 7 * xors_per_round
+        #   determine plaintext vars
+        plaintext_vars = inputsize / self.orientation
 
-        # there are no linear transformations in LBlock
-        lt_per_round = 16
-        lt_variables_per_round = xors_per_round
-        lt_constraints_per_round = 7 * xors_per_round
+        #   determine xor output vars, dummy vars, and constraints
+        if self.cryptanalysis_type == 'differential':
+            xors_per_round = int(64 / self.orientation)
+        elif self.cryptanalysis_type == 'linear':
+            xors_per_round = 0
 
+        xor_dummy_variables_per_round = xors_per_round
+        xor_constraints_per_round = 4 * xors_per_round
+        xor_new_x_vars_per_round = xors_per_round
+
+        #   determine 3 way fork output vars, dummy vars, and constraints
+        if self.cryptanalysis_type == 'differential':
+            twf_per_round = 0
+        elif self.cryptanalysis_type == 'linear':
+            twf_per_round = int(32 / self.orientation)
+
+        twf_dummy_variables_per_round = twf_per_round
+        twf_constraints_per_round = 4 * twf_per_round
+        twf_new_x_vars_per_round = 2 * twf_per_round
+
+        #   determine linear transformation output vars, dummy vars, and constraints
+        lt_per_round = 0
+        lt_dummy_variables_per_round = lt_per_round
+        lt_constraints_per_round = 4 * lt_per_round
+        lt_new_x_vars_per_round = 2 * lt_per_round
+
+        #   determine sbox output vars, dummy vars, and constraints
         # TODO: Find out LBLOCK SBox Branch Number
-        sbox_branch_number_equals_2 = True
-
-        sboxes_per_round = 8
+        sbox_branch_number_leq_2 = True
+        sbox_invertible = True
+        sbox_bijective = True
 
         if self.orientation == 1:
-            sbox_dummy_variables_per_round = sboxes_per_round
-            sbox_output_variables_per_round = 4 * sboxes_per_round
-            sbox_variables_per_round = sbox_dummy_variables_per_round + sbox_output_variables_per_round
-            sbox_constraints_per_round = 7 * sboxes_per_round + sbox_branch_number_equals_2 * 9
-
+            sboxes_per_round = 8
         else:
-            sbox_variables_per_round = 0
-            sbox_constraints_per_round = 0
+            sboxes_per_round = 0
+
+        sbox_new_x_variables_per_round = 4 * sboxes_per_round
+        sbox_dummy_variables_per_round = sboxes_per_round
+        sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = sboxes_per_round * sbox_branch_number_leq_2 * sbox_invertible
+        sbox_constraints_per_round = sboxes_per_round * (
+                1 + 4 + (sbox_bijective * 2) + (sbox_branch_number_leq_2 * sbox_invertible * (1 + 4 + 4)))
+
+        encryption_key_vars = int((32 * self.rounds) / self.orientation)
+
+        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
+
+        number_constraints = ((xor_constraints_per_round +
+                               twf_constraints_per_round +
+                               sbox_constraints_per_round +
+                               lt_constraints_per_round) * self.rounds) + 1
+
+        number_variables = (plaintext_vars +
+                            encryption_key_vars +
+                                (
+                                    xor_new_x_vars_per_round + xor_dummy_variables_per_round +
+                                    twf_new_x_vars_per_round + twf_dummy_variables_per_round +
+                                    lt_new_x_vars_per_round + lt_dummy_variables_per_round +
+                                    sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
+                                    sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
+                                ) * self.rounds) + 1
+
+        self.M = lil_matrix((number_constraints, number_variables), dtype=int)
 
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
-        # linear transformation dummy variables, the 1 constant
-        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
-        self.M = lil_matrix((
-            (xor_constraints_per_round + sbox_constraints_per_round + lt_constraints_per_round) * self.rounds + 1, (
-                    inputsize / self.orientation + (
-                    inputsize / self.orientation + xor_variables_per_round + sbox_variables_per_round + lt_variables_per_round) * self.rounds) + 1),
-            dtype=int)
+        # this ordering is self.V = dict of all variables mapping names to entry in self.M
+        self.V = {'x' + str(i): i for i in range(plaintext_vars + ((xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))}
+        self.V |= {'d' + str(i): i for i in range(xor_dummy_variables_per_round + twf_dummy_variables_per_round)}
 
-        # self.V = dict of all variables mapping names to entry in self.M
-        self.V = {'x' + str(i): i for i in range(int(inputsize / self.orientation) * (self.rounds + 1))}
+        self.V |= {'a' + str(i): i for i in range(sbox_dummy_variables_per_round)}
+        self.V |= {'ds' + str(i): i for i in range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large)}
 
         self.V['constant'] = self.M.get_shape()[1] - 1
+
+        if self.orientation == 1:
+            # i.e. if sboxes are required
+            # dummy variables for sboxes
+            self.V |= {'ds' + str(i): i for i in range(int(inputsize / self.orientation) * (self.rounds + 1))}
+            # dummy variables for if not (sbox invertible with branch number 2)
+            self.V |= {'da' + str(i): i for i in range(int(inputsize / self.orientation) * (self.rounds + 1))}
 
         # list mit den Bits die momentan in der Cipher sind
         self.A = ['x' + str(i) for i in range(int(inputsize / self.orientation))]
 
+        # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
-            sbox_dummy_variables = ["a" + str(i) for i in range(sboxes_per_round * self.rounds)]
-            for sbox_dummy, index in enumerate(sbox_dummy_variables):
-                self.V[sbox_dummy] = 64 * (self.rounds + 1) + xor_variables_per_round * self.rounds + index
+            sbox_dummy_variables = ["a" + str(i) for i in range(sbox_dummy_variables_per_round)]
         else:
             for round in range(1, self.rounds + 1):
                 sbox_dummy_variables = ["x" + str(i) for i in range(16 * round, 16 * (round + 1))]
 
-        # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
