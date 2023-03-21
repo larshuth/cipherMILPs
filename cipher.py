@@ -373,7 +373,8 @@ class Enocorolin:
             :   list of lists
                 Specifies which variables belong in the constraint
         """
-        return [[self.A[31], self.A[32], "0"], [0, self.A[33], "2", "3"], [self.A[2], "0", 2], [self.A[6], 2, 6], [self.A[7], self.A[33], 7],
+        return [[self.A[31], self.A[32], "0"], [0, self.A[33], "2", "3"], [self.A[2], "0", 2], [self.A[6], 2, 6],
+                [self.A[7], self.A[33], 7],
                 [self.A[15], 7, 15], [self.A[16], "2", 16], [self.A[28], 16, 28], [self.A[29], "3", 29]]
 
     def gen_long_constraint(self, line, r, e):
@@ -553,89 +554,155 @@ class LBlock(Cipher):
                 Specifies which variables belong in the constraint
         """
         # actions contain lists of either xors ['xor', input 1, input 2, output, dummy var],
-        # 3-way forks ['3wf', input, output 1, output 2, dummy var], sboxes ['sbox', input 1-4, output 1-4, dummy var]
+        # 3-way forks ['3wf', input, output 1, output 2, dummy var], sboxes ['sbox', input start number, output start number, dummy var]
+        words_total = int(64 / self.orientation)
+        words_half = int(words_total / 2)
+
         if self.cryptanalysis_type == 'differential':
-            actions = [['xor', self.A[i], self.K[i], self.round_number] for i in range(int(64/self.orientation))]
             if self.orientation == 1:
                 # sboxes are now required
+                new_x_variables_per_round = 96  # 32 var for xor (1st half plaintext, key)
+                new_xor_dummies_per_round = 64  # 32 var for xor (1st half plaintext, key)
+
+                # 32 var for Sbox (xor output), 32 var for xor (sbox output, 2nd half plaintext)
+                # TODO: Grafik die das vernünftig /erklärt
+                actions = [
+                    ['xor',
+                     self.A[i],
+                     self.K[i],
+                     'x' + str(int(self.A[i][1:]) + int(words_half)),
+                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + i)
+                     ] for i in range(words_half)]
                 for i in range(8):
-                    actions += [['sbox', 96*self.round_number - 32 + i*4, 96*self.round_number + i*4]]
+                    actions += [['sbox',
+                                 new_x_variables_per_round * self.round_number - words_half + i * 4,
+                                 new_x_variables_per_round * self.round_number + i * 4,
+                                 'a' + str(int(self.A[i][1:]) + int(words_half))]]
             else:
-                pass
+                new_x_variables_per_round = words_total  # 32 var for xor (1st half plaintext, key)
+                new_xor_dummies_per_round = words_total  # 32 var for xor (1st half plaintext, key)
+                actions = [
+                    ['xor',     # category
+                     'x' + str(new_x_variables_per_round * self.round_number + i),
+                     self.A[words_half + index],  # input var
+                     'x' + str(int(self.A[i][1:]) + words_total),    # output var
+                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + 32 + i)    # dummy var
+                     ] for i, index in enumerate(range(words_half))]
 
         elif self.cryptanalysis_type == 'linear':
             # TODO: Linear Cryptanalysis
-            actions = [['3wf', self.A[i], self.round_number] for i in range(int(64/self.orientation))]
+            actions = [['3wf', self.A[i], self.round_number] for i in range(int(64 / self.orientation))]
 
+        print(actions)
         return actions
 
-    def gen_long_constraint(self, line, r, e):
+    def gen_long_constraint(self, line, e):
         """
         Generates a long constraint depending on which variable is currently j.
         For Enocoro we take the first variables in j. With the last one, we use it to define it new
         """
-        if len(e) == 3:
-            self.M[line, self.V.index(e[0])] = 1
-            if e[1][0] == "x":
-                self.M[line, self.V.index(e[1])] = 1
-            else:
-                self.M[line, self.V.index(self.S[int(e[1])])] = 1
-            self.M[line, len(self.V) - 2] = 1
-            self.M[line, len(self.V) - 1] = -2
-            if type(e[2]) == int:
-                self.A[e[2]] = "x" + str(self.next)
-            else:
-                self.S[int(e[2])] = "x" + str(self.next)
-            self.next += 1
-        else:
-            self.V.append("x" + str(self.next + 1))
-            self.M[line, self.V.index(self.S[e[0]])] = 1
-            self.M[line, self.V.index(self.S[e[1]])] = 1
-            self.M[line, len(self.V) - 3] = 1
-            self.M[line, len(self.V) - 1] = 1
-            self.M[line, len(self.V) - 2] = -3
-            # here we dont need to check if we assign it to S or A
-            self.S[int(e[2])] = "x" + str(self.next)
-            self.S[int(e[3])] = "x" + str(self.next + 1)
-            self.next += 2
+        sbox_bijective = True
+        sbox_invertible = True
+        sbox_branchnumber = 2
 
-        # updating the last constraint
-        indicesofsboxinput = self.input_sbox()
-        for i in indicesofsboxinput:
-            if "x" + str(i) in self.V:
-                self.M[self.M.get_shape()[0] - 1, self.V.index("x" + str(i))] = 1
+        if e[0] == 'xor':
+            # inequalities of xor are
+            # (1.) input1 + input2 + output \leq 2*dummy
+            # (2.) input1 \leq dummy
+            # (3.) input2 \leq dummy
+            # (4.) output \leq dummy
+            input_var_1 = e[1]
+            input_var_2 = e[2]
+            output_var = e[3]
+            dummy_var = e[4]
+            input_var_1_pos_in_matrix = self.V[input_var_1]
+            input_var_2_pos_in_matrix = self.V[input_var_2]
+            output_var_pos_in_matrix = self.V[output_var]
+            dummy_var_pos_in_matrix = self.V[dummy_var]
+
+            # starting with (1.)
+            self.M[line, input_var_1_pos_in_matrix] = 1
+            self.M[line, input_var_2_pos_in_matrix] = 1
+            self.M[line, output_var_pos_in_matrix] = 1
+            self.M[line, dummy_var_pos_in_matrix] = -2
+            line += 1
+
+            # then (2.), (3.), and (4.)
+            self.M[line, input_var_1_pos_in_matrix] = 1
+            self.M[line, dummy_var_pos_in_matrix] = -1
+            line += 1
+
+            self.M[line, input_var_2_pos_in_matrix] = 1
+            self.M[line, dummy_var_pos_in_matrix] = -1
+            line += 1
+
+            self.M[line, output_var_pos_in_matrix] = 1
+            self.M[line, dummy_var_pos_in_matrix] = -1
+            line += 1
+        elif e[0] == 'sbox':
+            # inequalities of sbox are
+            # (1.) input \leq dummy for all inputs
+            # (2.) sum over all inputs \geq dummy
+            # (3.) if sbox bijective: sum_{i \in all_inputs}
+            # (4.) if the sbox invertible with branch number 2:
+            # (4.1) sum over inputs + sum over outputs \geq branch * new dummy
+            # (4.2) input \leq new dummy for all inputs
+            # (4.3) output \leq dummy for all outputs
+
+            sbox_input_size = 4
+            sbox_output_size = 4
+            input_vars = ['x' + str(e[1] + i) for i in range(sbox_input_size)]
+            output_vars = ['x' + str(e[2] + i) for i in range(sbox_output_size)]
+            dummy_var = e[3]
+            dummy_var_pos_in_matrix = self.V[dummy_var]
+
+            # starting with (1.)
+            for i in input_vars:
+                input_var_pos_in_matrix = self.V[i]
+                self.M[line, input_var_pos_in_matrix] = 1
+                self.M[line, dummy_var_pos_in_matrix] = -1
+                line += 1
+
+            # then (2.)
+            for i in input_vars:
+                input_var_pos_in_matrix = self.V[i]
+                self.M[line, input_var_pos_in_matrix] = -1
+            self.M[line, dummy_var_pos_in_matrix] = 1
+            line += 1
+
+            # then (3.)
+            if sbox_bijective:
+                for i in input_vars:
+                    input_var_pos_in_matrix = self.V[i]
+                    self.M[line, input_var_pos_in_matrix] = sbox_input_size
+                for o in output_vars:
+                    output_var_pos_in_matrix = self.V[o]
+                    self.M[line, output_var_pos_in_matrix] = -1
+                line += 1
+
+                for i in input_vars:
+                    input_var_pos_in_matrix = self.V[i]
+                    self.M[line, input_var_pos_in_matrix] = -1
+                for o in output_vars:
+                    output_var_pos_in_matrix = self.V[o]
+                    self.M[line, output_var_pos_in_matrix] = sbox_output_size
+                line += 1
+            # and finally (4.) sbox invertible with branch number 2
+            if (not sbox_invertible) or (not (sbox_branchnumber <= 2)):
+                pass
+                # TODO for when it comes up
+                # Make a new dummy
+                # (4.1) sum over inputs + sum over outputs \geq branch * new dummy
+                # (4.2) input \leq new dummy for all inputs
+                # (4.3) output \leq dummy for all outputs
+
         return line
-
-    def input_sbox(self):
-        inputsbox = []
-        for i in range(self.rounds):
-            # first sbox
-            if i < 3:
-                inputsbox.append((2 - i))
-            else:
-                inputsbox.append(34 + (i - 3) * 10)
-            # second sbox
-            if i < 5:
-                inputsbox.append(7 - i)
-            else:
-                inputsbox.append(41 + (i - 5) * 10)
-            # third sbox
-            if i < 9:
-                inputsbox.append(16 - i)
-            else:
-                inputsbox.append(42 + (i - 9) * 10)
-            # fourth sbox
-            if i < 13:
-                inputsbox.append(29 - i)
-            else:
-                inputsbox.append(43 + (i - 13) * 10)
-        return inputsbox
 
     def shift_before(self):
         # in X0, there is a 8 bit shift to the left
         # pos is a short function to return  the proper position depending on whether we model LBlock as 4-bit word oriented of just bit oriented
-        pos = lambda x: int(x/self.orientation)
-        tmp = [self.A[pos(32+i)] for i in range(pos(32))]
+        pos = lambda x: int(x / self.orientation)
+        tmp = [self.A[pos(32 + i)] for i in range(pos(32))]
         for i in range(pos(32), pos(56)):
             self.A[i] = self.A[i + pos(8)]
         for i, index in enumerate(range(pos(56), pos(64))):
@@ -656,11 +723,17 @@ class LBlock(Cipher):
         A   :   list
                 Shifted variables that can be used for the next round
         """
-        la = self.A[31]
-        for i in range(30, -1, -1):
-            temp = self.A[i]
-            self.A[i + 1] = temp
-        self.A[0] = la
+        if self.orientation == 1:
+            for i in range(32, 64):
+                self.A[i] = self.A[i-32]
+
+            if self.round_number == 1:
+                bonus = 32
+            else:
+                bonus = 0
+
+            for i in range(32):
+                self.A[i] = 'x' + str(i + 96 + bonus)
         return
 
     def __init__(self, rounds=32, model_as_bit_oriented=False):
@@ -750,12 +823,13 @@ class LBlock(Cipher):
         # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
         self.M = lil_matrix((
             (xor_constraints_per_round + sbox_constraints_per_round + lt_constraints_per_round) * self.rounds + 1, (
-                    inputsize/self.orientation + (
+                    inputsize / self.orientation + (
                     inputsize / self.orientation + xor_variables_per_round + sbox_variables_per_round + lt_variables_per_round) * self.rounds) + 1),
             dtype=int)
 
         # self.V = dict of all variables mapping names to entry in self.M
-        self.V = {'x'+str(i): i for i in range(int(inputsize/self.orientation) * (self.rounds + 1))}
+        self.V = {'x' + str(i): i for i in range(int(inputsize / self.orientation) * (self.rounds + 1))}
+
         self.V['constant'] = self.M.get_shape()[1] - 1
 
         # list mit den Bits die momentan in der Cipher sind
@@ -766,16 +840,13 @@ class LBlock(Cipher):
             for sbox_dummy, index in enumerate(sbox_dummy_variables):
                 self.V[sbox_dummy] = 64 * (self.rounds + 1) + xor_variables_per_round * self.rounds + index
         else:
-            for round in range(1, self.rounds+1):
-                sbox_dummy_variables = ["x" + str(i) for i in range(16*round, 16 * (round+1))]
+            for round in range(1, self.rounds + 1):
+                sbox_dummy_variables = ["x" + str(i) for i in range(16 * round, 16 * (round + 1))]
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
-
-        self.X_1 = ['x'+str(i) for i in range(32)]
-        self.X_0 = ['x'+str(i+32) for i in range(32)]
 
         self.round_number = 0
         return
@@ -816,6 +887,7 @@ class CipherTemplate(Cipher):
             self.next += 1
         self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
         return
+
 
 AVAILABLE = [Enocoro, Aes, LBlock]
 BIT_ORIENTED = [LBlock]
