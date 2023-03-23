@@ -3,7 +3,7 @@ import generateConstraints as gc
 import cipher as cip
 import visualization as vis
 
-DEBUG = False
+DEBUG = True
 
 
 def main(rounds, cipher, viz):
@@ -30,29 +30,34 @@ def main(rounds, cipher, viz):
     elif viz == 2:
         vis.gen_pdf(rounds, cipher)
 
-
-if __name__ == "__main__":
+def safe_call():
     try:
-        if not DEBUG:
-            # Asking the user what to generate
-            print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
-            viz = int(input())
-            print("How many rounds do you want to generate?")
-            rounds = int(input())
+        # Asking the user what to generate
+        print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
+        viz = int(input())
+        print("How many rounds do you want to generate?")
+        rounds = int(input())
 
-            # generalizing the cipher question for the possible addition of more ciphers
-            cipher_question = "Which cipher do you want to use? "
-            for index, cipher in enumerate(cip.AVAILABLE):
-                cipher_question += " %s (%s)" % (
-                    cipher.__name__, index) + " or"  # Adds e.g. "SKINNY-128 (1)" to the list of all options
-            cipher_question = cipher_question[:-3] + "?"
+        # generalizing the cipher question for the possible addition of more ciphers
+        cipher_question = "Which cipher do you want to use? "
+        for index, cipher in enumerate(cip.AVAILABLE):
+            cipher_question += " %s (%s)" % (
+                cipher.__name__, index) + " or"  # Adds e.g. "SKINNY-128 (1)" to the list of all options
+        cipher_question = cipher_question[:-3] + "?"
 
-            print(cipher_question)
-            ciphelp = int(input())
-            chosen_cipher = cip.AVAILABLE[ciphelp]
-        else:
-            rounds, chosen_cipher, viz = 1, 1, 0
+        print(cipher_question)
+        ciphelp = int(input())
+        chosen_cipher = cip.AVAILABLE[ciphelp]
 
         main(rounds, chosen_cipher, viz)
-    except:
+    except Exception as e:
         print('\n\n!!! Error in input, restart script !!!\n\n')
+        print(e)
+    return
+
+if __name__ == "__main__":
+    if DEBUG:
+        rounds, chosen_cipher, viz = 1, cip.Enocoro, 1
+        main(rounds, chosen_cipher, viz)
+    else:
+        safe_call()

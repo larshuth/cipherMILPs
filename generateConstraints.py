@@ -65,7 +65,7 @@ def removezerocols(M, V):
             newV.append(V[i])
     colszero = np.array(colszero)
     M = M[:, colszero]
-    return M, newV
+    return M
 
 
 def new_generate_constraints(rounds, cipher):
@@ -91,23 +91,17 @@ def new_generate_constraints(rounds, cipher):
     """
     line = 0
     cipher_instance = cipher(rounds)
+    cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
         cipher_instance.shift_before()
         for j in cipher_instance.rangenumber():
-            line = cipher_instance.gen_long_constraint(line, r, j)
-            line = generate_smallconstraints(cipher_instance, line)
-            line += 1
+            line = cipher_instance.gen_long_constraint(line, j)
+            # TODO: figure out how to add generate_smallconstraints from Aes, Enocoro, and EnocoroLin to the class
+            # line = generate_smallconstraints(cipher_instance, line)
         cipher_instance.shift_after()
     cipher_instance.M = cipher_instance.M.tocsr()
-    cipher_instance.V.append("1")
-    return removezerocols(cipher_instance.M, cipher_instance.V)
-
-
-def generate_additional_bit_oriented_constraints(sbox):
-    # for every S-box in the schematic diagram, including the encryption process and the key schedule algorithm, we introduce a new 0-1 variable A_j such that
-
-    return 0
-
+    cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
+    return cipher_instance
 
 def generate_convex_hull_constraints(sbox, selection_style="greedy"):
     """

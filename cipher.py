@@ -114,7 +114,7 @@ class Aes(Cipher):
         """
         In AES the bits do not change after one round so this function does nothing.
         """
-        pass
+        self.round_number += 1
         return
 
     def __init__(self, rounds=1):
@@ -288,6 +288,7 @@ class Enocoro(Cipher):
             temp = self.A[i]
             self.A[i + 1] = temp
         self.A[0] = la
+        self.round_number += 1
         return
 
     def __init__(self, rounds=1):
@@ -479,6 +480,7 @@ class Enocorolin:
         for i in range(30, -1, -1):
             self.A[i + 1] = self.A[i]
         self.A[0] = tmp
+        self.round_number += 1
         return
 
     def __init__(self, rounds):
@@ -539,6 +541,17 @@ class LBlock(Cipher):
     Class in which all functions for LBlock cipher [Wu et al 2011] are defined.
     """
 
+    def extra_permutation_after_sbox(self, pos):
+        if pos % 4 == 0:
+            shift = -2
+        elif pos % 4 == 1:
+            shift = +1
+        elif pos % 4 == 2:
+            shift = -1
+        elif pos % 4 == 3:
+            shift = +2
+        return shift * 4
+
     def rangenumber(self):
         """
         Defines what happens in a round.
@@ -557,6 +570,12 @@ class LBlock(Cipher):
         # 3-way forks ['3wf', input, output 1, output 2, dummy var], sboxes ['sbox', input start number, output start number, dummy var]
         words_total = int(64 / self.orientation)
         words_half = int(words_total / 2)
+        first_number = int(self.A[0][1:])
+
+        if self.round_number == 1:
+            bonus = 32
+        else:
+            bonus = 0
 
         if self.cryptanalysis_type == 'differential':
             if self.orientation == 1:
@@ -565,29 +584,27 @@ class LBlock(Cipher):
                 new_xor_dummies_per_round = 64  # 32 var for xor (1st half plaintext, key)
 
                 # 32 var for Sbox (xor output), 32 var for xor (sbox output, 2nd half plaintext)
-                # TODO: Grafik die das vernünftig /erklärt
+                # TODO: Grafik die das vernünftig darstellt/erklärt
                 actions = [
                     ['xor',
                      self.A[i],
                      self.K[i],
-                     'x' + str(int(self.A[i][1:]) + int(words_half)),
+                     'x' + str(int(self.A[i][1:]) + int(words_half) + bonus),
                      'd' + str((self.round_number - 1) * new_xor_dummies_per_round + i)
                      ] for i in range(words_half)]
                 for i in range(8):
                     actions += [['sbox',
                                  new_x_variables_per_round * self.round_number - words_half + i * 4,
                                  new_x_variables_per_round * self.round_number + i * 4,
-                                 'a' + str(int(self.A[i][1:]) + int(words_half))]]
+                                 'a' + str((self.round_number - 1) * int(self.number_a_vars / self.rounds) + i)]]
+
+                start_val = 96 * self.round_number
+                for index, shift in enumerate([+4, +8, -8, -4, +4, +8, -8, -4]):
+                    actions += [['xor', 'x' + str(start_val + (index * 4) + shift + i), 'x' + str(32 + (index * 4) + i),
+                                 'x' + str(128 + (index * 4) + i),
+                                 'd' + str(32 + 64 * (self.round_number - 1) + (index * 4) + i)] for i in range(4)]
             else:
-                new_x_variables_per_round = words_total  # 32 var for xor (1st half plaintext, key)
-                new_xor_dummies_per_round = words_total  # 32 var for xor (1st half plaintext, key)
-                actions = [
-                    ['xor',  # category
-                     'x' + str(new_x_variables_per_round * self.round_number + i),
-                     self.A[words_half + index],  # input var
-                     'x' + str(int(self.A[i][1:]) + words_total),  # output var
-                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + 32 + i)  # dummy var
-                     ] for i, index in enumerate(range(words_half))]
+                pass
 
         elif self.cryptanalysis_type == 'linear':
             # TODO: Linear Cryptanalysis
@@ -702,11 +719,11 @@ class LBlock(Cipher):
         # in X0, there is a 8 bit shift to the left
         # pos is a short function to return  the proper position depending on whether we model LBlock as 4-bit word oriented of just bit oriented
         pos = lambda x: int(x / self.orientation)
-        tmp = [self.A[pos(32 + i)] for i in range(pos(32))]
+        tmp = [self.A[pos(32 + i)] for i in range(pos(8))]
         for i in range(pos(32), pos(56)):
             self.A[i] = self.A[i + pos(8)]
-        for i, index in enumerate(range(pos(56), pos(64))):
-            self.A[i] = tmp[index]
+        for index, elem in enumerate(range(pos(56), pos(64))):
+            self.A[elem] = tmp[index]
         return
 
     def shift_after(self):
@@ -727,16 +744,16 @@ class LBlock(Cipher):
             for i in range(32, 64):
                 self.A[i] = self.A[i - 32]
 
-            if self.round_number == 1:
-                bonus = 32
-            else:
-                bonus = 0
-
             for i in range(32):
-                self.A[i] = 'x' + str(i + 96 + bonus)
+                self.A[i] = 'x' + str(96 * self.round_number + 32 + i)
+
+        # this is actually not the size of the key but the array representing the subkey in each round
+        keysize = int((64 / 2) / self.orientation)
+        self.K = ['k' + str(self.round_number * keysize + i) for i in range(keysize)]
+        self.round_number += 1
         return
 
-    def __init__(self, rounds=32, model_as_bit_oriented=False):
+    def __init__(self, rounds=32, model_as_bit_oriented=True):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -842,25 +859,46 @@ class LBlock(Cipher):
 
         number_variables = (plaintext_vars +
                             encryption_key_vars +
-                                (
+                            (
                                     xor_new_x_vars_per_round + xor_dummy_variables_per_round +
                                     twf_new_x_vars_per_round + twf_dummy_variables_per_round +
                                     lt_new_x_vars_per_round + lt_dummy_variables_per_round +
                                     sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
                                     sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
-                                ) * self.rounds) + 1
+                            ) * self.rounds) + 1
 
-        self.M = lil_matrix((number_constraints, number_variables), dtype=int)
+        self.M = lil_matrix((int(number_constraints), int(number_variables)), dtype=int)
+
+        print(number_variables)
 
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
-        self.V = {'x' + str(i): i for i in range(plaintext_vars + ((xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))}
-        self.V |= {'d' + str(i): i for i in range(xor_dummy_variables_per_round + twf_dummy_variables_per_round)}
+        self.number_x_vars = int(plaintext_vars + ((
+                                                               xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))
+        self.number_d_vars = (xor_dummy_variables_per_round + twf_dummy_variables_per_round) * self.rounds
+        self.number_a_vars = int(sbox_dummy_variables_per_round * self.rounds)
+        self.number_ds_vars = int(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)
 
-        self.V |= {'a' + str(i): i for i in range(sbox_dummy_variables_per_round)}
-        self.V |= {'ds' + str(i): i for i in range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large)}
+        self.V = {'x' + str(i): i for i in range(self.number_x_vars)}
+        self.V |= {i: 'x' + str(i) for i in range(self.number_x_vars)}
+
+        self.V |= {'d' + str(i): i + self.number_x_vars for i in range(self.number_d_vars)}
+        self.V |= {i + self.number_x_vars: 'd' + str(i) for i in range(self.number_d_vars)}
+
+        self.V |= {'a' + str(i): i + self.number_x_vars + self.number_d_vars for i in range(self.number_a_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars: 'a' + str(i) for i in range(self.number_a_vars)}
+        self.V |= {'ds' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars for i in
+                   range(self.number_ds_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars: 'ds' + str(i) for i in
+                   range(self.number_ds_vars)}
+
+        self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
+                   for i in range(encryption_key_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
+                   for i in range(encryption_key_vars)}
 
         self.V['constant'] = self.M.get_shape()[1] - 1
+        self.V[self.M.get_shape()[1] - 1] = 'constant'
 
         if self.orientation == 1:
             # i.e. if sboxes are required
@@ -871,6 +909,7 @@ class LBlock(Cipher):
 
         # list mit den Bits die momentan in der Cipher sind
         self.A = ['x' + str(i) for i in range(int(inputsize / self.orientation))]
+        self.K = ['k' + str(i) for i in range(int((inputsize / 2) / self.orientation))]
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
@@ -883,7 +922,7 @@ class LBlock(Cipher):
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
 
-        self.round_number = 0
+        self.round_number = 1
         return
 
 

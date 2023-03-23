@@ -35,10 +35,14 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    A, V = gc.new_generate_constraints(rounds, cipher)
-    M, V = sf.d_var_to_beginning(A, V)
-    B = sf.long_constraints_to_top(M)
-    C, _ = sf.create_fourblock(A, V)
+    cipherinstance = gc.new_generate_constraints(rounds, cipher)
+    A = cipherinstance.M.copy()
+    sf.d_var_to_beginning(cipherinstance)
+    M = cipherinstance.M.copy()
+    sf.long_constraints_to_top(cipherinstance)
+    B = cipherinstance.M.copy()
+    #sf.create_fourblock(cipherinstance)
+    C = cipherinstance.M
 
     axs[0].set_title('native')
     axs[1].set_title('d_variables to the beginning')
@@ -51,6 +55,7 @@ def matplotlibvis(rounds, cipher):
     ax4.spy(C, markersize=1, color="skyblue")
 
     plt.show()
+    print("plot should have been shown")
 
 
 def matplot_scatterplot():
