@@ -1,5 +1,5 @@
 import unittest
-import cipher
+from cipher import cipher
 
 
 class LBlockTest(unittest.TestCase):
