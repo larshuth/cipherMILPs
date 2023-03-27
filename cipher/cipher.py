@@ -1,8 +1,4 @@
 from scipy.sparse import lil_matrix
-from differential.enocoro import Enocoro
-from differential.aes import Aes
-from differential.lblock import LBlock
-from linear.enocoro import Enocorolin
 
 # If a new cipher is added, do not forget to add it to the list stored in the AVAILABLE variable at the end of the file.
 
@@ -55,7 +51,3 @@ class CipherTemplate(Cipher):
             self.next += 1
         self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
         return
-
-
-AVAILABLE = [Enocoro, Enocorolin, Aes, LBlock]
-BIT_ORIENTED = [LBlock]

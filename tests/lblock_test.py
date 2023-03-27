@@ -1,10 +1,10 @@
 import unittest
-from cipher import cipher
+from cipher.differential.lblock import LBlock
 
 
 class LBlockTest(unittest.TestCase):
     def test_init_bit_oriented(self):
-        cipher_instance = cipher.LBlock(model_as_bit_oriented=True)
+        cipher_instance = LBlock(model_as_bit_oriented=True)
         bits_before_round_1 = ['x0', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13',
                                'x14', 'x15', 'x16', 'x17', 'x18', 'x19', 'x20', 'x21', 'x22', 'x23', 'x24', 'x25',
                                'x26', 'x27', 'x28', 'x29', 'x30', 'x31', 'x32', 'x33', 'x34', 'x35', 'x36', 'x37',
@@ -15,7 +15,7 @@ class LBlockTest(unittest.TestCase):
         return
 
     def test_round_progression_bit_oriented(self):
-        cipher_instance = cipher.LBlock(rounds=4, model_as_bit_oriented=True)
+        cipher_instance = LBlock(rounds=4, model_as_bit_oriented=True)
 
         cipher_instance.shift_before()
         actions = cipher_instance.rangenumber()
@@ -55,7 +55,8 @@ class LBlockTest(unittest.TestCase):
                           ['xor', 'x120', 'x60', 'x156', 'd60'], ['xor', 'x121', 'x61', 'x157', 'd61'],
                           ['xor', 'x122', 'x62', 'x158', 'd62'], ['xor', 'x123', 'x63', 'x159', 'd63']]
 
-        self.assertEqual(actions, events_round_1)
+        filtered_actions = [[a[0]] + a[2:] if a[0] == 'sbox' else a for a in actions]    # filtering out sbox instances
+        self.assertEqual(events_round_1, filtered_actions)
 
         line = 0
         for action in actions:
@@ -108,7 +109,8 @@ class LBlockTest(unittest.TestCase):
                           ['xor', 'x216', 'x60', 'x156', 'd124'], ['xor', 'x217', 'x61', 'x157', 'd125'],
                           ['xor', 'x218', 'x62', 'x158', 'd126'], ['xor', 'x219', 'x63', 'x159', 'd127']]
 
-        self.assertEqual(events_round_2, actions)
+        filtered_actions = [[a[0]] + a[2:] if a[0] == 'sbox' else a for a in actions]  # filtering out sbox instances
+        self.assertEqual(events_round_2, filtered_actions)
 
         line = 0
         for action in actions:

@@ -1,34 +1,41 @@
-import cipher
-import generateConstraints as gc
-import cipher as cip
+import cipher.cipher as cip
 import visualization as vis
+from cipher.differential.enocoro import Enocoro
+from cipher.differential.aes import Aes
+from cipher.differential.lblock import LBlock
+from cipher.linear.enocoro import Enocorolin
 
 DEBUG = True
 
+AVAILABLE = [Enocoro, Enocorolin, Aes, LBlock]
+BIT_ORIENTED = [LBlock]
+
 
 def main(rounds, cipher, viz):
-    '''
+    """
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
 
     Parameters:
     -----------
     rounds      :   int
                     Number of rounds used for cipher
-    
+
     cipher      :   class
                     Class that represents the wanted cipher
-    
+
     viz         :   int
                     Indicates the desired visualization
 
     Returns:
     ----------
-    Opens a new window or creates a new pdf file in the same directory of this file.         
-    '''
+    Opens a new window or creates a new pdf file in the same directory of this file.
+    """
+
     if viz == 1:
         vis.matplotlibvis(rounds, cipher)
     elif viz == 2:
         vis.gen_pdf(rounds, cipher)
+
 
 def safe_call():
     try:
@@ -54,6 +61,7 @@ def safe_call():
         print('\n\n!!! Error in input, restart script !!!\n\n')
         print(e)
     return
+
 
 if __name__ == "__main__":
     if DEBUG:

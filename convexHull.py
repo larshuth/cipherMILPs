@@ -4,10 +4,6 @@ import sage.geometry.polyhedron.base
 from scipy.sparse import csr_matrix, lil_matrix
 import cipher as cip
 
-# poly_test = Polyhedron ( vertices = myPoints )
-# for v in poly_test . inequality_generator ():
-#   print v
-
 
 def ch_hrep_from_sbox(sbox_instance):
     sbox_instance.build_non_zero_ddt_entries()
@@ -17,6 +13,5 @@ def ch_hrep_from_sbox(sbox_instance):
 
 
 def ch_hrep_from_vectors(vectors):
-    print(sage.geometry.polyhedron.base.Polyhedron(vertices=vectors).Hrepresentation_str(style="<="))
-    # in case it doesnt work try code from the top
+    print(sage.geometry.polyhedron.base.Polyhedron(vertices=vectors).Hrepresentation().vector())
     return

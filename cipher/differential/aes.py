@@ -1,5 +1,6 @@
 from cipher.cipher import Cipher
-from scipy import lil_matrix
+from scipy.sparse import lil_matrix
+
 
 class Aes(Cipher):
     """
