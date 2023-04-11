@@ -32,8 +32,15 @@ class SBox:
                     minimal_hamming_weight = min(minimal_hamming_weight, current_hamming_weight)
         return minimal_hamming_weight
 
+    def check_subs_match_bits(self):
+        return True
+
     def __init__(self, substitutions, in_bits, out_bits):
         self.substitutions, self.in_bits, self.out_bits = substitutions, in_bits, out_bits
+
+        if not self.check_subs_match_bits():
+            print("bits dont match ")
+            return
 
         self.is_invertible = self.determine_invertibility()
         self.is_bijective = self.determine_bijectivity()
@@ -48,6 +55,7 @@ class SBox:
         self.differential_properties_built = False
         self.differential_properties = set()
 
+        self.non_zero_ddt_entries_vectors_built = False
         self.vectors = set()
         return
 
@@ -55,20 +63,24 @@ class SBox:
         if self.ddt_built:
             return
 
-        self.ddt = [[0] * self.out_bits] * self.in_bits
+        self.ddt = [[0] * (2 ** self.out_bits)] * (2 ** self.in_bits)
         self.non_zero_ddt_entries = set()
         for in_val_1, out_val_1 in self.substitutions.items():
             for in_val_2, out_val_2 in self.substitutions.items():
                 in_val_xorwise_diff = in_val_1 ^ in_val_2
                 out_val_xorwise_diff = out_val_1 ^ out_val_2
-                self.ddt[in_val_xorwise_diff][out_val_xorwise_diff] += 1
+                try:
+                    self.ddt[in_val_xorwise_diff][out_val_xorwise_diff] += 1
+                except:
+                    print(in_val_xorwise_diff, out_val_xorwise_diff, self.in_bits, self.out_bits)
+
                 self.non_zero_ddt_entries |= {(in_val_xorwise_diff, out_val_xorwise_diff)}
         self.non_zero_ddt_entries_built = True
         self.ddt_built = True
         return
 
     def build_non_zero_ddt_entries_vectors(self):
-        if self.non_zero_ddt_entries_built:
+        if self.non_zero_ddt_entries_vectors_built:
             return
 
         if not self.non_zero_ddt_entries_built:

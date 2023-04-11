@@ -119,3 +119,5 @@ fabric.properties
 .idea/*
 *.tex
 __pycache__/*
+*/__pycache__/*
+*/*/__pycache__/*

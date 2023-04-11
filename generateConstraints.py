@@ -102,25 +102,3 @@ def new_generate_constraints(rounds, cipher):
     cipher_instance.M = cipher_instance.M.tocsr()
     cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     return cipher_instance
-
-def generate_convex_hull_constraints(sbox, selection_style="greedy"):
-    """
-        This function generates the constraint matrix for a number of rounds of a given cipher.
-
-        Parameters:
-        ----------
-        sbox  :   dict (int to int)
-                    The s-box, one is looking to model in
-
-        selection_style  :   string
-                    "greedy"    ->  Sun et al. 2013 Greedy approach
-
-        Returns:
-        -----------
-        M       :   csr_matrix
-                    Generated constraint matrix for the MILP representing the convex hull of the given s-box
-
-        V       :   list
-                    List constraining the variables. Multiplying the matrix with this list results in the constraints.
-        """
-    return

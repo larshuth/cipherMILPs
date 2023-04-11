@@ -207,12 +207,54 @@ class LBlock(Cipher):
                     self.M[line, extra_constraint_dummy_var_pos_in_matrix] = 1
                     line += 1
 
+            constant_pos = self.V["constant"]
             if self.convex_hull_applied:
-                convexHull.ch_hrep_from_sbox(sbox)
-                # TODO: get vectors of sbox CH hrep
-                # TODO: convert vectors to values in self.M
-                pass
+                inequalities = convexHull.ch_hrep_from_sbox(sbox)
 
+                # we get a string along the lines of
+                #          -x6 + x7  >=   0
+                #               -x7  >=  -1
+                #          -x4 + x5  >=   0
+                #                x0  >=   0
+                # x1 - x3 + x4 - x5  >=  -1
+                # as a return value from convexHull.ch_hrep_from_sbox in inequalities
+                for inequality in inequalities:  # split inequalities in a list with one inequality per entry
+                    try:
+                        inequality = inequality.replace(' ', '')
+                        [greater, lesser] = inequality.split(">=")  # get left part, right part, something along the lines of
+                    # ["         -x4 + x5 ", "  0"]
+                    except AttributeError:
+                        continue
+
+                    modifier = 1
+                    # TODO input the actual values into the matrix and not just a 1 for non-zero
+                    variables_not_zero = set()
+                    for character in greater:
+                        if character == "-":
+                            modifier = -1
+                        elif character == "+":
+                            modifier = +1
+                        elif character == "x":
+                            continue
+                        else:   # i.e. the character is number coming after x
+                            variables_not_zero |= {int(character)}
+
+                    for index, i in enumerate(input_vars):
+                        if index in variables_not_zero:
+                            input_var_pos_in_matrix = self.V[i]
+                            print(self.M)
+                            print(input_var_pos_in_matrix)
+                            print(line)
+                            self.M[line, input_var_pos_in_matrix] = 1
+
+                    for index, i in enumerate(output_vars):
+                        output_var_pos_in_matrix = self.V[i]
+                        if index + sbox.in_bits in variables_not_zero:
+                            self.M[line, output_var_pos_in_matrix] = 1
+
+                    value_right_of_inequality = int(lesser)
+                    self.M[line, constant_pos] = value_right_of_inequality
+                    line += 1
         return line
 
     def shift_before(self):

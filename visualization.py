@@ -237,10 +237,14 @@ def gen_pdf(rounds, cipher):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    A, V = gc.new_generate_constraints(rounds, cipher)
-    M, v = sf.d_var_to_beginning(A, V)
-    B = sf.long_constraints_to_top(M)
-    C, W = sf.create_fourblock(A, V)
+    cipherinstance = gc.new_generate_constraints(rounds, cipher)
+    A = cipherinstance.M.copy()
+    sf.d_var_to_beginning(cipherinstance)
+    M = cipherinstance.M.copy()
+    sf.long_constraints_to_top(cipherinstance)
+    B = cipherinstance.M.copy()
+    # sf.create_fourblock(cipherinstance)
+    C = cipherinstance.M
 
     ax1.set_title('native')
     ax2.set_title('d_variables to the left')
@@ -255,4 +259,4 @@ def gen_pdf(rounds, cipher):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds', A=A, V=V, title=title, dpi=300)
+    mainly(title[0] + title[1] + 'rounds', A=A, V=cipherinstance.V, title=title, dpi=300)

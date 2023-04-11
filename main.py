@@ -1,4 +1,3 @@
-import cipher.cipher as cip
 import visualization as vis
 from cipher.differential.enocoro import Enocoro
 from cipher.differential.aes import Aes
@@ -47,14 +46,14 @@ def safe_call():
 
         # generalizing the cipher question for the possible addition of more ciphers
         cipher_question = "Which cipher do you want to use? "
-        for index, cipher in enumerate(cip.AVAILABLE):
+        for index, cipher in enumerate(AVAILABLE):
             cipher_question += " %s (%s)" % (
                 cipher.__name__, index) + " or"  # Adds e.g. "SKINNY-128 (1)" to the list of all options
         cipher_question = cipher_question[:-3] + "?"
 
         print(cipher_question)
         ciphelp = int(input())
-        chosen_cipher = cip.AVAILABLE[ciphelp]
+        chosen_cipher = AVAILABLE[ciphelp]
 
         main(rounds, chosen_cipher, viz)
     except Exception as e:
@@ -65,7 +64,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz = 1, cip.Enocoro, 1
+        rounds, chosen_cipher, viz = 4, LBlock, 2
         main(rounds, chosen_cipher, viz)
     else:
         safe_call()
