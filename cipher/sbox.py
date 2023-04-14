@@ -63,12 +63,14 @@ class SBox:
         if self.ddt_built:
             return
 
-        self.ddt = [[0] * (2 ** self.out_bits)] * (2 ** self.in_bits)
+        self.ddt = [[0].copy() * (2 ** self.out_bits) for i in range(2 ** self.in_bits)]
+
         self.non_zero_ddt_entries = set()
         for in_val_1, out_val_1 in self.substitutions.items():
             for in_val_2, out_val_2 in self.substitutions.items():
                 in_val_xorwise_diff = in_val_1 ^ in_val_2
                 out_val_xorwise_diff = out_val_1 ^ out_val_2
+                print(in_val_xorwise_diff, out_val_xorwise_diff)
                 try:
                     self.ddt[in_val_xorwise_diff][out_val_xorwise_diff] += 1
                 except:
