@@ -4,7 +4,8 @@ import convexHull
 
 from scipy.sparse import lil_matrix
 
-# TODO remove everything related to linear cryptanalysis and create a class for linear in cipher/linear
+
+# TODO remove everything related to self.linear cryptanalysis and create a class for self.linear in cipher/linear
 # TODO 4-bit word-oriented cipher not supported as of now
 
 
@@ -91,171 +92,13 @@ class LBlock(Cipher):
 
         return actions
 
-    def gen_long_constraint(self, line, action):
+    def gen_long_constraint(self, action):
         """
         Generates a long constraint depending on which variable is currently j.
         For Enocoro we take the first variables in j. With the last one, we use it to define it new
         """
-        if action[0] == 'xor':
-            # inequalities of xor are
-            # (1.) input1 + input2 + output \leq 2*dummy
-            # (2.) input1 \leq dummy
-            # (3.) input2 \leq dummy
-            # (4.) output \leq dummy
-            input_var_1 = action[1]
-            input_var_2 = action[2]
-            output_var = action[3]
-            dummy_var = action[4]
-            input_var_1_pos_in_matrix = self.V[input_var_1]
-            input_var_2_pos_in_matrix = self.V[input_var_2]
-            output_var_pos_in_matrix = self.V[output_var]
-            dummy_var_pos_in_matrix = self.V[dummy_var]
 
-            # starting with (1.)
-            self.M[line, input_var_1_pos_in_matrix] = 1
-            self.M[line, input_var_2_pos_in_matrix] = 1
-            self.M[line, output_var_pos_in_matrix] = 1
-            self.M[line, dummy_var_pos_in_matrix] = -2
-            line += 1
-
-            # then (2.), (3.), and (4.)
-            self.M[line, input_var_1_pos_in_matrix] = 1
-            self.M[line, dummy_var_pos_in_matrix] = -1
-            line += 1
-
-            self.M[line, input_var_2_pos_in_matrix] = 1
-            self.M[line, dummy_var_pos_in_matrix] = -1
-            line += 1
-
-            self.M[line, output_var_pos_in_matrix] = 1
-            self.M[line, dummy_var_pos_in_matrix] = -1
-            line += 1
-
-        elif action[0] == 'sbox':
-            # inequalities of sbox are
-            # (1.) input \leq dummy for all inputs
-            # (2.) sum over all inputs \geq dummy
-            # (3.) if sbox bijective: sum_{i \in all_inputs}
-            # (4.) if the sbox invertible with branch number 2:
-            # (4.1) sum over inputs + sum over outputs \geq branch * new dummy
-            # (4.2) input \leq new dummy for all inputs
-            # (4.3) output \leq dummy for all outputs
-            sbox = action[1]
-
-            input_vars = ['x' + str(action[2] + i) for i in range(sbox.in_bits)]
-            output_vars = ['x' + str(action[3] + i) for i in range(sbox.out_bits)]
-            dummy_var = action[4]
-            dummy_var_pos_in_matrix = self.V[dummy_var]
-
-            # starting with (1.)
-            for i in input_vars:
-                input_var_pos_in_matrix = self.V[i]
-                self.M[line, input_var_pos_in_matrix] = 1
-                self.M[line, dummy_var_pos_in_matrix] = -1
-                line += 1
-
-            # then (2.)
-            for i in input_vars:
-                input_var_pos_in_matrix = self.V[i]
-                self.M[line, input_var_pos_in_matrix] = -1
-            self.M[line, dummy_var_pos_in_matrix] = 1
-            line += 1
-
-            # then (3.)
-            if sbox.is_bijective:
-                for i in input_vars:
-                    input_var_pos_in_matrix = self.V[i]
-                    self.M[line, input_var_pos_in_matrix] = sbox.in_bits
-                for o in output_vars:
-                    output_var_pos_in_matrix = self.V[o]
-                    self.M[line, output_var_pos_in_matrix] = -1
-                line += 1
-
-                for i in input_vars:
-                    input_var_pos_in_matrix = self.V[i]
-                    self.M[line, input_var_pos_in_matrix] = -1
-                for o in output_vars:
-                    output_var_pos_in_matrix = self.V[o]
-                    self.M[line, output_var_pos_in_matrix] = sbox.out_bits
-                line += 1
-
-            # and finally (4.) sbox invertible with branch number 2
-            if (not sbox.is_invertible) or (not (sbox.branch_number <= 2)):
-                # Make a new dummy
-                # TODO expand to be applicable to ciphers with more than 10 sboxes
-                extra_constraint_dummy_var = 'ds' + str(self.round_number) + str(sbox.__name__())[-1]
-                extra_constraint_dummy_var_pos_in_matrix = self.V[extra_constraint_dummy_var]
-                # (4.1) sum over inputs + sum over outputs \geq branch * new dummy
-                for i in input_vars:
-                    input_var_pos_in_matrix = self.V[i]
-                    self.M[line, input_var_pos_in_matrix] = 1
-                for o in output_vars:
-                    output_var_pos_in_matrix = self.V[o]
-                    self.M[line, output_var_pos_in_matrix] = 1
-                self.M[line, extra_constraint_dummy_var_pos_in_matrix] = - sbox.branch_number
-                line += 1
-                # (4.2) input \leq new dummy for all inputs
-                for i in input_vars:
-                    input_var_pos_in_matrix = self.V[i]
-                    self.M[line, input_var_pos_in_matrix] = -1
-                    self.M[line, extra_constraint_dummy_var_pos_in_matrix] = 1
-                    line += 1
-                # (4.3) output \leq dummy for all outputs
-                for o in output_vars:
-                    output_var_pos_in_matrix = self.V[o]
-                    self.M[line, output_var_pos_in_matrix] = -1
-                    self.M[line, extra_constraint_dummy_var_pos_in_matrix] = 1
-                    line += 1
-
-            constant_pos = self.V["constant"]
-            if self.convex_hull_applied:
-                inequalities = convexHull.ch_hrep_from_sbox(sbox)
-
-                # we get a string along the lines of
-                #          -x6 + x7  >=   0
-                #               -x7  >=  -1
-                #          -x4 + x5  >=   0
-                #                x0  >=   0
-                # x1 - x3 + x4 - x5  >=  -1
-                # as a return value from convexHull.ch_hrep_from_sbox in inequalities
-                for inequality in inequalities:  # split inequalities in a list with one inequality per entry
-                    try:
-                        inequality = inequality.replace(' ', '')
-                        [greater, lesser] = inequality.split(">=")  # get left part, right part, something along the lines of
-                    # ["         -x4 + x5 ", "  0"]
-                    except AttributeError:
-                        continue
-
-                    modifier = 1
-                    # TODO input the actual values into the matrix and not just a 1 for non-zero
-                    variables_not_zero = set()
-                    for character in greater:
-                        if character == "-":
-                            modifier = -1
-                        elif character == "+":
-                            modifier = +1
-                        elif character == "x":
-                            continue
-                        else:   # i.e. the character is number coming after x
-                            variables_not_zero |= {int(character)}
-
-                    for index, i in enumerate(input_vars):
-                        if index in variables_not_zero:
-                            input_var_pos_in_matrix = self.V[i]
-                            print(self.M)
-                            print(input_var_pos_in_matrix)
-                            print(line)
-                            self.M[line, input_var_pos_in_matrix] = 1
-
-                    for index, i in enumerate(output_vars):
-                        output_var_pos_in_matrix = self.V[i]
-                        if index + sbox.in_bits in variables_not_zero:
-                            self.M[line, output_var_pos_in_matrix] = 1
-
-                    value_right_of_inequality = int(lesser)
-                    self.M[line, constant_pos] = value_right_of_inequality
-                    line += 1
-        return line
+        return
 
     def shift_before(self):
         # in X0, there is an 8-bit bit-shift to the left
@@ -332,13 +175,13 @@ class LBlock(Cipher):
 
         # self.next = number of currently used (x) variable
         self.next = 0
-        # self.M = matrix representing the linear inequalities
+        # self.M = matrix representing the self.linear inequalities
 
         # with mouha, every round, there are
-        #   1 dummy + 1 output per XOR, 1 dummy per linear transformation, dummy + 2 output per 3-way fork,
+        #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
         #   4 inequalities per XOR
-        #   2*l + 1 inequalities per linear transformation L: F_2^l -> F_2^l
+        #   2*l + 1 inequalities per self.linear transformation L: F_2^l -> F_2^l
         #   4 per 3-fork branch
         # Das Nicky Paper war byte-oriented (e.g. 32 byte input in Enocoro) während das
         # Sun Paper bit-oriented ist (e.g. 64 bit input in LBlock)
@@ -355,6 +198,8 @@ class LBlock(Cipher):
             xors_per_round = int(64 / self.orientation)
         elif self.cryptanalysis_type == 'linear':
             xors_per_round = 0
+        else:
+            xors_per_round = 0
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -363,14 +208,14 @@ class LBlock(Cipher):
         #   determine 3 way fork output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
             twf_per_round = 0
-        else:   # self.cryptanalysis_type == 'linear':
+        else:  # self.cryptanalysis_type == 'linear':
             twf_per_round = int(32 / self.orientation)
 
         twf_dummy_variables_per_round = twf_per_round
         twf_constraints_per_round = 4 * twf_per_round
         twf_new_x_vars_per_round = 2 * twf_per_round
 
-        #   determine linear transformation output vars, dummy vars, and constraints
+        #   determine self.linear transformation output vars, dummy vars, and constraints
         lt_per_round = 0
         lt_dummy_variables_per_round = lt_per_round
         lt_constraints_per_round = 4 * lt_per_round
@@ -417,7 +262,8 @@ class LBlock(Cipher):
 
             bijective_sboxes_per_round = sum([int(sbox.is_bijective) for sbox in self.sboxes])
             # the entry for a sbox is 1 iff the sbox is not invertible or its branch number is larger than 2
-            extra_constraint_sboxes_per_round = sum([1 ^ int(sbox.is_invertible and sbox.branch_number <= 2) for sbox in self.sboxes])
+            extra_constraint_sboxes_per_round = sum(
+                [1 ^ int(sbox.is_invertible and sbox.branch_number <= 2) for sbox in self.sboxes])
         else:
             sboxes_per_round = 0
             bijective_sboxes_per_round = 0
@@ -426,7 +272,8 @@ class LBlock(Cipher):
         sbox_new_x_variables_per_round = 4 * sboxes_per_round
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
-        sbox_constraints_per_round = sboxes_per_round * (1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
+        sbox_constraints_per_round = sboxes_per_round * (
+                    1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
 
         encryption_key_vars = int((32 * self.rounds) / self.orientation)
 
@@ -436,8 +283,9 @@ class LBlock(Cipher):
                                twf_constraints_per_round +
                                sbox_constraints_per_round +
                                lt_constraints_per_round) * self.rounds) + 1
+        number_constraints = int(number_constraints)
 
-        number_variables = (plaintext_vars +
+        self.number_variables = (plaintext_vars +
                             encryption_key_vars +
                             (
                                     xor_new_x_vars_per_round + xor_dummy_variables_per_round +
@@ -446,8 +294,9 @@ class LBlock(Cipher):
                                     sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
                                     sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
                             ) * self.rounds) + 1
+        self.number_variables = int(self.number_variables)
 
-        self.M = lil_matrix((int(number_constraints), int(number_variables)), dtype=int)
+        self.M = lil_matrix((number_constraints, self.number_variables), dtype=int)
 
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
@@ -490,12 +339,17 @@ class LBlock(Cipher):
         if model_as_bit_oriented:
             sbox_dummy_variables = ["a" + str(i) for i in range(sbox_dummy_variables_per_round)]
         else:
+            sbox_dummy_variables = list()
             for round in range(1, self.rounds + 1):
-                sbox_dummy_variables = ["x" + str(i) for i in range(16 * round, 16 * (round + 1))]
+                sbox_dummy_variables += ["x" + str(i) for i in range(16 * round, 16 * (round + 1))]
 
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
+        
+        # adding a set to include the matrices of possible convex hull
+        self.convex_hull_inequality_matrices = list()
 
+        self.line = 0
         self.round_number = 1
         return

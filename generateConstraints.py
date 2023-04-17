@@ -1,6 +1,8 @@
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix, vstack
 import cipher as cip
+import pickle
+import cipher
 
 
 def generate_smallconstraints(cipher_instance, line):
@@ -89,16 +91,19 @@ def new_generate_constraints(rounds, cipher):
                 List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    line = 0
     cipher_instance = cipher(rounds)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
         cipher_instance.shift_before()
-        for j in cipher_instance.rangenumber():
-            line = cipher_instance.gen_long_constraint(line, j)
+        for cipher_action in cipher_instance.rangenumber():
+            line = cipher_instance.gen_long_constraint(cipher_action)
             # TODO: figure out how to add generate_smallconstraints from Aes, Enocoro, and EnocoroLin to the class
             # line = generate_smallconstraints(cipher_instance, line)
         cipher_instance.shift_after()
+
+    if cipher_instance.convex_hull_applied:
+        cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.convex_hull_inequality_matrices, dtype=int)
+
     cipher_instance.M = cipher_instance.M.tocsr()
     cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     return cipher_instance

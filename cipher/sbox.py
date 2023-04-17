@@ -70,7 +70,6 @@ class SBox:
             for in_val_2, out_val_2 in self.substitutions.items():
                 in_val_xorwise_diff = in_val_1 ^ in_val_2
                 out_val_xorwise_diff = out_val_1 ^ out_val_2
-                print(in_val_xorwise_diff, out_val_xorwise_diff)
                 try:
                     self.ddt[in_val_xorwise_diff][out_val_xorwise_diff] += 1
                 except:

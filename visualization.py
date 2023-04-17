@@ -160,7 +160,7 @@ def constraints(A, V):
     for i in range(A.get_shape()[0]):
         if i == A.get_shape()[0]:
             linebreak = 1
-        # getting the indizes of the nonzero elements
+        # getting the indices of the nonzero elements
         positions = A.getrow(i).nonzero()[1]
         con = ""
         for e in positions:
