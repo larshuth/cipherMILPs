@@ -42,24 +42,26 @@ class Enocoro(Cipher):
                 list_of_actions.append(SBoxAction(sbox=self.sbox, input_start=sbox_input, output_start=list()))
 
         elif self.orientation == 8:
-            this_rounds_starting_value = 34 + self.round_number * 7
+            # the actions are handled in the order of the numbering of their output variable in Fig.3 of Mouha et al
+            this_rounds_starting_value = 34 + self.round_number * 10
             new_variable = lambda i: "x" + str(this_rounds_starting_value + i)
-            list_of_xor_inputs = [(self.A[31], self.A[32]), (self.A[2], self.A[6]), (self.A[7], self.A[15]),
-                                  (self.A[16], self.A[28]), (self.A[2], self.A[32]), (self.A[7], self.A[33])]
+            list_of_xor_inputs = [(self.A[31], self.A[32]), (self.A[2], self.A[32]), (self.A[7], self.A[33])]
             for index, xor_input in enumerate(list_of_xor_inputs):  # total of 6 xors
                 list_of_actions.append(XorAction(inputs=xor_input, output=new_variable(index),
                                                  dummy="d" + str(8 * (self.round_number - 1) + index),
                                                  cipher_instance=self))
             xor_outputs_above_lin_trans = (new_variable(4), new_variable(5))
+
             lin_trans_outputs = (new_variable(6), new_variable(7))
             list_of_actions += [LinTransformationAction(inputs=xor_outputs_above_lin_trans, outputs=lin_trans_outputs,
-                                                        dummy="d" + str((8 * (self.round_number - 1)) + 6 + 1),
+                                                        dummy="d" + str((8 * (self.round_number - 1)) + 3),
                                                         cipher_instance=self)]
 
-            list_of_xor_inputs = [(self.A[16], new_variable(6)), (self.A[29], new_variable(7))]
+            list_of_xor_inputs = [(self.A[16], new_variable(6)), (self.A[29], new_variable(7)), (self.A[2], self.A[6]),
+                                  (self.A[7], self.A[15]), (self.A[16], self.A[28])]
             for index, xor_input in enumerate(list_of_xor_inputs):  # additional 2 xors after the linear transformation
                 list_of_actions.append(XorAction(inputs=xor_input, output=new_variable(index),
-                                                 dummy="d" + str((9 * (self.round_number - 1)) + 7 + index),
+                                                 dummy="d" + str((9 * (self.round_number - 1)) + 4 + index),
                                                  cipher_instance=self))
         else:
             pass
@@ -262,8 +264,10 @@ class Enocoro(Cipher):
 
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
-        self.number_x_vars = int(plaintext_vars + ((xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))
-        self.number_d_vars = (xor_dummy_variables_per_round + twf_dummy_variables_per_round + lt_dummy_variables_per_round) * self.rounds
+        self.number_x_vars = int(plaintext_vars + ((
+                                                               xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))
+        self.number_d_vars = (
+                                         xor_dummy_variables_per_round + twf_dummy_variables_per_round + lt_dummy_variables_per_round) * self.rounds
         self.number_a_vars = int(sbox_dummy_variables_per_round * self.rounds)
         self.number_ds_vars = int(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)
 
