@@ -1,5 +1,4 @@
 import convexHull
-import differential.lblock
 from scipy.sparse import lil_matrix
 
 
@@ -26,7 +25,7 @@ class CipherAction:
 
 class SBoxAction(CipherAction):
 
-    def __init__(self, sbox, input_start, output_start, dummy, cipher_instance, type_of_action):
+    def __init__(self, sbox, input_start, output_start, dummy, cipher_instance):
         super().__init__("sbox", cipher_instance)
         self.sbox = sbox
 
@@ -76,7 +75,7 @@ class SBoxAction(CipherAction):
         self.for_each_var_set_to_value_plus_dummy(self.input_vars, -1, extra_constraint_dummy_var_pos_in_matrix, 1)
 
         # (4.3) output \leq dummy for all outputs
-        # for every outputput var, a new inequality is made with the var \leq dummy
+        # for every output var, a new inequality is made with the var \leq dummy
         self.for_each_var_set_to_value_plus_dummy(self.output_vars, -1, extra_constraint_dummy_var_pos_in_matrix, 1)
         return
 
@@ -142,7 +141,7 @@ class SBoxAction(CipherAction):
         self.cipher_instance.convex_hull_inequality_matrices.append(convex_hull_inequality_matrix)
         return
 
-    def run_sbox(self):
+    def run_action(self):
         # inequalities of sbox are
         # (1.) input \leq dummy for all inputs
         # (2.) sum over all inputs \geq dummy
@@ -180,10 +179,9 @@ class XorAction(CipherAction):
         super().__init__("xor", cipher_instance)
         (self.input_var_1, self.input_var_2), self.output_var = inputs, output
         self.dummy_var = dummy
-        self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
         return
 
-    def run_xor(self):
+    def run_action(self):
         # inequalities of xor are
         # (1.) input1 + input2 + output \leq 2*dummy
         # (2.) input1 \leq dummy
@@ -198,6 +196,35 @@ class XorAction(CipherAction):
 
         # then (2.), (3.), and (4.)
         self.for_each_var_set_to_value_plus_dummy(
-            list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], var_value=1,
-            dummy_pos=dummy_var_pos_in_matrix, dum_value=-1)
+            list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], var_value=-1,
+            dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
+        return
+
+
+class LinTransformationAction(CipherAction):
+    def __init__(self, inputs, outputs, dummy, cipher_instance):
+        super().__init__("lin trans", cipher_instance)
+        (self.input_var_1, self.input_var_2), (self.output_var_1, self.output_var_2) = inputs, outputs
+        self.dummy_var = dummy
+        return
+
+    def run_action(self):
+        # inequalities of linear transformations are
+        # (1.) input1 + input2 + output1 + output2 \leq 3*dummy
+        # (2.) input1 \leq dummy
+        # (3.) input2 \leq dummy
+        # (4.) output1 \leq dummy
+        # (5.) output2 \leq dummy
+        dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
+
+        all_io_variables = [self.input_var_1, self.input_var_2, self.output_var_1, self.output_var_2]
+        # starting with (1.)
+        self.set_all_to_value(list_of_variables=all_io_variables, value=1)
+        self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = -3
+        self.cipher_instance.line += 1
+
+        # then (2.), (3.), (4.), and (5.)
+        self.for_each_var_set_to_value_plus_dummy(
+            list_of_variables=all_io_variables, var_value=-1,
+            dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
         return

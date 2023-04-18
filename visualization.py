@@ -35,14 +35,14 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    cipherinstance = gc.new_generate_constraints(rounds, cipher)
-    A = cipherinstance.M.copy()
-    sf.d_var_to_beginning(cipherinstance)
-    M = cipherinstance.M.copy()
-    sf.long_constraints_to_top(cipherinstance)
-    B = cipherinstance.M.copy()
-    #sf.create_fourblock(cipherinstance)
-    C = cipherinstance.M
+    cipher_instance = gc.new_generate_constraints(rounds, cipher)
+    A = cipher_instance.M.copy()
+    sf.d_var_to_beginning(cipher_instance)
+    M = cipher_instance.M.copy()
+    sf.long_constraints_to_top(cipher_instance)
+    B = cipher_instance.M.copy()
+    #sf.create_fourblock(cipher_instance)
+    C = cipher_instance.M
 
     axs[0].set_title('native')
     axs[1].set_title('d_variables to the beginning')
@@ -237,14 +237,17 @@ def gen_pdf(rounds, cipher):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    cipherinstance = gc.new_generate_constraints(rounds, cipher)
-    A = cipherinstance.M.copy()
-    sf.d_var_to_beginning(cipherinstance)
-    M = cipherinstance.M.copy()
-    sf.long_constraints_to_top(cipherinstance)
-    B = cipherinstance.M.copy()
-    # sf.create_fourblock(cipherinstance)
-    C = cipherinstance.M
+    cipher_instance = gc.new_generate_constraints(rounds, cipher)
+    A = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    sf.d_var_to_beginning(cipher_instance)
+    M = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    sf.long_constraints_to_top(cipher_instance)
+    B = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    # sf.create_fourblock(cipher_instance)
+    C = cipher_instance.M
 
     ax1.set_title('native')
     ax2.set_title('d_variables to the left')
@@ -259,4 +262,4 @@ def gen_pdf(rounds, cipher):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds', A=A, V=cipherinstance.V, title=title, dpi=300)
+    mainly(title[0] + title[1] + 'rounds', A=A, V=cipher_instance.V, title=title, dpi=300)

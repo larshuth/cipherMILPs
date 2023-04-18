@@ -5,39 +5,6 @@ import pickle
 import cipher
 
 
-def generate_smallconstraints(cipher_instance, line):
-    """
-    Generates all the constraint-inequalities that consist of a dummy and a x- variable.
-    Those constraints follow after a constraint that models going through a path in a cipher,
-    and they just indicate that if a x-variable is 1, then the dummy variable is also 1 and the path
-    is active.
-
-    Parameters:
-    ----------
-    M       :   lil_matrix
-                The matrix in which all the constraints are saved
-
-    line    :   int
-                The index of the row from which we want to generate the remaining constraints
-
-
-    Returns:
-    ----------
-    M       :   scr_matrix
-                The matrix with all new constraints in it
-
-    line    :   int
-                Index of the row that we last filled in
-
-    """
-    dummyIndex = np.where((cipher_instance.M.getrow(line).toarray()[0] != 0) & (cipher_instance.M.getrow(line).toarray()[0] != 1))[0][0]
-    for ind in np.where(cipher_instance.M.getrow(line).toarray()[0] == 1)[0]:
-        line += 1
-        cipher_instance.M[line, ind] = -1
-        cipher_instance.M[line, dummyIndex] = 1
-    return line
-
-
 def removezerocols(M, V):
     """
     Removes all Columns that have no non-zero value.
@@ -94,8 +61,9 @@ def new_generate_constraints(rounds, cipher):
     cipher_instance = cipher(rounds)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
+        print(cipher_instance.round_number)
         cipher_instance.shift_before()
-        for cipher_action in cipher_instance.rangenumber():
+        for cipher_action in cipher_instance.generate_actions_for_round():
             line = cipher_instance.gen_long_constraint(cipher_action)
             # TODO: figure out how to add generate_smallconstraints from Aes, Enocoro, and EnocoroLin to the class
             # line = generate_smallconstraints(cipher_instance, line)
@@ -105,5 +73,5 @@ def new_generate_constraints(rounds, cipher):
         cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.convex_hull_inequality_matrices, dtype=int)
 
     cipher_instance.M = cipher_instance.M.tocsr()
-    cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
+    # cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     return cipher_instance

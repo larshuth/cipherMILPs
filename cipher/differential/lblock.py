@@ -1,5 +1,6 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
+from cipher.actions import SBoxAction, XorAction
 import convexHull
 
 from scipy.sparse import lil_matrix
@@ -26,7 +27,7 @@ class LBlock(Cipher):
     Class in which all functions for LBlock cipher [Wu et al 2011] are defined.
     """
 
-    def rangenumber(self):
+    def generate_actions_for_round(self):
         """
         Defines what happens in a round.
 
@@ -44,7 +45,7 @@ class LBlock(Cipher):
         # actions contain lists of either xors ['xor', input 1, input 2, output, dummy var],
         # 3-way forks ['3wf', input, output 1, output 2, dummy var]
         # SBoxes ['sbox', input start number, output start number, dummy var]
-        actions = list()
+        action_list = list()
 
         words_total = int(64 / self.orientation)
         words_half = int(words_total / 2)
@@ -55,49 +56,42 @@ class LBlock(Cipher):
         else:
             bonus = 0
 
-        if self.cryptanalysis_type == 'differential':
-            if self.orientation == 1:
-                # sboxes are now required
-                new_x_variables_per_round = 96  # 32 var for xor (1st half plaintext, key)
-                new_xor_dummies_per_round = 64  # 32 var for xor (1st half plaintext, key)
+        if self.orientation == 1:
+            # sboxes are now required
+            new_x_variables_per_round = 96  # 32 var for xor (1st half plaintext, key)
+            new_xor_dummies_per_round = 64  # 32 var for xor (1st half plaintext, key)
 
-                # 32 var for SBox (xor output), 32 var for xor (sbox output, 2nd half plaintext)
-                # TODO: Grafik die das vernünftig darstellt/erklärt
-                actions = [
-                    ['xor',
-                     self.A[i],
-                     self.K[i],
-                     'x' + str(int(self.A[i][1:]) + int(words_half) + bonus),
-                     'd' + str((self.round_number - 1) * new_xor_dummies_per_round + i)
-                     ] for i in range(words_half)]
+            # 32 var for SBox (xor output), 32 var for xor (sbox output, 2nd half plaintext)
+            # TODO: Grafik die das vernünftig darstellt/erklärt
+            get_output = lambda i: 'x' + str(int(self.A[i][1:]) + int(words_half) + bonus)
+            get_dummy = lambda i: 'd' + str((self.round_number - 1) * new_xor_dummies_per_round + i)
+            action_list += [XorAction(inputs=(self.A[i], self.K[i]), output=get_output(i), dummy=get_dummy(i),
+                                      cipher_instance=self) for i in range(words_half)]
 
-                for i in range(8):
-                    actions += [['sbox',
-                                 self.sboxes[i],
-                                 new_x_variables_per_round * self.round_number - words_half + i * 4,
-                                 new_x_variables_per_round * self.round_number + i * 4,
-                                 'a' + str((self.round_number - 1) * int(self.number_a_vars / self.rounds) + i)]]
+            get_input_start = lambda i: new_x_variables_per_round * self.round_number - words_half + i * 4
+            get_output_start = lambda i: new_x_variables_per_round * self.round_number + i * 4
+            get_dummy = lambda i: 'a' + str((self.round_number - 1) * int(self.number_a_vars / self.rounds) + i)
+            for i in range(8):
+                action_list.append(SBoxAction(sbox=self.sboxes[i], input_start=get_input_start(i),
+                                              output_start=get_output_start(i), dummy=get_dummy(i),
+                                              cipher_instance=self))
 
-                start_val = 96 * self.round_number
-                for index, shift in enumerate([+4, +8, -8, -4, +4, +8, -8, -4]):
-                    actions += [['xor', 'x' + str(start_val + (index * 4) + shift + i), 'x' + str(32 + (index * 4) + i),
-                                 'x' + str(128 + (index * 4) + i),
-                                 'd' + str(32 + 64 * (self.round_number - 1) + (index * 4) + i)] for i in range(4)]
-            else:
-                pass
+            start_val = 96 * self.round_number
+            get_input_1 = lambda index, shift, i: 'x' + str(start_val + (index * 4) + shift + i)
+            get_input_2 = lambda index, i: 'x' + str(32 + (index * 4) + i)
+            get_input = lambda index, shift, i: (get_input_1, get_input_2)
+            get_output = lambda index, i: 'x' + str(128 + (index * 4) + i)
+            get_dummy = lambda index, i: 'd' + str(32 + 64 * (self.round_number - 1) + (index * 4) + i)
+            for index, shift in enumerate([+4, +8, -8, -4, +4, +8, -8, -4]):
+                action_list += [XorAction(inputs=get_input(index, shift, i), output=get_output(index, i),
+                                          dummy=get_dummy(index, i), cipher_instance=self) for i in range(4)]
+        else:
+            pass
 
-        elif self.cryptanalysis_type == 'linear':
-            # TODO: Linear Cryptanalysis
-            actions = [['3wf', self.A[i], self.round_number] for i in range(int(64 / self.orientation))]
-
-        return actions
+        return action_list
 
     def gen_long_constraint(self, action):
-        """
-        Generates a long constraint depending on which variable is currently j.
-        For Enocoro we take the first variables in j. With the last one, we use it to define it new
-        """
-
+        action.run_action()
         return
 
     def shift_before(self):
@@ -273,7 +267,7 @@ class LBlock(Cipher):
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
         sbox_constraints_per_round = sboxes_per_round * (
-                    1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
+                1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
 
         encryption_key_vars = int((32 * self.rounds) / self.orientation)
 
@@ -286,14 +280,14 @@ class LBlock(Cipher):
         number_constraints = int(number_constraints)
 
         self.number_variables = (plaintext_vars +
-                            encryption_key_vars +
-                            (
-                                    xor_new_x_vars_per_round + xor_dummy_variables_per_round +
-                                    twf_new_x_vars_per_round + twf_dummy_variables_per_round +
-                                    lt_new_x_vars_per_round + lt_dummy_variables_per_round +
-                                    sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
-                                    sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
-                            ) * self.rounds) + 1
+                                 encryption_key_vars +
+                                 (
+                                         xor_new_x_vars_per_round + xor_dummy_variables_per_round +
+                                         twf_new_x_vars_per_round + twf_dummy_variables_per_round +
+                                         lt_new_x_vars_per_round + lt_dummy_variables_per_round +
+                                         sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
+                                         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
+                                 ) * self.rounds) + 1
         self.number_variables = int(self.number_variables)
 
         self.M = lil_matrix((number_constraints, self.number_variables), dtype=int)
@@ -346,7 +340,7 @@ class LBlock(Cipher):
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
-        
+
         # adding a set to include the matrices of possible convex hull
         self.convex_hull_inequality_matrices = list()
 

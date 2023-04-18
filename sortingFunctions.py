@@ -59,7 +59,7 @@ def permutate_columns(H, idenCols):
     return H
 
 
-def long_constraints_to_top(cipherinstance):
+def long_constraints_to_top(cipher_instance):
     """
     This function permutates the rows(constraints) in a way such that the constraints with 
     a lot nonzero entries are at the top. This way one could form a block at the top.
@@ -76,11 +76,11 @@ def long_constraints_to_top(cipherinstance):
         Permutated matrix
         """
     dic = {}
-    for i in range(cipherinstance.M.get_shape()[0]):
-        dic[i] = cipherinstance.M.getrow(i).count_nonzero()
+    for i in range(cipher_instance.M.get_shape()[0]):
+        dic[i] = cipher_instance.M.getrow(i).count_nonzero()
     dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=True))
     sortedrows = list(dic2.keys())
-    cipherinstance.M = permutate_rows(cipherinstance.M, sortedrows)
+    cipher_instance.M = permutate_rows(cipher_instance.M, sortedrows)
     return
 
 
@@ -108,7 +108,7 @@ def full_columns_begin(M):
     return M
 
 
-def d_var_to_beginning(cipherinstance):
+def d_var_to_beginning(cipher_instance):
     """
     This function permutates the columns such that all the dummy variables are at the beginning, and then the
     x variables follow. And the variable for the added constraint goes to the beginnign
@@ -129,23 +129,25 @@ def d_var_to_beginning(cipherinstance):
     newV:   list
             List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
-    pos_first_d_var = cipherinstance.number_x_vars
-    sorted_indices = list(range(pos_first_d_var, pos_first_d_var + cipherinstance.number_d_vars)) + list(range(pos_first_d_var)) + list(range(pos_first_d_var + cipherinstance.number_d_vars, cipherinstance.M.get_shape()[1]))
+    pos_first_d_var = cipher_instance.number_x_vars
+    sorted_indices = list(range(pos_first_d_var, pos_first_d_var + cipher_instance.number_d_vars)) + list(
+        range(pos_first_d_var)) + list(
+        range(pos_first_d_var + cipher_instance.number_d_vars, cipher_instance.M.get_shape()[1]))
 
-    for key, value in cipherinstance.V.items():
+    for key, value in cipher_instance.V.items():
         try:
             if key[0] == 'd':
-                cipherinstance.V[key] -= pos_first_d_var
+                cipher_instance.V[key] -= pos_first_d_var
             elif key[0] == 'x':
-                cipherinstance.V[key] += (pos_first_d_var - cipherinstance.number_d_vars)
+                cipher_instance.V[key] += (pos_first_d_var - cipher_instance.number_d_vars)
         except:
             pass
 
-    cipherinstance.M = permutate_columns(cipherinstance.M, sorted_indices)
+    cipher_instance.M = permutate_columns(cipher_instance.M, sorted_indices)
     return
 
 
-def creating_diagonal_in4block(cipherinstance):
+def creating_diagonal_in4block(cipher_instance):
     """
     This function permutates the rows of the matrix, but not the ones in the block at the top.
     They are permutated in a way such that a diagonal will appear alongisde an vertical block on the left.
@@ -168,18 +170,18 @@ def creating_diagonal_in4block(cipherinstance):
     """
     dic = {}
     # count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
-    for i in range(cipherinstance.M.get_shape()[0]):
-        if i >= cipherinstance.number_d_vars:
-            dic[i] = cipherinstance.M.getrow(i).nonzero()[1][1]
+    for i in range(cipher_instance.M.get_shape()[0]):
+        if i >= cipher_instance.number_d_vars:
+            dic[i] = cipher_instance.M.getrow(i).nonzero()[1][1]
     dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=False))
     sortedrows = list(dic2.keys())
-    beginofrows = [i for i in range(cipherinstance.number_d_vars)]
+    beginofrows = [i for i in range(cipher_instance.number_d_vars)]
     sortedrows = beginofrows + sortedrows
-    cipherinstance.M = permutate_rows(cipherinstance.M, sortedrows)
+    cipher_instance.M = permutate_rows(cipher_instance.M, sortedrows)
     return
 
 
-def create_fourblock(cipherinstance):
+def create_fourblock(cipher_instance):
     """
     Creates a four-block structure in the given matrix.
 
@@ -196,9 +198,9 @@ def create_fourblock(cipherinstance):
     M:  csr_matrix
         Permutated matrix
     """
-    d_var_to_beginning(cipherinstance)
-    long_constraints_to_top(cipherinstance)
-    creating_diagonal_in4block(cipherinstance)
+    d_var_to_beginning(cipher_instance)
+    long_constraints_to_top(cipher_instance)
+    creating_diagonal_in4block(cipher_instance)
     return
 
 
@@ -546,6 +548,7 @@ def enonewshape(M, V):
     im = plt.imshow(data2D, cmap=cmap)
     plt.colorbar(im)
     plt.show()
+
 
 if False:
     aes = cip.Enocoro
