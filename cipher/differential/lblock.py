@@ -85,6 +85,7 @@ class LBlock(Cipher):
             for index, shift in enumerate([+4, +8, -8, -4, +4, +8, -8, -4]):
                 action_list += [XorAction(inputs=get_input(index, shift, i), output=get_output(index, i),
                                           dummy=get_dummy(index, i), cipher_instance=self) for i in range(4)]
+
         else:
             pass
 
@@ -342,7 +343,7 @@ class LBlock(Cipher):
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
 
         # adding a set to include the matrices of possible convex hull
-        self.convex_hull_inequality_matrices = list()
+        self.sbox_inequality_matrices = list()
 
         self.line = 0
         self.round_number = 1

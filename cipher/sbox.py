@@ -26,21 +26,49 @@ class SBox:
                 output_2 = self.substitutions[input_2]
                 output_diff = output_1 ^ output_2
                 if (input_diff * output_diff) > 0:
-                    hamming_weight_input_diff = sum([1 if ((2**i & input_diff) > 0) else 0 for i in range(self.in_bits)])
-                    hamming_weight_output_diff = sum([1 if ((2**i & output_diff) > 0) else 0 for i in range(self.out_bits)])
+                    hamming_weight_input_diff = sum(
+                        [1 if ((2 ** i & input_diff) > 0) else 0 for i in range(self.in_bits)])
+                    hamming_weight_output_diff = sum(
+                        [1 if ((2 ** i & output_diff) > 0) else 0 for i in range(self.out_bits)])
                     current_hamming_weight = hamming_weight_input_diff + hamming_weight_output_diff
                     minimal_hamming_weight = min(minimal_hamming_weight, current_hamming_weight)
         return minimal_hamming_weight
 
+    def determine_branch_number(self):
+        return
+
     def check_subs_match_bits(self):
-        return True
+        key_set = set(key for key, value in self.substitutions.items())
+        value_set = set(value for key, value in self.substitutions.items())
+
+        expected_in_words = self.in_bits ** 2
+        expected_out_words = self.out_bits ** 2
+        actual_number_in_words = len(self.substitutions)
+        actual_number_out_words = len(value_set)
+
+        expected_max_key = self.in_bits ** 2 - 1
+        expected_max_value = self.out_bits ** 2 - 1
+
+        actual_max_key = max(key_set)
+        actual_max_value = max(value_set)
+
+        if actual_number_in_words != expected_in_words:
+            raise Exception('Number of substitutions defined not feasible with declared number of in_bits')
+        elif actual_number_out_words != expected_out_words:
+            raise Exception('Number of substitutions defined not feasible with declared number of in_bits')
+        elif actual_max_value > expected_max_value:
+            raise Exception(
+                'At least one value in substitution cannot feasibly be represented with declared number of out_bits')
+        elif actual_max_key > expected_max_key:
+            raise Exception(
+                'At least one key in substitution cannot feasibly be represented with declared number of in_bits')
+        else:
+            return
 
     def __init__(self, substitutions, in_bits, out_bits):
         self.substitutions, self.in_bits, self.out_bits = substitutions, in_bits, out_bits
 
-        if not self.check_subs_match_bits():
-            print("bits dont match ")
-            return
+        self.check_subs_match_bits()
 
         self.is_invertible = self.determine_invertibility()
         self.is_bijective = self.determine_bijectivity()
@@ -57,6 +85,14 @@ class SBox:
 
         self.non_zero_ddt_entries_vectors_built = False
         self.vectors = set()
+
+        self.dummy_vars_for_bit_oriented_modeling_all = 1
+        self.dummy_vars_for_bit_oriented_modeling_sbox_dependent = 1 ^ int(
+            self.is_invertible and self.branch_number <= 2)
+        self.dummy_vars_for_bit_oriented_modeling = self.dummy_vars_for_bit_oriented_modeling_all + self.dummy_vars_for_bit_oriented_modeling_sbox_dependent
+
+        self.transitions_built = False
+        self.probability_transitions = dict()
         return
 
     def build_ddt(self):
@@ -165,4 +201,21 @@ class SBox:
         return
 
     def build_lat(self):
+        return
+
+    def build_transitions(self):
+        if self.transitions_built:
+            return
+        for i in range(max(self.in_bits, self.out_bits)):
+            self.probability_transitions[1] = 0
+        set_not_to_remove = set()
+        for in_diff, out_diff in self.non_zero_ddt_entries:
+            probability = self.ddt[in_diff][out_diff]
+            self.probability_transitions[probability] += 1
+            set_not_to_remove |= {probability}
+        for key in self.probability_transitions:
+            if key not in set_not_to_remove:
+                self.probability_transitions.pop(key)
+        self.probability_transitions.pop(16)
+        self.transitions_built = True
         return

@@ -69,9 +69,9 @@ def new_generate_constraints(rounds, cipher):
             # line = generate_smallconstraints(cipher_instance, line)
         cipher_instance.shift_after()
 
-    if cipher_instance.convex_hull_applied:
-        cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.convex_hull_inequality_matrices, dtype=int)
+    if cipher_instance.orientation == 1:
+        cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=int)
 
     cipher_instance.M = cipher_instance.M.tocsr()
-    # cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
+    cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     return cipher_instance

@@ -8,10 +8,15 @@ class CipherAction:
         self.cipher_instance = cipher_instance
         return
 
-    def set_all_to_value(self, list_of_variables, value):
+    def set_all_to_value(self, list_of_variables, value, line_var=None, matrix_to_be_set=None):
+        if matrix_to_be_set is None:
+            matrix_to_be_set = self.cipher_instance.M
+        if line_var is None:
+            line_var = self.cipher_instance.line
+
         for var in list_of_variables:
             var_pos_in_matrix = self.cipher_instance.V[var]
-            self.cipher_instance.M[self.cipher_instance.line, var_pos_in_matrix] = value
+            matrix_to_be_set[line_var, var_pos_in_matrix] = value
         return
 
     def for_each_var_set_to_value_plus_dummy(self, list_of_variables, var_value, dummy_pos, dum_value):
@@ -33,6 +38,10 @@ class SBoxAction(CipherAction):
         self.output_vars = ['x' + str(output_start + i) for i in range(self.sbox.out_bits)]
         self.dummy_var = dummy
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
+
+        # TODO rename vars
+        self.qijp_vars = list()
+        self.qijlp_vars = list()
         return
 
     def input_leq_dummy(self):
@@ -138,10 +147,69 @@ class SBoxAction(CipherAction):
                 convex_hull_inequality_matrix_line, constant_pos] = value_right_of_inequality
             convex_hull_inequality_matrix_line += 1
 
-        self.cipher_instance.convex_hull_inequality_matrices.append(convex_hull_inequality_matrix)
+        self.cipher_instance.sbox_inequality_matrices.append(convex_hull_inequality_matrix)
         return
 
-    def run_action(self):
+    def create_baksi_inequalities(self):
+        if not self.sbox.is_bijectiv():
+            raise Exception(
+                "The 2020 Baksi paper only defines its S-box constraints on bijective s-boxes. Yet this action's s-box is not bijective.")
+        # The Baksi paper introduces a new kind of modeling to ensure that the input and output differences of S-boxes
+        # are only able to take feasible values in section 4. This model uses the following inequalities:
+        # Q_{i,j} represents that this Sbox is active
+        # (1.) M*Q_{i,j} \geq sum over inputs + sum over outputs
+        # next, variables for each transition probability p are created in Q_{i,j}^p representing that the taken
+        # transition is of probability p/2^{input bits}
+        # (2.) Q_{i,j} = sum over all Q_{i,j}^p
+        # we split this up in 2 inequalities since our matrix strictly represents \geq
+        # (2.1) Q_{i,j} \geq sum over all Q_{i,j}^p
+        # (2.2) - Q_{i,j} \geq -(sum over all Q_{i,j}^p)
+
+        constant_pos = self.cipher_instance.V["constant"]
+        big_m = 2 * self.sbox.in_bits
+
+        self.sbox.build_transitions()
+
+        # TODO find number of inequalities
+        MORE = 0
+        number_of_inequalities = 3 + 2 * len(self.sbox.probability_transitions) + sum(
+            [value for key, value in self.sbox.probability_transitions.items]) + MORE
+
+        sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
+                                            dtype=int)
+        sbox_inequality_matrix_line = 0
+
+        # (1.)
+        self.set_all_to_value(list_of_variables=self.input_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        self.set_all_to_value(list_of_variables=self.output_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = big_m
+        sbox_inequality_matrix_line += 1
+
+        # build/find Q_{i,j}^p variables
+        self.qijp_vars = list()
+        # TODO include Q_{i,j}^p variables in the calculation of the number of variables in cipher classes __init__
+
+        # (2.1)
+        self.set_all_to_value(list_of_variables=self.qijp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = 1
+        sbox_inequality_matrix_line += 1
+        # (2.2)
+        self.set_all_to_value(list_of_variables=self.qijp_vars, value=1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = -1
+        sbox_inequality_matrix_line += 1
+
+        # build/find Q_{i,j}^p variables
+        self.qijlp_vars = list()
+        # TODO include Q_{i,j,l}^p variables in the calculation of the number of variables in cipher classes __init__
+
+        None
+        return
+
+    def run_action(self, type_of_modeling="SunEtAl 2013"):
         # inequalities of sbox are
         # (1.) input \leq dummy for all inputs
         # (2.) sum over all inputs \geq dummy
@@ -169,8 +237,14 @@ class SBoxAction(CipherAction):
             # TODO expand to be applicable to ciphers with more than 10 sboxes
             self.branch_number_inequality()
 
-        if self.cipher_instance.convex_hull_applied:
+        if type_of_modeling == "SunEtAl 2013":
             self.create_convex_hull_matrices()
+        elif type_of_modeling == "Baksi 2020":
+            self.create_baksi_inequalities()
+            pass
+        else:
+            raise ValueError(
+                "Variable type_of_modeling declared incorrectly. Value should be 'SunEtAl 2013' or 'Baksi 2020'.")
         return
 
 
