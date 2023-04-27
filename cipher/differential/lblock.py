@@ -1,25 +1,9 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import SBoxAction, XorAction
+from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction
 import convexHull
 
 from scipy.sparse import lil_matrix
-
-
-# TODO remove everything related to self.linear cryptanalysis and create a class for self.linear in cipher/linear
-# TODO 4-bit word-oriented cipher not supported as of now
-
-
-def extra_permutation_after_sbox(pos):
-    if pos % 4 == 0:
-        shift = -2
-    elif pos % 4 == 1:
-        shift = +1
-    elif pos % 4 == 2:
-        shift = -1
-    else:  # i.e. pos % 4 == 3:
-        shift = +2
-    return shift * 4
 
 
 class LBlock(Cipher):
@@ -27,112 +11,90 @@ class LBlock(Cipher):
     Class in which all functions for LBlock cipher [Wu et al 2011] are defined.
     """
 
-    def generate_actions_for_round(self):
-        """
-        Defines what happens in a round.
+    def generate_f_function_actions(self):
+        list_of_f_function_actions = list()
+        list_of_f_function_actions += self.generate_key_xor_actions_for_round()
+        list_of_f_function_actions += self.generate_sbox_actions_for_round()
+        list_of_f_function_actions += self.generate_permutation_after_sbox_actions_for_round()
+        return list_of_f_function_actions
 
-        Parameters:
-        ----------
-        A   :   list
-                Names of all variables in this current round
+    def generate_key_xor_actions_for_round(self):
+        list_of_key_xor_actions = list()
+        for i in range(int(len(self.A)/2)):
+            list_of_key_xor_actions.append(XorAction(inputs=(self.A[i], self.K[i]),
+                                                     cipher_instance=self, a_position_to_overwrite=i))
+        return list_of_key_xor_actions
 
-        Returns:
-        ----------
-            :   list of lists
-                Specifies which variables belong in the constraint
-        """
-        # TODO: make a class for the actions
-        # actions contain lists of either xors ['xor', input 1, input 2, output, dummy var],
-        # 3-way forks ['3wf', input, output 1, output 2, dummy var]
-        # SBoxes ['sbox', input start number, output start number, dummy var]
-        action_list = list()
-
-        words_total = int(64 / self.orientation)
-        words_half = int(words_total / 2)
-        first_number = int(self.A[0][1:])
-
-        if self.round_number == 1:
-            bonus = 32
-        else:
-            bonus = 0
-
+    def generate_sbox_actions_for_round(self):
+        list_of_sbox_actions = list()
         if self.orientation == 1:
-            # sboxes are now required
-            new_x_variables_per_round = 96  # 32 var for xor (1st half plaintext, key)
-            new_xor_dummies_per_round = 64  # 32 var for xor (1st half plaintext, key)
-
-            # 32 var for SBox (xor output), 32 var for xor (sbox output, 2nd half plaintext)
-            # TODO: Grafik die das vernünftig darstellt/erklärt
-            get_output = lambda i: 'x' + str(int(self.A[i][1:]) + int(words_half) + bonus)
-            get_dummy = lambda i: 'd' + str((self.round_number - 1) * new_xor_dummies_per_round + i)
-            action_list += [XorAction(inputs=(self.A[i], self.K[i]), output=get_output(i), dummy=get_dummy(i),
-                                      cipher_instance=self) for i in range(words_half)]
-
-            get_input_start = lambda i: new_x_variables_per_round * self.round_number - words_half + i * 4
-            get_output_start = lambda i: new_x_variables_per_round * self.round_number + i * 4
-            get_dummy = lambda i: 'a' + str((self.round_number - 1) * int(self.number_a_vars / self.rounds) + i)
+            extract_int_from_x_var = lambda x_var_name: int(x_var_name[1:])
             for i in range(8):
-                action_list.append(SBoxAction(sbox=self.sboxes[i], input_start=get_input_start(i),
-                                              output_start=get_output_start(i), dummy=get_dummy(i),
-                                              cipher_instance=self))
-
-            start_val = 96 * self.round_number
-            get_input_1 = lambda index, shift, i: 'x' + str(start_val + (index * 4) + shift + i)
-            get_input_2 = lambda index, i: 'x' + str(32 + (index * 4) + i)
-            get_input = lambda index, shift, i: (get_input_1, get_input_2)
-            get_output = lambda index, i: 'x' + str(128 + (index * 4) + i)
-            get_dummy = lambda index, i: 'd' + str(32 + 64 * (self.round_number - 1) + (index * 4) + i)
-            for index, shift in enumerate([+4, +8, -8, -4, +4, +8, -8, -4]):
-                action_list += [XorAction(inputs=get_input(index, shift, i), output=get_output(index, i),
-                                          dummy=get_dummy(index, i), cipher_instance=self) for i in range(4)]
-
+                first_input_element_position_in_A = sum(self.sboxes[prior].in_bits for prior in range(i))
+                input_start = extract_int_from_x_var(self.A[first_input_element_position_in_A])
+                list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[i], input_start=input_start,
+                                                       cipher_instance=self,
+                                                       first_a_position_to_overwrite=first_input_element_position_in_A))
         else:
             pass
+        return list_of_sbox_actions
 
-        return action_list
+    def generate_permutation_after_sbox_actions_for_round(self):
+        list_of_permutation_actions = list()
+        permutation = list()
+        block_size = int(4/self.orientation)
+        for index, shift in enumerate([+1, +2, -2, -1, +1, +2, -2, -1]):
+            permutation += [(index + shift) * block_size * i for i in range(int(4/self.orientation))]
+        # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7,8,9 ...] becomes [4,5,6,7,12,13,14,15,0,1 ...]
+        permutation += list(range(self.plaintextsize/2, self.plaintextsize))
+        # permutation needs to span the whole A list, even if not all of them are changed
+        list_of_permutation_actions.append(PermutationAction(permutation, self))
+        return list_of_permutation_actions
 
-    def gen_long_constraint(self, action):
-        action.run_action()
-        return
+    def generate_bitshift_actions_for_round(self):
+        list_of_bitshift_actions = list()
+        permutation = list()
+        permutation += list(range(self.plaintextsize / 2))
+        # permutation needs to span the whole A list, even if not all of them are changed
+        # using the previously written code if just due to laziness
+        block_size = int(4 / self.orientation)
+        for index, shift in enumerate([+2] * 8):
+            permutation += [((index + shift) * block_size * i) % (8*block_size) for i in range(int(4 / self.orientation))]
+        # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7 ...] becomes [8,9,10,11,12,13,14,15 ...]
+        list_of_bitshift_actions.append(PermutationAction(permutation, self))
+        return list_of_bitshift_actions
 
-    def shift_before(self):
-        # in X0, there is an 8-bit bit-shift to the left
-        # pos is a short function to return  the proper position depending on whether we model LBlock as 4-bit word
-        # word-oriented or just bit-oriented
-        pos = lambda x: int(x / self.orientation)
-        tmp = [self.A[pos(32 + i)] for i in range(pos(8))]
-        for i in range(pos(32), pos(56)):
-            self.A[i] = self.A[i + pos(8)]
-        for index, elem in enumerate(range(pos(56), pos(64))):
-            self.A[elem] = tmp[index]
-        return
+    def generate_f_output_right_plaintext_xor_actions_for_round(self):
+        f_output_right_plaintext_xor_actions_list = list()
+        half_length = int(self.plaintextsize/2)
+        f_output_right_plaintext_xor_actions_list += [XorAction(inputs=(self.A[i], self.A[i + half_length]), cipher_instance=self, a_position_to_overwrite= (i + half_length)) for i in range(half_length)]
+        return f_output_right_plaintext_xor_actions_list
 
-    def shift_after(self):
-        """
-        This function shifts all the bits used in the current round to the right.
+    def generate_actions_for_round(self):
+        list_of_actions = list()
+        # Feistel f-function, includes key xor-ing, sboxes and permutation
+        list_of_actions += self.generate_f_function_actions()
+        list_of_actions += self.generate_bitshift_actions_for_round()
+        list_of_actions += self.generate_f_output_right_plaintext_xor_actions_for_round()
+        return list_of_actions
 
-        Parameters:
-        ----------
-        A   :   list
-                Current variables
+    def run_round(self):
+        x1_size = int(self.plaintextsize / 2)
+        x1_backup = self.A[:x1_size].copy()
 
-        Returns:
-        ---------
-        A   :   list
-                Shifted variables that can be used for the next round
-        """
-        if self.orientation == 1:
-            for i in range(32, 64):
-                self.A[i] = self.A[i - 32]
+        for action in self.generate_actions_for_round():
+            self.gen_long_constraint(action)
 
-            for i in range(32):
-                self.A[i] = 'x' + str(96 * self.round_number + 32 + i)
+        # renew the elements s.t. the first half of A, X_1 in the og paper,
+        self.A[:x1_size] = x1_backup
+
+        # and switch left and right
+        self.A = self.A[x1_size:] + self.A[:x1_size]
 
         # this is actually not the size of the key but the array representing the subkey in each round
-        keysize = int((64 / 2) / self.orientation)
-        self.K = ['k' + str(self.round_number * keysize + i) for i in range(keysize)]
+        self.K = ['k' + str(self.round_number * self.keysize + i) for i in range(keysize)]
         self.round_number += 1
-        return
+        return True
 
     def __init__(self, rounds=32, model_as_bit_oriented=True, convex_hull_applied=True):
         """
@@ -264,10 +226,10 @@ class LBlock(Cipher):
             bijective_sboxes_per_round = 0
             extra_constraint_sboxes_per_round = 0
 
-        sbox_new_x_variables_per_round = 4 * sboxes_per_round
+        sbox_new_x_variables_per_round = self.orientation * sboxes_per_round
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
-        sbox_constraints_per_round = sboxes_per_round * (
+        sbox_constraints_per_round_following_sun = sboxes_per_round * (
                 1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
 
         encryption_key_vars = int((32 * self.rounds) / self.orientation)
@@ -276,7 +238,7 @@ class LBlock(Cipher):
 
         number_constraints = ((xor_constraints_per_round +
                                twf_constraints_per_round +
-                               sbox_constraints_per_round +
+                               sbox_constraints_per_round_following_sun +
                                lt_constraints_per_round) * self.rounds) + 1
         number_constraints = int(number_constraints)
 
@@ -310,9 +272,8 @@ class LBlock(Cipher):
         self.V |= {'a' + str(i): i + self.number_x_vars + self.number_d_vars for i in range(self.number_a_vars)}
         self.V |= {i + self.number_x_vars + self.number_d_vars: 'a' + str(i) for i in range(self.number_a_vars)}
 
-        list_of_ds_vars = ['ds' + str(i) + str(r)
-                           for i in range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large)
-                           for r in range(self.rounds)]
+        list_of_ds_vars = ['ds' + str(i)
+                           for i in range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)]
         self.V |= {var_name: index + self.number_x_vars + self.number_d_vars + self.number_a_vars
                    for index, var_name in enumerate(list_of_ds_vars)}
         self.V |= {index + self.number_x_vars + self.number_d_vars + self.number_a_vars: var_name

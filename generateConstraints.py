@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix, vstack
-import cipher as cip
+from cipher.differential.lblock import LBlock as LBlock_differential
+from cipher.differential.aes import Aes as Aes_differential
+from cipher.differential.enocoro import Enocoro as Enocoro_differential
 import pickle
 import cipher
 
@@ -37,7 +39,7 @@ def removezerocols(M, V):
     return M
 
 
-def new_generate_constraints(rounds, cipher):
+def new_generate_constraints(rounds, chosen_cipher):
     """
     This function generates the constraint matrix for a number of rounds of a given cipher.
 
@@ -58,16 +60,13 @@ def new_generate_constraints(rounds, cipher):
                 List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    cipher_instance = cipher(rounds)
+    cipher_instance = chosen_cipher(rounds)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
-        print(cipher_instance.round_number)
-        cipher_instance.shift_before()
         for cipher_action in cipher_instance.generate_actions_for_round():
-            line = cipher_instance.gen_long_constraint(cipher_action)
-            # TODO: figure out how to add generate_smallconstraints from Aes, Enocoro, and EnocoroLin to the class
-            # line = generate_smallconstraints(cipher_instance, line)
-        cipher_instance.shift_after()
+            cipher_instance.gen_long_constraint(cipher_action)
+        cipher_instance.K = ['k' + str(cipher_instance.round_number * cipher_instance.keysize + i) for i in range(keysize)]
+        cipher_instance.round_number += 1
 
     if cipher_instance.orientation == 1:
         cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=int)

@@ -1,53 +1,161 @@
 from scipy.sparse import lil_matrix
 
-# If a new cipher is added, do not forget to add it to the list stored in the AVAILABLE variable at the end of the file.
-
 
 class Cipher:
     """
     Superclass for better readability in code
     """
 
-    def __init__(self, rounds=1, orientation=1):
+    def __init__(self, rounds=1, plaintextsize=1, keysize=0, orientation=1):
         self.S = [0, 0, 0, 0]
         self.rounds = rounds
         self.orientation = orientation
+
+        self.plaintextsize = plaintextsize
+        self.keysize = keysize
+
+        self.sboxes = list()
+        self.number_variables = 0
+
+        self.number_x_vars = 0
+        self.number_dx_vars = 0
+        self.number_dt_vars = 0
+        self.number_dl_vars = 0
+        self.number_d_vars = self.number_dx_vars + self.number_dt_vars + self.number_dl_vars
+
+        self.number_a_vars = 0
+        self.number_ds_vars = 0
+
+        self.V = dict()
+        self.M = None  # placeholder for completeness
+
+        # list mit den Bits die momentan in der Cipher sind
+        self.A = ['x' + str(i) for i in range(int(self.plaintextsize / self.orientation))]
+        self.K = ['k' + str(i) for i in range(int(self.keysize / self.orientation))]
+
+        self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': 0, 'a': 0, 'ds': 0, 'x': 0}
         return
 
+    def gen_long_constraint(self, action):
+        action.run_action()
+        return
 
-class CipherTemplate(Cipher):
-    # still a work in progress
-    def __init__(self, rounds=1):
-        super().__init__(rounds)
-        # self.next = number of currently used (x) variable
-        self.next = 0
-
+    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, overwrites=0):
         # with mouha, every round, there are
-        #   1 dummy per XOR, 1 dummy per linear transformation, and 1 dummy per sbox
-        #   k + 1 inequalities per k-XOR
-        #   2*l + 1 inequalities per linear transformation L: F_2^l -> F_2^l
+        #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
+        #   and 1 dummy + v output per w*v sbox
+        #   4 inequalities per XOR
+        #   2*l + 1 inequalities per self.linear transformation L: F_2^l -> F_2^l
         #   4 per 3-fork branch
         # Das Nicky Paper war byte-oriented (e.g. 32 byte input in Enocoro) während das
         # Sun Paper bit-oriented ist (e.g. 64 bit input in LBlock)
         # with sun, every round there are:
         #   1 + w constraints are necessary for all (w*v)-sboxes
         #   2 more are needed if the sbox is symmetric
-        #   w + v + 1 more if the sbox does not have branch number 2 or is not invertible
-        # self.M = matrix representing the linear inequalities
+        #   w + v + 1 more, redundant if the sbox invertible with branch number 2
 
-        self.M = lil_matrix((64 * self.rounds + 1, (64 + 19 * self.rounds) + 1), dtype=int)
-        # self.V = ist of all variables
-        self.V = []
-        # list mit den Bits die momentan in der Cipher sind
-        self.A = []
-        indicesofsboxinput = self.input_sbox()
-        # create variable for input (plaintext) bits/bytes/word, depending on how the cipher is oriented
-        input_words = 64
-        for e in range(input_words):
-            self.A.append("x" + str(self.next))
-            self.V.append("x" + str(self.next))
-            if self.next in indicesofsboxinput:
-                self.M[self.M.get_shape()[0] - 1, self.next] = 1
-            self.next += 1
-        self.M[self.M.get_shape()[0] - 1, self.M.get_shape()[1] - 1] = -1
-        return
+        #   determine plaintext vars
+        plaintext_vars = self.plaintextsize / self.orientation
+        key_vars = self.keysize / self.orientation
+
+        xor_dummy_variables_per_round = xors_per_round
+        xor_constraints_per_round = 4 * xors_per_round
+        xor_new_x_vars_per_round = xors_per_round
+
+        twf_dummy_variables_per_round = twf_per_round
+        twf_constraints_per_round = 4 * twf_per_round
+        twf_new_x_vars_per_round = 2 * twf_per_round
+
+        #   determine self.linear transformation output vars, dummy vars, and constraints
+        lt_dummy_variables_per_round = lt_per_round
+        lt_constraints_per_round = 4 * lt_per_round
+        lt_new_x_vars_per_round = 2 * lt_per_round
+
+        #   determine output vars from overwriting operations such as ColumnMix in AES
+        overwrite_new_x_vars_per_round = overwrites
+
+        #   determine sbox output vars, dummy vars, and constraints
+        if self.orientation == 1:
+            sboxes_per_round = len(self.sboxes)
+
+            bijective_sboxes_per_round = sum([int(sbox.is_bijective) for sbox in self.sboxes])
+            # the entry for a sbox is 1 iff the sbox is not invertible or its branch number is larger than 2
+            extra_constraint_sboxes_per_round = sum(
+                [1 ^ int(sbox.is_invertible and sbox.branch_number <= 2) for sbox in self.sboxes])
+        else:
+            sboxes_per_round = 0
+            bijective_sboxes_per_round = 0
+            extra_constraint_sboxes_per_round = 0
+
+        sbox_new_x_variables_per_round = self.orientation * sboxes_per_round
+        sbox_dummy_variables_per_round = sboxes_per_round
+        sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
+        sbox_constraints_per_round_following_sun = sboxes_per_round * (
+                1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
+
+        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
+
+        number_constraints = ((xor_constraints_per_round +
+                               twf_constraints_per_round +
+                               sbox_constraints_per_round_following_sun +
+                               lt_constraints_per_round) * self.rounds) + 1
+        number_constraints = int(number_constraints)
+
+        self.number_variables = (plaintext_vars +
+                                 key_vars +
+                                 (
+                                         xor_new_x_vars_per_round + xor_dummy_variables_per_round +
+                                         twf_new_x_vars_per_round + twf_dummy_variables_per_round +
+                                         lt_new_x_vars_per_round + lt_dummy_variables_per_round +
+                                         sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
+                                         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large +
+                                         overwrite_new_x_vars_per_round
+                                 ) * self.rounds) + 1
+        self.number_variables = int(self.number_variables)
+
+        self.M = lil_matrix((number_constraints, self.number_variables), dtype=int)
+
+        # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
+        # this ordering is self.V = dict of all variables mapping names to entry in self.M
+        self.number_x_vars = int(plaintext_vars + ((
+                                                           xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round) * self.rounds))
+        self.number_dx_vars = xor_dummy_variables_per_round * self.rounds
+        self.number_dt_vars = twf_dummy_variables_per_round * self.rounds
+        self.number_dl_vars = lt_dummy_variables_per_round * self.rounds
+
+        self.number_a_vars = int(sbox_dummy_variables_per_round * self.rounds)
+        self.number_ds_vars = int(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)
+
+        self.V = {'x' + str(i): i for i in range(self.number_x_vars)}
+        self.V |= {i: 'x' + str(i) for i in range(self.number_x_vars)}
+
+        self.V |= {'dx' + str(i): i + self.number_x_vars for i in range(self.number_dx_vars)}
+        self.V |= {i + self.number_x_vars: 'dx' + str(i) for i in range(self.number_dx_vars)}
+
+        self.V |= {'dt' + str(i): i + self.number_x_vars + self.number_dx_vars for i in range(self.number_dt_vars)}
+        self.V |= {i + self.number_x_vars: 'dt' + str(i) for i in range(self.number_dt_vars)}
+
+        self.V |= {'dl' + str(i): i + self.number_x_vars + self.number_dx_vars  + self.number_dt_vars for i in range(self.number_dl_vars)}
+        self.V |= {i + self.number_x_vars: 'dl' + str(i) for i in range(self.number_dl_vars)}
+
+        self.number_d_vars = self.number_dx_vars + self.number_dt_vars + self.number_dl_vars
+
+        self.V |= {'a' + str(i): i + self.number_x_vars + self.number_d_vars for i in range(self.number_a_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars: 'a' + str(i) for i in range(self.number_a_vars)}
+
+        list_of_ds_vars = ['ds' + str(i) for i in
+                           range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)]
+        self.V |= {var_name: index + self.number_x_vars + self.number_d_vars + self.number_a_vars
+                   for index, var_name in enumerate(list_of_ds_vars)}
+        self.V |= {index + self.number_x_vars + self.number_d_vars + self.number_a_vars: var_name
+                   for index, var_name in enumerate(list_of_ds_vars)}
+
+        self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
+                   for i in range(self.keysize)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
+                   for i in range(self.keysize)}
+
+        self.V['constant'] = self.M.get_shape()[1] - 1
+        self.V[self.M.get_shape()[1] - 1] = 'constant'
+
+        return sbox_dummy_variables_per_round

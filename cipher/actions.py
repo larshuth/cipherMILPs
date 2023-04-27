@@ -29,19 +29,25 @@ class CipherAction:
 
 
 class SBoxAction(CipherAction):
-
-    def __init__(self, sbox, input_start, output_start, dummy, cipher_instance):
+    def __init__(self, sbox, input_start, cipher_instance, first_a_position_to_overwrite=None):
         super().__init__("sbox", cipher_instance)
         self.sbox = sbox
 
         self.input_vars = ['x' + str(input_start + i) for i in range(self.sbox.in_bits)]
-        self.output_vars = ['x' + str(output_start + i) for i in range(self.sbox.out_bits)]
-        self.dummy_var = dummy
+
+        self.output_vars = ['x' + str(self.cipher_instance.next['x'] + i) for i in range(self.sbox.out_bits)]
+        self.cipher_instance.next['x'] += self.sbox.out_bits
+
+        self.dummy_var = 'a' + str(self.cipher_instance.next['a'])
+        self.cipher_instance.next['a'] += 1
+
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         # TODO rename vars
         self.qijp_vars = list()
         self.qijlp_vars = list()
+
+        self.overwrite_position = first_a_position_to_overwrite
         return
 
     def input_leq_dummy(self):
@@ -67,7 +73,9 @@ class SBoxAction(CipherAction):
         return
 
     def branch_number_inequality(self):
-        extra_constraint_dummy_var = 'ds' + str(self.cipher_instance.round_number) + str(self.sbox.__name__())[5:]
+        extra_constraint_dummy_var = 'ds' + str(self.cipher_instance.next['ds'])
+        self.cipher_instance.next['ds'] += 1
+
         extra_constraint_dummy_var_pos_in_matrix = self.cipher_instance.V[extra_constraint_dummy_var]
 
         # (4.1) sum over inputs + sum over outputs \geq branch * new dummy
@@ -206,7 +214,6 @@ class SBoxAction(CipherAction):
         self.qijlp_vars = list()
         # TODO include Q_{i,j,l}^p variables in the calculation of the number of variables in cipher classes __init__
 
-        None
         return
 
     def run_action(self, type_of_modeling="SunEtAl 2013"):
@@ -245,14 +252,25 @@ class SBoxAction(CipherAction):
         else:
             raise ValueError(
                 "Variable type_of_modeling declared incorrectly. Value should be 'SunEtAl 2013' or 'Baksi 2020'.")
+
+        if self.overwrite_position:
+            for i in range(self.sbox.in_bits):
+                self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]
         return
 
 
 class XorAction(CipherAction):
-    def __init__(self, inputs, output, dummy, cipher_instance):
+    def __init__(self, inputs, cipher_instance, a_position_to_overwrite=None):
         super().__init__("xor", cipher_instance)
-        (self.input_var_1, self.input_var_2), self.output_var = inputs, output
-        self.dummy_var = dummy
+        (self.input_var_1, self.input_var_2) = inputs
+
+        self.output_var = 'x' + str(self.cipher_instance.next['x'])
+        self.cipher_instance.next['x'] += 1
+
+        self.dummy_var = 'dx' + str(self.cipher_instance.next['dx'])
+        self.cipher_instance.next['dx'] += 1
+
+        self.a_position_to_overwrite = a_position_to_overwrite
         return
 
     def run_action(self):
@@ -264,7 +282,7 @@ class XorAction(CipherAction):
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         # starting with (1.)
-        self.set_all_to_value(list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], value=1)
+        self.set_all_to_value(list_of_variables=[self.input_var_1, self.input_var_2], value=1)
         self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = -2
         self.cipher_instance.line += 1
 
@@ -272,14 +290,27 @@ class XorAction(CipherAction):
         self.for_each_var_set_to_value_plus_dummy(
             list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], var_value=-1,
             dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
+
+        if self.a_position_to_overwrite:
+            self.cipher_instance.A[self.a_position_to_overwrite] = self.output_var
         return
 
 
 class LinTransformationAction(CipherAction):
-    def __init__(self, inputs, outputs, dummy, cipher_instance):
+    def __init__(self, inputs, cipher_instance, a_positions_to_overwrite=None):
         super().__init__("lin trans", cipher_instance)
-        (self.input_var_1, self.input_var_2), (self.output_var_1, self.output_var_2) = inputs, outputs
-        self.dummy_var = dummy
+        (self.input_var_1, self.input_var_2) = inputs
+
+        self.output_var_1 = 'x' + str(self.cipher_instance.next['x'])
+        self.cipher_instance.next['x'] += 1
+
+        self.output_var_2 = 'x' + str(self.cipher_instance.next['x'])
+        self.cipher_instance.next['x'] += 1
+
+        self.dummy_var = 'dl' + str(self.cipher_instance.next['dx'])
+        self.cipher_instance.next['dl'] += 1
+
+        self.a_positions_to_overwrite = a_positions_to_overwrite
         return
 
     def run_action(self):
@@ -301,4 +332,38 @@ class LinTransformationAction(CipherAction):
         self.for_each_var_set_to_value_plus_dummy(
             list_of_variables=all_io_variables, var_value=-1,
             dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
+
+        if self.a_positions_to_overwrite:
+            overwrite_pos_1, overwrite_pos_2 = self.a_positions_to_overwrite[0], self.a_positions_to_overwrite[1]
+            self.cipher_instance.A[overwrite_pos_1] = self.output_var_1
+            self.cipher_instance.A[overwrite_pos_2] = self.output_var_2
+        return
+
+
+class PermutationAction(CipherAction):
+    def __init__(self, permutation, cipher_instance):
+        super().__init__("permutation", cipher_instance)
+        # watch that the list says what should be replaced by what, i.e. if the original is [a,b,c,d] and after that it
+        # says [b,d,a,c] then the permutation list is [1,3,0,2]
+        self.permutation = permutation
+        return
+
+    def run_action(self):
+        backup_A = self.cipher_instance.A.copy()
+        for i in range(self.cipher_instance.plaintextsize):
+            self.cipher_instance.A[i] = backup_A[self.permutation[i]]
+        return
+
+
+class OverwriteAction(CipherAction):
+    def __init__(self, input_indices, cipher_instance):
+        super().__init__("overwrite", cipher_instance)
+        self.input_indices = input_indices
+        return
+
+    def run_action(self):
+        for i in self.input_indices:
+            new_var = 'x' + str(self.cipher_instance.next['x'])
+            self.cipher_instance.A[i] = new_var
+            self.cipher_instance.next['x'] += 1
         return
