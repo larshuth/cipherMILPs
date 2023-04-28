@@ -92,7 +92,7 @@ class LBlock(Cipher):
         self.A = self.A[x1_size:] + self.A[:x1_size]
 
         # this is actually not the size of the key but the array representing the subkey in each round
-        self.K = ['k' + str(self.round_number * self.keysize + i) for i in range(keysize)]
+        self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
         self.round_number += 1
         return True
 
@@ -158,25 +158,14 @@ class LBlock(Cipher):
         else:
             xors_per_round = 0
 
-        xor_dummy_variables_per_round = xors_per_round
-        xor_constraints_per_round = 4 * xors_per_round
-        xor_new_x_vars_per_round = xors_per_round
-
         #   determine 3 way fork output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
             twf_per_round = 0
         else:  # self.cryptanalysis_type == 'linear':
             twf_per_round = int(32 / self.orientation)
 
-        twf_dummy_variables_per_round = twf_per_round
-        twf_constraints_per_round = 4 * twf_per_round
-        twf_new_x_vars_per_round = 2 * twf_per_round
-
         #   determine self.linear transformation output vars, dummy vars, and constraints
         lt_per_round = 0
-        lt_dummy_variables_per_round = lt_per_round
-        lt_constraints_per_round = 4 * lt_per_round
-        lt_new_x_vars_per_round = 2 * lt_per_round
 
         #   determine sbox output vars, dummy vars, and constraints
         if self.orientation == 1:
@@ -226,70 +215,11 @@ class LBlock(Cipher):
             bijective_sboxes_per_round = 0
             extra_constraint_sboxes_per_round = 0
 
-        sbox_new_x_variables_per_round = self.orientation * sboxes_per_round
-        sbox_dummy_variables_per_round = sboxes_per_round
-        sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
-        sbox_constraints_per_round_following_sun = sboxes_per_round * (
-                1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
+        extra_xors = 0
+        overwrites = 0
 
-        encryption_key_vars = int((32 * self.rounds) / self.orientation)
-
-        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
-
-        number_constraints = ((xor_constraints_per_round +
-                               twf_constraints_per_round +
-                               sbox_constraints_per_round_following_sun +
-                               lt_constraints_per_round) * self.rounds) + 1
-        number_constraints = int(number_constraints)
-
-        self.number_variables = (plaintext_vars +
-                                 encryption_key_vars +
-                                 (
-                                         xor_new_x_vars_per_round + xor_dummy_variables_per_round +
-                                         twf_new_x_vars_per_round + twf_dummy_variables_per_round +
-                                         lt_new_x_vars_per_round + lt_dummy_variables_per_round +
-                                         sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
-                                         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large
-                                 ) * self.rounds) + 1
-        self.number_variables = int(self.number_variables)
-
-        self.M = lil_matrix((number_constraints, self.number_variables), dtype=int)
-
-        # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
-        # this ordering is self.V = dict of all variables mapping names to entry in self.M
-        self.number_x_vars = int(plaintext_vars + ((
-                                                           xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round) * self.rounds))
-        self.number_d_vars = (xor_dummy_variables_per_round + twf_dummy_variables_per_round) * self.rounds
-        self.number_a_vars = int(sbox_dummy_variables_per_round * self.rounds)
-        self.number_ds_vars = int(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)
-
-        self.V = {'x' + str(i): i for i in range(self.number_x_vars)}
-        self.V |= {i: 'x' + str(i) for i in range(self.number_x_vars)}
-
-        self.V |= {'d' + str(i): i + self.number_x_vars for i in range(self.number_d_vars)}
-        self.V |= {i + self.number_x_vars: 'd' + str(i) for i in range(self.number_d_vars)}
-
-        self.V |= {'a' + str(i): i + self.number_x_vars + self.number_d_vars for i in range(self.number_a_vars)}
-        self.V |= {i + self.number_x_vars + self.number_d_vars: 'a' + str(i) for i in range(self.number_a_vars)}
-
-        list_of_ds_vars = ['ds' + str(i)
-                           for i in range(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)]
-        self.V |= {var_name: index + self.number_x_vars + self.number_d_vars + self.number_a_vars
-                   for index, var_name in enumerate(list_of_ds_vars)}
-        self.V |= {index + self.number_x_vars + self.number_d_vars + self.number_a_vars: var_name
-                   for index, var_name in enumerate(list_of_ds_vars)}
-
-        self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
-                   for i in range(encryption_key_vars)}
-        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
-                   for i in range(encryption_key_vars)}
-
-        self.V['constant'] = self.M.get_shape()[1] - 1
-        self.V[self.M.get_shape()[1] - 1] = 'constant'
-
-        # list mit den Bits die momentan in der Cipher sind
-        self.A = ['x' + str(i) for i in range(int(inputsize / self.orientation))]
-        self.K = ['k' + str(i) for i in range(int((inputsize / 2) / self.orientation))]
+        sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
+                                                                             lt_per_round, extra_xors, overwrites)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:

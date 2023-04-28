@@ -217,6 +217,7 @@ class SBoxAction(CipherAction):
         return
 
     def run_action(self, type_of_modeling="SunEtAl 2013"):
+        print(self.type_of_action, self.input_vars)
         # inequalities of sbox are
         # (1.) input \leq dummy for all inputs
         # (2.) sum over all inputs \geq dummy
@@ -274,6 +275,7 @@ class XorAction(CipherAction):
         return
 
     def run_action(self):
+        print(self.type_of_action, self.input_var_1, self.input_var_2)
         # inequalities of xor are
         # (1.) input1 + input2 + output \leq 2*dummy
         # (2.) input1 \leq dummy
@@ -320,6 +322,7 @@ class LinTransformationAction(CipherAction):
         # (3.) input2 \leq dummy
         # (4.) output1 \leq dummy
         # (5.) output2 \leq dummy
+        print(self.type_of_action, self.input_var_1, self.input_var_2)
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         all_io_variables = [self.input_var_1, self.input_var_2, self.output_var_1, self.output_var_2]
@@ -349,8 +352,9 @@ class PermutationAction(CipherAction):
         return
 
     def run_action(self):
+        print(self.type_of_action, self.permutation)
         backup_A = self.cipher_instance.A.copy()
-        for i in range(self.cipher_instance.plaintextsize):
+        for i in range(self.cipher_instance.plaintext_vars):
             self.cipher_instance.A[i] = backup_A[self.permutation[i]]
         return
 
@@ -362,6 +366,7 @@ class OverwriteAction(CipherAction):
         return
 
     def run_action(self):
+        print(self.type_of_action, self.input_indices)
         for i in self.input_indices:
             new_var = 'x' + str(self.cipher_instance.next['x'])
             self.cipher_instance.A[i] = new_var

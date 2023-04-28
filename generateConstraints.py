@@ -60,16 +60,15 @@ def new_generate_constraints(rounds, chosen_cipher):
                 List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    cipher_instance = chosen_cipher(rounds)
+    cipher_instance = chosen_cipher(rounds, True)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
-        for cipher_action in cipher_instance.generate_actions_for_round():
-            cipher_instance.gen_long_constraint(cipher_action)
-        cipher_instance.K = ['k' + str(cipher_instance.round_number * cipher_instance.keysize + i) for i in range(keysize)]
-        cipher_instance.round_number += 1
+        cipher_instance.run_round()
+    print("Created constraints")
 
     if cipher_instance.orientation == 1:
         cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=int)
+    print("Combined normal constraints and extra S-box constraints.")
 
     cipher_instance.M = cipher_instance.M.tocsr()
     cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)

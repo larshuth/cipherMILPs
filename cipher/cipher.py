@@ -26,21 +26,24 @@ class Cipher:
         self.number_a_vars = 0
         self.number_ds_vars = 0
 
+        self.plaintext_vars = int(self.plaintextsize / self.orientation)
+        self.key_vars = int(self.keysize / self.orientation)
+
         self.V = dict()
         self.M = None  # placeholder for completeness
 
         # list mit den Bits die momentan in der Cipher sind
-        self.A = ['x' + str(i) for i in range(int(self.plaintextsize / self.orientation))]
-        self.K = ['k' + str(i) for i in range(int(self.keysize / self.orientation))]
+        self.A = ['x' + str(i) for i in range(self.plaintext_vars)]
+        self.K = ['k' + str(i) for i in range(self.key_vars)]
 
-        self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': 0, 'a': 0, 'ds': 0, 'x': 0}
+        self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': int(self.keysize / self.orientation), 'a': 0, 'ds': 0, 'x': int(self.plaintextsize / self.orientation)}
         return
 
     def gen_long_constraint(self, action):
         action.run_action()
         return
 
-    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, overwrites=0):
+    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0, overwrites=0):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -55,8 +58,10 @@ class Cipher:
         #   w + v + 1 more, redundant if the sbox invertible with branch number 2
 
         #   determine plaintext vars
-        plaintext_vars = self.plaintextsize / self.orientation
-        key_vars = self.keysize / self.orientation
+        plaintext_vars = self.plaintext_vars
+        key_vars = self.key_vars * (self.rounds + 1)  # upper bound in accordance with AES
+
+
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -74,6 +79,10 @@ class Cipher:
         #   determine output vars from overwriting operations such as ColumnMix in AES
         overwrite_new_x_vars_per_round = overwrites
 
+        extra_xor_dummy_variables_per_round = xors_not_in_rounds
+        extra_xor_constraints = 4 * xors_not_in_rounds
+        extra_xor_new_x_vars = xors_not_in_rounds
+
         #   determine sbox output vars, dummy vars, and constraints
         if self.orientation == 1:
             sboxes_per_round = len(self.sboxes)
@@ -87,7 +96,7 @@ class Cipher:
             bijective_sboxes_per_round = 0
             extra_constraint_sboxes_per_round = 0
 
-        sbox_new_x_variables_per_round = self.orientation * sboxes_per_round
+        sbox_new_x_variables_per_round = sum(sbox.out_bits for sbox in self.sboxes) * bool(sboxes_per_round)
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
         sbox_constraints_per_round_following_sun = sboxes_per_round * (
@@ -98,8 +107,9 @@ class Cipher:
         number_constraints = ((xor_constraints_per_round +
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
-                               lt_constraints_per_round) * self.rounds) + 1
+                               lt_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
         number_constraints = int(number_constraints)
+        print("# Constraints:", number_constraints)
 
         self.number_variables = (plaintext_vars +
                                  key_vars +
@@ -110,16 +120,17 @@ class Cipher:
                                          sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
                                          sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large +
                                          overwrite_new_x_vars_per_round
-                                 ) * self.rounds) + 1
+                                 ) * self.rounds) + extra_xor_new_x_vars + extra_xor_dummy_variables_per_round + 1
         self.number_variables = int(self.number_variables)
+        print("# Variables:", self.number_variables)
 
         self.M = lil_matrix((number_constraints, self.number_variables), dtype=int)
 
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
-        self.number_x_vars = int(plaintext_vars + ((
+        self.number_x_vars = int(plaintext_vars + extra_xor_new_x_vars + ((
                                                            xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round) * self.rounds))
-        self.number_dx_vars = xor_dummy_variables_per_round * self.rounds
+        self.number_dx_vars = xor_dummy_variables_per_round * self.rounds + extra_xor_dummy_variables_per_round
         self.number_dt_vars = twf_dummy_variables_per_round * self.rounds
         self.number_dl_vars = lt_dummy_variables_per_round * self.rounds
 

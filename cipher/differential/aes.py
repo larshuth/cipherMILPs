@@ -23,17 +23,21 @@ class Aes(Cipher):
 
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
-        for var in range(len(self.A)):
+        for var in range(self.plaintext_vars):
             list_of_key_xor_actions.append(XorAction((self.A[var], self.K[var]), self))
         return list_of_key_xor_actions
 
     def generate_shift_rows_actions_for_round(self):
-        permutation = [0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11]
+        permutation = [0, 5, 10, 15,
+                       4, 9, 14, 3,
+                       8, 13, 2, 7,
+                       12, 1, 6, 11]
         if self.orientation == 1:
-            sub_permutations = [[val * 8 + i for i in range(8)] for val in permutation]
+            sub_permutations = [[(val * 8) + i for i in range(8)] for val in permutation]
             permutation = list()
             for sub_permutation in sub_permutations:
                 permutation += sub_permutation
+        print(permutation)
         list_of_permutation_actions = [PermutationAction(permutation, self)]
         return list_of_permutation_actions
 
@@ -51,28 +55,30 @@ class Aes(Cipher):
 
         else:
             list_of_mix_columns_actions.append(OverwriteAction(list(range(16)), self))
-            pass
-        return
-
-    def generate_actions_for_round(self):
-        list_of_actions = list()
-
-        # add substitutions
-        list_of_actions += self.generate_sbox_actions_for_round()
-
-        if self.round_number == 1:
-            list_of_actions += self.generate_key_xor_actions_for_round()
-
-        list_of_actions += self.generate_sbox_actions_for_round()
-        list_of_actions += self.generate_shift_rows_actions_for_round()
-        list_of_actions += self.generate_mix_columns_actions_for_round()
-        list_of_actions += self.generate_key_xor_actions_for_round()
-        return list_of_actions
+        return list_of_mix_columns_actions
 
     def run_round(self):
-        for action in self.generate_actions_for_round():
-            action.run_action()
-        self.K = ['k' + str(self.round_number * self.keysize + i) for i in range(keysize)]
+        print(f"Round {self.round_number} start")
+
+        if self.round_number == 1:
+            for keyaction in self.generate_key_xor_actions_for_round():
+                keyaction.run_action()
+            self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
+
+        for sboxaction in self.generate_sbox_actions_for_round():
+            sboxaction.run_action()
+
+        for shiftrowsaction in self.generate_shift_rows_actions_for_round():
+            shiftrowsaction.run_action()
+
+        for mixcolumnsaction in self.generate_mix_columns_actions_for_round():
+            mixcolumnsaction.run_action()
+
+        for keyaction in self.generate_key_xor_actions_for_round():
+            keyaction.run_action()
+
+        self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
+        print(f"Round {self.round_number} end")
         self.round_number += 1
         return True
 
@@ -104,7 +110,8 @@ class Aes(Cipher):
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
-            xors_per_round = int(64 / self.orientation)
+            xors_per_round = int(self.plaintext_vars)
+            extra_xors = self.plaintext_vars
         elif self.cryptanalysis_type == 'linear':
             xors_per_round = 0
         else:
@@ -147,7 +154,7 @@ class Aes(Cipher):
         # variables are just overwritten because otherwise it is too complex
 
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, overwrites)
+                                                                             lt_per_round, extra_xors, overwrites)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:

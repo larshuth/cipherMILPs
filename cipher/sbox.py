@@ -34,20 +34,17 @@ class SBox:
                     minimal_hamming_weight = min(minimal_hamming_weight, current_hamming_weight)
         return minimal_hamming_weight
 
-    def determine_branch_number(self):
-        return
-
     def check_subs_match_bits(self):
         key_set = set(key for key, value in self.substitutions.items())
         value_set = set(value for key, value in self.substitutions.items())
 
-        expected_in_words = self.in_bits ** 2
-        expected_out_words = self.out_bits ** 2
+        expected_in_words = 2 ** self.in_bits
+        expected_out_words = 2 ** self.out_bits
         actual_number_in_words = len(self.substitutions)
         actual_number_out_words = len(value_set)
 
-        expected_max_key = self.in_bits ** 2 - 1
-        expected_max_value = self.out_bits ** 2 - 1
+        expected_max_key = 2 ** self.in_bits - 1
+        expected_max_value = 2 ** self.out_bits - 1
 
         actual_max_key = max(key_set)
         actual_max_value = max(value_set)
