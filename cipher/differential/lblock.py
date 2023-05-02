@@ -1,22 +1,12 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction
-import convexHull
-
-from scipy.sparse import lil_matrix
+from cipher.actions import SBoxAction, XorAction, PermutationAction
 
 
 class LBlock(Cipher):
     """
     Class in which all functions for LBlock cipher [Wu et al 2011] are defined.
     """
-
-    def generate_f_function_actions(self):
-        list_of_f_function_actions = list()
-        list_of_f_function_actions += self.generate_key_xor_actions_for_round()
-        list_of_f_function_actions += self.generate_sbox_actions_for_round()
-        list_of_f_function_actions += self.generate_permutation_after_sbox_actions_for_round()
-        return list_of_f_function_actions
 
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
@@ -70,20 +60,21 @@ class LBlock(Cipher):
         f_output_right_plaintext_xor_actions_list += [XorAction(inputs=(self.A[i], self.A[i + half_length]), cipher_instance=self, a_position_to_overwrite= (i + half_length)) for i in range(half_length)]
         return f_output_right_plaintext_xor_actions_list
 
-    def generate_actions_for_round(self):
-        list_of_actions = list()
-        # Feistel f-function, includes key xor-ing, sboxes and permutation
-        list_of_actions += self.generate_f_function_actions()
-        list_of_actions += self.generate_bitshift_actions_for_round()
-        list_of_actions += self.generate_f_output_right_plaintext_xor_actions_for_round()
-        return list_of_actions
-
     def run_round(self):
         x1_size = int(self.plaintextsize / 2)
         x1_backup = self.A[:x1_size].copy()
 
-        for action in self.generate_actions_for_round():
-            self.gen_long_constraint(action)
+        for key_xor_action in self.generate_key_xor_actions_for_round():
+            key_xor_action.run_action()
+        for sbox_action in self.generate_sbox_actions_for_round():
+            sbox_action.run_action()
+        for permutation_action in self.generate_permutation_after_sbox_actions_for_round():
+            permutation_action.run_action()
+
+        for bitshift in self.generate_bitshift_actions_for_round():
+            bitshift.run_action()
+        for xor_action in self.generate_f_output_right_plaintext_xor_actions_for_round():
+            xor_action.run_action()
 
         # renew the elements s.t. the first half of A, X_1 in the og paper,
         self.A[:x1_size] = x1_backup
@@ -114,8 +105,6 @@ class LBlock(Cipher):
         else:
             super().__init__(rounds, orientation=4)
 
-        inputsize = 64
-
         self.cryptanalysis_type = 'differential'
 
         # note that convex hull application (as shown in Sun et al. 2013 and Baksi 2020 is only used for sboxes which
@@ -129,26 +118,6 @@ class LBlock(Cipher):
         #   4. X_0 xor F_1
         #   5. X_1 und X_0 tauschen
         #   6. That was 1 round, now repeat 32 times
-
-        # self.next = number of currently used (x) variable
-        self.next = 0
-        # self.M = matrix representing the self.linear inequalities
-
-        # with mouha, every round, there are
-        #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
-        #   and 1 dummy + v output per w*v sbox
-        #   4 inequalities per XOR
-        #   2*l + 1 inequalities per self.linear transformation L: F_2^l -> F_2^l
-        #   4 per 3-fork branch
-        # Das Nicky Paper war byte-oriented (e.g. 32 byte input in Enocoro) während das
-        # Sun Paper bit-oriented ist (e.g. 64 bit input in LBlock)
-        # with sun, every round there are:
-        #   1 + w constraints are necessary for all (w*v)-sboxes
-        #   2 more are needed if the sbox is symmetric
-        #   w + v + 1 more, redundant if the sbox invertible with branch number 2
-
-        #   determine plaintext vars
-        plaintext_vars = inputsize / self.orientation
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -203,17 +172,6 @@ class LBlock(Cipher):
             sbox_7 = SBox(s_7_subs, 4, 4)
 
             self.sboxes = [sbox_0, sbox_1, sbox_2, sbox_3, sbox_4, sbox_5, sbox_6, sbox_7]
-
-            sboxes_per_round = 8
-
-            bijective_sboxes_per_round = sum([int(sbox.is_bijective) for sbox in self.sboxes])
-            # the entry for a sbox is 1 iff the sbox is not invertible or its branch number is larger than 2
-            extra_constraint_sboxes_per_round = sum(
-                [1 ^ int(sbox.is_invertible and sbox.branch_number <= 2) for sbox in self.sboxes])
-        else:
-            sboxes_per_round = 0
-            bijective_sboxes_per_round = 0
-            extra_constraint_sboxes_per_round = 0
 
         extra_xors = 0
         overwrites = 0

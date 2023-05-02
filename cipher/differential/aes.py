@@ -14,9 +14,9 @@ class Aes(Cipher):
         list_of_sbox_actions = list()
         rounds_til_now = self.rounds - 1
         if self.orientation == 1:
-            get_number = lambda i: int(self.A[i][1:])
             for i in range(16):
-                list_of_sbox_actions.append(SBoxAction(sbox=self.sbox, input_start=get_number(i), cipher_instance=self))
+                first_element = int(self.A[i*8][1:])
+                list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[first_element], input_start=first_element, cipher_instance=self, first_a_position_to_overwrite=first_element))
         else:
             pass
         return list_of_sbox_actions

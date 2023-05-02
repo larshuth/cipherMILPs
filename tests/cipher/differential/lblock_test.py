@@ -1,5 +1,6 @@
 import unittest
 from cipher.differential.lblock import LBlock
+from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction
 
 
 class LBlockTest(unittest.TestCase):
@@ -17,8 +18,29 @@ class LBlockTest(unittest.TestCase):
     def test_round_progression_bit_oriented(self):
         cipher_instance = LBlock(rounds=4, model_as_bit_oriented=True)
 
-        cipher_instance.shift_before()
-        actions = cipher_instance.rangenumber()
+        actions = list()
+        # copy pasted from the lblock.py file
+        actions += cipher_instance.generate_key_xor_actions_for_round()
+        for key_xor_action in cipher_instance.generate_key_xor_actions_for_round():
+            key_xor_action.run_action()
+
+        actions += cipher_instance.generate_sbox_actions_for_round()
+        for sbox_action in cipher_instance.generate_sbox_actions_for_round():
+            sbox_action.run_action()
+
+        actions += cipher_instance.generate_permutation_after_sbox_actions_for_round()
+        for permutation_action in cipher_instance.generate_permutation_after_sbox_actions_for_round():
+            permutation_action.run_action()
+
+        actions += cipher_instance.generate_bitshift_actions_for_round()
+        for bitshift in cipher_instance.generate_bitshift_actions_for_round():
+            bitshift.run_action()
+
+        actions += cipher_instance.generate_f_output_right_plaintext_xor_actions_for_round()
+        for xor_action in cipher_instance.generate_f_output_right_plaintext_xor_actions_for_round():
+            xor_action.run_action()
+
+
         events_round_1 = [['xor', 'x0', 'k0', 'x64', 'd0'], ['xor', 'x1', 'k1', 'x65', 'd1'],
                           ['xor', 'x2', 'k2', 'x66', 'd2'], ['xor', 'x3', 'k3', 'x67', 'd3'],
                           ['xor', 'x4', 'k4', 'x68', 'd4'], ['xor', 'x5', 'k5', 'x69', 'd5'],
@@ -54,6 +76,12 @@ class LBlockTest(unittest.TestCase):
                           ['xor', 'x114', 'x58', 'x154', 'd58'], ['xor', 'x115', 'x59', 'x155', 'd59'],
                           ['xor', 'x120', 'x60', 'x156', 'd60'], ['xor', 'x121', 'x61', 'x157', 'd61'],
                           ['xor', 'x122', 'x62', 'x158', 'd62'], ['xor', 'x123', 'x63', 'x159', 'd63']]
+
+        expected_actions = list()
+        for action in events_round_1:
+            if action[0] == "xor":
+                if int(action[1][1:])
+                expected_actions.append(XorAction((action[1], action[2]), cipher_instance))
 
         filtered_actions = [[a[0]] + a[2:] if a[0] == 'sbox' else a for a in actions]    # filtering out sbox instances
         self.assertEqual(events_round_1, filtered_actions)
