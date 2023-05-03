@@ -11,7 +11,7 @@ class LBlock(Cipher):
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
         start_first_half = 0
-        end_first_half = int(self.plaintextsize/2)
+        end_first_half = int((self.plaintextsize/2)/self.orientation)
 
         for i in range(start_first_half, end_first_half):
             list_of_key_xor_actions.append(XorAction(inputs=(self.A[i], self.K[i]),
@@ -37,11 +37,11 @@ class LBlock(Cipher):
         permutation = list()
         block_size = int(4/self.orientation)
         for index, shift in enumerate([+1, +2, -2, -1, +1, +2, -2, -1]):
-            permutation += [(index + shift) * block_size + i for i in range(int(4/self.orientation))]
+            permutation += [(index + shift) * block_size + i for i in range(block_size)]
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7,8,9 ...] becomes [4,5,6,7,12,13,14,15,0,1 ...]
 
-        start_second_half = int(self.plaintextsize/2)
-        end_second_half = int(self.plaintextsize)
+        start_second_half = int((self.plaintextsize/2)/self.orientation)
+        end_second_half = int(self.plaintextsize/self.orientation)
         permutation += list(range(start_second_half, end_second_half))
         # permutation needs to span the whole A list, even if not all of them are changed
         list_of_permutation_actions.append(PermutationAction(permutation, self))
@@ -50,7 +50,7 @@ class LBlock(Cipher):
     def generate_bitshift_actions_for_round(self):
         list_of_bitshift_actions = list()
         start_first_half = 0
-        end_first_half = int(self.plaintextsize / 2)
+        end_first_half = int((self.plaintextsize/2)/self.orientation)
         permutation = list()
         permutation += list(range(start_first_half, end_first_half))
         # permutation needs to span the whole A list, even if not all of them are changed
@@ -64,12 +64,15 @@ class LBlock(Cipher):
 
     def generate_f_output_right_plaintext_xor_actions_for_round(self):
         f_output_right_plaintext_xor_actions_list = list()
-        half_length = int(self.plaintextsize/2)
-        f_output_right_plaintext_xor_actions_list += [XorAction(inputs=(self.A[i], self.A[i + half_length]), cipher_instance=self, a_position_to_overwrite= (i + half_length)) for i in range(half_length)]
+        half_length = int((self.plaintextsize/2)/self.orientation)
+        f_output_right_plaintext_xor_actions_list += [XorAction(inputs=(self.A[i], self.A[i + half_length]),
+                                                                cipher_instance=self,
+                                                                a_position_to_overwrite=(i + half_length))
+                                                      for i in range(half_length)]
         return f_output_right_plaintext_xor_actions_list
 
     def run_round(self):
-        x1_size = int(self.plaintextsize / 2)
+        x1_size = int((self.plaintextsize/2)/self.orientation)
         x1_backup = self.A[:x1_size].copy()
 
         for key_xor_action in self.generate_key_xor_actions_for_round():

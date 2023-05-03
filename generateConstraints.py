@@ -39,7 +39,7 @@ def removezerocols(M, V):
     return M
 
 
-def new_generate_constraints(rounds, chosen_cipher):
+def new_generate_constraints(rounds, chosen_cipher, bit_oriented):
     """
     This function generates the constraint matrix for a number of rounds of a given cipher.
 
@@ -60,7 +60,7 @@ def new_generate_constraints(rounds, chosen_cipher):
                 List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    cipher_instance = chosen_cipher(rounds, True)
+    cipher_instance = chosen_cipher(rounds, model_as_bit_oriented=bit_oriented)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
         cipher_instance.run_round()

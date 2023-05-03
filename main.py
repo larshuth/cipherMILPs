@@ -10,7 +10,7 @@ AVAILABLE = [Enocoro, Enocorolin, Aes, LBlock]
 BIT_ORIENTED = [LBlock]
 
 
-def main(rounds, cipher, viz):
+def main(rounds, cipher, viz, bit_oriented):
     """
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
 
@@ -31,18 +31,34 @@ def main(rounds, cipher, viz):
     """
 
     if viz == 1:
-        vis.matplotlibvis(rounds, cipher)
+        vis.matplotlibvis(rounds, cipher, bit_oriented)
     elif viz == 2:
-        vis.gen_pdf(rounds, cipher)
+        vis.gen_pdf(rounds, cipher, bit_oriented)
 
 
 def safe_call():
     try:
         # Asking the user what to generate
         print("Do you want to see the matrix structures in detail(1) oder generate a pdf(2)?")
-        viz = int(input())
+        while True:
+            try:
+                viz = int(input())
+                if viz not in {1, 2}:
+                    print("I like the spirit but that is not a 1 or 2. Try again, fool.")
+                else:
+                    break
+            except ValueError:
+                print("I like the spirit but that is not a number. Try again, fool.")
         print("How many rounds do you want to generate?")
-        rounds = int(input())
+        while True:
+            try:
+                rounds = int(input())
+                if rounds < 1:
+                    print("Not enough rounds. Try again, fool.")
+                else:
+                    break
+            except ValueError:
+                print("I like the spirit but that is not a number. Try again, fool.")
 
         # generalizing the cipher question for the possible addition of more ciphers
         cipher_question = "Which cipher do you want to use? "
@@ -52,10 +68,31 @@ def safe_call():
         cipher_question = cipher_question[:-3] + "?"
 
         print(cipher_question)
-        ciphelp = int(input())
-        chosen_cipher = AVAILABLE[ciphelp]
+        while True:
+            try:
+                ciphelp = int(input())
+                if viz not in set(range(len(AVAILABLE))):
+                    print("I like the spirit but that is not a number corresponding with one of the ciphers. Try again, fool.")
+                else:
+                    break
+            except ValueError:
+                print("I like the spirit but that is not a number. Try again, fool.")
 
-        main(rounds, chosen_cipher, viz)
+        chosen_cipher = AVAILABLE[ciphelp]
+        if chosen_cipher in BIT_ORIENTED:
+            print("Would you like to model the cipher bit-oriented (0) or word/byte-oriented (1)?")
+            while True:
+                try:
+                    bit_oriented = bool(int(input()))
+                    if bit_oriented not in {0, 1}:
+                        print(
+                            "I like the spirit but that is not a 0 or 1. Try again, fool.")
+                    else:
+                        break
+                except ValueError:
+                    print("I like the spirit but that is not a number. Try again, fool.")
+
+        main(rounds, chosen_cipher, viz, bit_oriented)
     except Exception as e:
         print('\n\n!!! Error in input, restart script !!!\n\n')
         print(e)
@@ -64,7 +101,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz = 4, LBlock, 2
-        main(rounds, chosen_cipher, viz)
+        rounds, chosen_cipher, viz, bit_oriented = 1, LBlock, 2, False
+        main(rounds, chosen_cipher, viz, bit_oriented)
     else:
         safe_call()

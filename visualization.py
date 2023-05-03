@@ -14,7 +14,7 @@ import matplotlib.pylab as plt
 plt.rcParams.update({'font.size': 5})
 
 
-def matplotlibvis(rounds, cipher):
+def matplotlibvis(rounds, cipher, bit_oriented):
     """
     Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
     Generates 4 visualizations of the same sparse matrix.
@@ -35,7 +35,7 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
     A = cipher_instance.M.copy()
     sf.d_var_to_beginning(cipher_instance)
     M = cipher_instance.M.copy()
@@ -219,7 +219,7 @@ def mainly(fname, A, V, title, *args, **kwargs):
     doc.generate_pdf(clean_tex=False)
 
 
-def gen_pdf(rounds, cipher):
+def gen_pdf(rounds, cipher, bit_oriented):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -237,7 +237,7 @@ def gen_pdf(rounds, cipher):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
     A = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
     #sf.d_var_to_beginning(cipher_instance)
@@ -262,4 +262,4 @@ def gen_pdf(rounds, cipher):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds', A=A, V=cipher_instance.V, title=title, dpi=300)
+    mainly(title[0] + title[1] + 'rounds_bitoriented_' + str(bit_oriented), A=A, V=cipher_instance.V, title=title, dpi=300)
