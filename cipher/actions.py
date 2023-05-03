@@ -271,6 +271,7 @@ class XorAction(CipherAction):
         self.dummy_var = 'dx' + str(self.cipher_instance.next['dx'])
         self.cipher_instance.next['dx'] += 1
 
+        self.overwrite = bool(type(a_position_to_overwrite) == int)
         self.a_position_to_overwrite = a_position_to_overwrite
         return
 
@@ -293,7 +294,7 @@ class XorAction(CipherAction):
             list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], var_value=-1,
             dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
 
-        if self.a_position_to_overwrite:
+        if self.overwrite:
             self.cipher_instance.A[self.a_position_to_overwrite] = self.output_var
         return
 

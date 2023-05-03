@@ -10,7 +10,10 @@ class LBlock(Cipher):
 
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
-        for i in range(int(len(self.A)/2)):
+        start_first_half = 0
+        end_first_half = int(self.plaintextsize/2)
+
+        for i in range(start_first_half, end_first_half):
             list_of_key_xor_actions.append(XorAction(inputs=(self.A[i], self.K[i]),
                                                      cipher_instance=self, a_position_to_overwrite=i))
         return list_of_key_xor_actions
@@ -34,22 +37,27 @@ class LBlock(Cipher):
         permutation = list()
         block_size = int(4/self.orientation)
         for index, shift in enumerate([+1, +2, -2, -1, +1, +2, -2, -1]):
-            permutation += [(index + shift) * block_size * i for i in range(int(4/self.orientation))]
+            permutation += [(index + shift) * block_size + i for i in range(int(4/self.orientation))]
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7,8,9 ...] becomes [4,5,6,7,12,13,14,15,0,1 ...]
-        permutation += list(range(self.plaintextsize/2, self.plaintextsize))
+
+        start_second_half = int(self.plaintextsize/2)
+        end_second_half = int(self.plaintextsize)
+        permutation += list(range(start_second_half, end_second_half))
         # permutation needs to span the whole A list, even if not all of them are changed
         list_of_permutation_actions.append(PermutationAction(permutation, self))
         return list_of_permutation_actions
 
     def generate_bitshift_actions_for_round(self):
         list_of_bitshift_actions = list()
+        start_first_half = 0
+        end_first_half = int(self.plaintextsize / 2)
         permutation = list()
-        permutation += list(range(self.plaintextsize / 2))
+        permutation += list(range(start_first_half, end_first_half))
         # permutation needs to span the whole A list, even if not all of them are changed
         # using the previously written code if just due to laziness
         block_size = int(4 / self.orientation)
         for index, shift in enumerate([+2] * 8):
-            permutation += [((index + shift) * block_size * i) % (8*block_size) for i in range(int(4 / self.orientation))]
+            permutation += [((index + shift) * block_size + i) % (8*block_size) for i in range(block_size)]
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7 ...] becomes [8,9,10,11,12,13,14,15 ...]
         list_of_bitshift_actions.append(PermutationAction(permutation, self))
         return list_of_bitshift_actions
@@ -66,21 +74,27 @@ class LBlock(Cipher):
 
         for key_xor_action in self.generate_key_xor_actions_for_round():
             key_xor_action.run_action()
+        print(self.A)
         for sbox_action in self.generate_sbox_actions_for_round():
             sbox_action.run_action()
+        print(self.A)
         for permutation_action in self.generate_permutation_after_sbox_actions_for_round():
             permutation_action.run_action()
+        print(self.A)
 
         for bitshift in self.generate_bitshift_actions_for_round():
             bitshift.run_action()
+        print(self.A)
         for xor_action in self.generate_f_output_right_plaintext_xor_actions_for_round():
             xor_action.run_action()
+        print(self.A)
 
         # renew the elements s.t. the first half of A, X_1 in the og paper,
         self.A[:x1_size] = x1_backup
 
         # and switch left and right
         self.A = self.A[x1_size:] + self.A[:x1_size]
+        print(self.A)
 
         # this is actually not the size of the key but the array representing the subkey in each round
         self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
@@ -100,10 +114,13 @@ class LBlock(Cipher):
                                     Argument on whether LBlock should be modeled as a bit-oriented cipher instead
                                     of as a 4-bit word-oriented cipher.
         """
+        plaintextsize = 64
+        keysize = 32
+
         if model_as_bit_oriented:
-            super().__init__(rounds, orientation=1)
+            super().__init__(rounds, plaintextsize, keysize, orientation=1)
         else:
-            super().__init__(rounds, orientation=4)
+            super().__init__(rounds, plaintextsize, keysize, orientation=4)
 
         self.cryptanalysis_type = 'differential'
 
@@ -177,7 +194,7 @@ class LBlock(Cipher):
         overwrites = 0
 
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, overwrites)
+                                                                             lt_per_round, extra_xors, overwrites, new_keys_every_round=True)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
@@ -196,4 +213,5 @@ class LBlock(Cipher):
 
         self.line = 0
         self.round_number = 1
+        print(self.next)
         return

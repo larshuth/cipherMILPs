@@ -43,7 +43,7 @@ class Cipher:
         action.run_action()
         return
 
-    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0, overwrites=0):
+    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0, overwrites=0, new_keys_every_round=False):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -162,9 +162,9 @@ class Cipher:
                    for index, var_name in enumerate(list_of_ds_vars)}
 
         self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
-                   for i in range(self.keysize)}
+                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
         self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
-                   for i in range(self.keysize)}
+                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
 
         self.V['constant'] = self.M.get_shape()[1] - 1
         self.V[self.M.get_shape()[1] - 1] = 'constant'
