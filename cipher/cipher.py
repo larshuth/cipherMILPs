@@ -36,14 +36,16 @@ class Cipher:
         self.A = ['x' + str(i) for i in range(self.plaintext_vars)]
         self.K = ['k' + str(i) for i in range(self.key_vars)]
 
-        self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': int(self.keysize / self.orientation), 'a': 0, 'ds': 0, 'x': int(self.plaintextsize / self.orientation)}
+        self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': int(self.keysize / self.orientation), 'a': 0, 'ds': 0,
+                     'x': int(self.plaintextsize / self.orientation)}
         return
 
     def gen_long_constraint(self, action):
         action.run_action()
         return
 
-    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0, overwrites=0, new_keys_every_round=False):
+    def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
+                                       overwrites=0, new_keys_every_round=False):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -60,8 +62,6 @@ class Cipher:
         #   determine plaintext vars
         plaintext_vars = self.plaintext_vars
         key_vars = self.key_vars * (self.rounds + 1)  # upper bound in accordance with AES
-
-
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -99,8 +99,7 @@ class Cipher:
         sbox_new_x_variables_per_round = sum(sbox.out_bits for sbox in self.sboxes) * bool(sboxes_per_round)
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
-        sbox_constraints_per_round_following_sun = sboxes_per_round * (
-                1 + 4) + bijective_sboxes_per_round * 2 + extra_constraint_sboxes_per_round * (1 + 4 + 4)
+        sbox_constraints_per_round_following_sun = sboxes_per_round + sum(sbox.in_bits for sbox in self.sboxes) + (bijective_sboxes_per_round * 2) + extra_constraint_sboxes_per_round * (1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(sbox.in_bits for sbox in self.sboxes))
 
         # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
 
@@ -129,7 +128,7 @@ class Cipher:
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
         self.number_x_vars = int(plaintext_vars + extra_xor_new_x_vars + ((
-                                                           xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round) * self.rounds))
+                                                                                  xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round) * self.rounds))
         self.number_dx_vars = xor_dummy_variables_per_round * self.rounds + extra_xor_dummy_variables_per_round
         self.number_dt_vars = twf_dummy_variables_per_round * self.rounds
         self.number_dl_vars = lt_dummy_variables_per_round * self.rounds
@@ -146,7 +145,8 @@ class Cipher:
         self.V |= {'dt' + str(i): i + self.number_x_vars + self.number_dx_vars for i in range(self.number_dt_vars)}
         self.V |= {i + self.number_x_vars: 'dt' + str(i) for i in range(self.number_dt_vars)}
 
-        self.V |= {'dl' + str(i): i + self.number_x_vars + self.number_dx_vars  + self.number_dt_vars for i in range(self.number_dl_vars)}
+        self.V |= {'dl' + str(i): i + self.number_x_vars + self.number_dx_vars + self.number_dt_vars for i in
+                   range(self.number_dl_vars)}
         self.V |= {i + self.number_x_vars: 'dl' + str(i) for i in range(self.number_dl_vars)}
 
         self.number_d_vars = self.number_dx_vars + self.number_dt_vars + self.number_dl_vars
