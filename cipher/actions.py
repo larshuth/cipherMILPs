@@ -300,19 +300,19 @@ class XorAction(CipherAction):
 
 
 class LinTransformationAction(CipherAction):
-    def __init__(self, inputs, cipher_instance, a_positions_to_overwrite=None):
+    def __init__(self, inputs, cipher_instance, branch_number=2, a_positions_to_overwrite=None):
         super().__init__("lin trans", cipher_instance)
-        (self.input_var_1, self.input_var_2) = inputs
+        self.input_list = inputs
 
-        self.output_var_1 = 'x' + str(self.cipher_instance.next['x'])
-        self.cipher_instance.next['x'] += 1
-
-        self.output_var_2 = 'x' + str(self.cipher_instance.next['x'])
-        self.cipher_instance.next['x'] += 1
+        self.output_list = list()
+        for i in range(len(self.input_list)):
+            self.output_list.append('x' + str(self.cipher_instance.next['x']))
+            self.cipher_instance.next['x'] += 1
 
         self.dummy_var = 'dl' + str(self.cipher_instance.next['dx'])
         self.cipher_instance.next['dl'] += 1
 
+        self.branch_number = branch_number
         self.a_positions_to_overwrite = a_positions_to_overwrite
         return
 
@@ -323,24 +323,23 @@ class LinTransformationAction(CipherAction):
         # (3.) input2 \leq dummy
         # (4.) output1 \leq dummy
         # (5.) output2 \leq dummy
-        print(self.type_of_action, self.input_var_1, self.input_var_2)
+        print(self.type_of_action, self.input_list)
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
-        all_io_variables = [self.input_var_1, self.input_var_2, self.output_var_1, self.output_var_2]
+        all_io_variables = self.input_list + self.output_list
         # starting with (1.)
         self.set_all_to_value(list_of_variables=all_io_variables, value=1)
-        self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = -3
+        self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = - self.branch_number
         self.cipher_instance.line += 1
 
         # then (2.), (3.), (4.), and (5.)
         self.for_each_var_set_to_value_plus_dummy(
             list_of_variables=all_io_variables, var_value=-1,
-            dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
+            dummy_pos=dummy_var_pos_in_matrix, dum_value=self.branch_number)
 
         if self.a_positions_to_overwrite:
-            overwrite_pos_1, overwrite_pos_2 = self.a_positions_to_overwrite[0], self.a_positions_to_overwrite[1]
-            self.cipher_instance.A[overwrite_pos_1] = self.output_var_1
-            self.cipher_instance.A[overwrite_pos_2] = self.output_var_2
+            for index, pos in enumerate(self.a_positions_to_overwrite):
+                self.cipher_instance.A[pos] = self.output_list[index]
         return
 
 

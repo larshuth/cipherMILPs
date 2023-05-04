@@ -101,7 +101,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented = 1, LBlock, 2, False
+        rounds, chosen_cipher, viz, bit_oriented = 4, Aes, 2, False
         main(rounds, chosen_cipher, viz, bit_oriented)
     else:
         safe_call()

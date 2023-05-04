@@ -1,6 +1,6 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction
+from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction, LinTransformationAction
 
 from scipy.sparse import lil_matrix
 
@@ -46,17 +46,17 @@ class Aes(Cipher):
     def generate_mix_columns_actions_for_round(self):
         list_of_mix_columns_actions = list()
         if self.orientation == 1:
-            list_of_mix_columns_actions.append(OverwriteAction(list(range(16 * 8)), self))
-            # TODO: Check for inequality for the mix columns operation. Is that doable without modulo?
-            # byte_list_to_value = lambda byte_list: sum([bit * (2 ** bit_pos) for bit_pos,bit in enumerate(byte_list)])
-            # for column_number in range(4):
-            #     bit_vars_so_var = column_number * 4 * 8     # number columns * number bytes per column * bits per byte
-            #     column = [[bit_number + bit_vars_so_var for bit_number in range(8)] for byte_number in range(4)]
-            #     for byte in column:
-            #         self.A[byte] = None
+            # TODO: Calculate Branch number for Aes MixColumns byte oriented and bit-oriented
+            for row in range(4):
+                row_positions = [row*4 + i for i in range(4)]
+                current_row = list(self.A[pos] for pos in row_positions)
+                list_of_mix_columns_actions.append(LinTransformationAction(current_row, self, 5, row_positions))
 
         else:
-            list_of_mix_columns_actions.append(OverwriteAction(list(range(16)), self))
+            for row in range(4):
+                row_positions = [row*4 + i for i in range(4)]
+                current_row = list(self.A[pos] for pos in row_positions)
+                list_of_mix_columns_actions.append(LinTransformationAction(current_row, self, 5, row_positions))
         return list_of_mix_columns_actions
 
     def run_round(self):
