@@ -6,8 +6,8 @@ from cipher.linear.enocoro import Enocorolin
 
 DEBUG = True
 
-AVAILABLE = [Enocoro, Enocorolin, Aes, LBlock]
-BIT_ORIENTED = [LBlock]
+AVAILABLE = [Aes, LBlock]
+BIT_ORIENTED = [Aes, LBlock]
 
 
 def main(rounds, cipher, viz, bit_oriented):
@@ -30,10 +30,13 @@ def main(rounds, cipher, viz, bit_oriented):
     Opens a new window or creates a new pdf file in the same directory of this file.
     """
 
-    if viz == 1:
+    if viz == 0:
+        return vis.no_viz_just_testrun(rounds, cipher, bit_oriented)
+    elif viz == 1:
         vis.matplotlibvis(rounds, cipher, bit_oriented)
     elif viz == 2:
         vis.gen_pdf(rounds, cipher, bit_oriented)
+    return
 
 
 def safe_call():
@@ -101,7 +104,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented = 4, Aes, 2, False
+        rounds, chosen_cipher, viz, bit_oriented = 1, Aes, 2, True
         main(rounds, chosen_cipher, viz, bit_oriented)
     else:
         safe_call()

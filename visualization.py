@@ -210,11 +210,12 @@ def mainly(fname, A, V, title, *args, **kwargs):
         doc.append(NoEscape("\[\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0\]"))
     """
     doc.append(NewPage())
-    with doc.create(Section("Constraints")):
-        B = constraints(A, V)
-        with doc.create(Alignat(numbering=False, escape=False)) as agn:
-            for i in B:
-                agn.append(i + "\\\\")
+    if False:
+        with doc.create(Section("Constraints")):
+            B = constraints(A, V)
+            with doc.create(Alignat(numbering=False, escape=False)) as agn:
+                for i in B:
+                    agn.append(i + "\\\\")
 
     doc.generate_pdf(clean_tex=False)
 
@@ -263,3 +264,19 @@ def gen_pdf(rounds, cipher, bit_oriented):
     print(type(A))
     print("lala")  # r'1\textwidth',
     mainly(title[0] + title[1] + 'rounds_bitoriented_' + str(bit_oriented), A=A, V=cipher_instance.V, title=title, dpi=300)
+
+
+def no_viz_just_testrun(rounds, cipher, bit_oriented):
+    """
+    Generates the plots in matplotlib and calls the function to generate the pdf.
+
+    Parameters:
+    -----------
+    rounds  :   int
+                Number of rounds
+
+    cipher  :   class
+                Class of the wanted cipher
+    """
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
+    return True

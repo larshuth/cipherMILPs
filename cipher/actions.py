@@ -309,11 +309,12 @@ class LinTransformationAction(CipherAction):
             self.output_list.append('x' + str(self.cipher_instance.next['x']))
             self.cipher_instance.next['x'] += 1
 
-        self.dummy_var = 'dl' + str(self.cipher_instance.next['dx'])
+        self.dummy_var = 'dl' + str(self.cipher_instance.next['dl'])
         self.cipher_instance.next['dl'] += 1
 
         self.branch_number = branch_number
         self.a_positions_to_overwrite = a_positions_to_overwrite
+        print("created", self.type_of_action, self.input_list, self.dummy_var)
         return
 
     def run_action(self):
@@ -323,7 +324,7 @@ class LinTransformationAction(CipherAction):
         # (3.) input2 \leq dummy
         # (4.) output1 \leq dummy
         # (5.) output2 \leq dummy
-        print(self.type_of_action, self.input_list)
+        print("run", self.type_of_action, self.input_list, self.dummy_var)
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         all_io_variables = self.input_list + self.output_list

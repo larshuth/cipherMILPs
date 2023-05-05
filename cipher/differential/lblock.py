@@ -154,7 +154,7 @@ class LBlock(Cipher):
             twf_per_round = int(32 / self.orientation)
 
         #   determine self.linear transformation output vars, dummy vars, and constraints
-        lt_per_round = 0
+        lt_per_round = list()
 
         #   determine sbox output vars, dummy vars, and constraints
         if self.orientation == 1:

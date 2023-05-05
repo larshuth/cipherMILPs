@@ -121,3 +121,8 @@ fabric.properties
 __pycache__/**
 **/__pycache__/**
 **/**/__pycache__/**
+*.pdf
+*.aux
+*.log
+*.fls
+*.fdb_latexmk

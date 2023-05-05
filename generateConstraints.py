@@ -70,6 +70,6 @@ def new_generate_constraints(rounds, chosen_cipher, bit_oriented):
         cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=int)
     print("Combined normal constraints and extra S-box constraints.")
 
+    # cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     cipher_instance.M = cipher_instance.M.tocsr()
-    cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
     return cipher_instance

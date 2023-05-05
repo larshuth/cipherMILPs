@@ -47,8 +47,9 @@ class Aes(Cipher):
         list_of_mix_columns_actions = list()
         if self.orientation == 1:
             # TODO: Calculate Branch number for Aes MixColumns byte oriented and bit-oriented
+            # TODO: add Boura and xyz Section 3 matrix jamming
             for row in range(4):
-                row_positions = [row*4 + i for i in range(4)]
+                row_positions = [row*4*8 + i for i in range(4*8)]
                 current_row = list(self.A[pos] for pos in row_positions)
                 list_of_mix_columns_actions.append(LinTransformationAction(current_row, self, 5, row_positions))
 
@@ -116,8 +117,10 @@ class Aes(Cipher):
             extra_xors = self.plaintext_vars
         elif self.cryptanalysis_type == 'linear':
             xors_per_round = 0
+            extra_xors = 0
         else:
             xors_per_round = 0
+            extra_xors = 0
 
         #   determine 3 way fork output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -126,7 +129,7 @@ class Aes(Cipher):
             twf_per_round = int(0 / self.orientation)
 
         #   determine self.linear transformation output vars, dummy vars, and constraints
-        lt_per_round = 0
+        lt_per_round = [4 * int(8/self.orientation) for _ in range(4)]
 
         #   determine sbox output vars, dummy vars, and constraints
         if self.orientation == 1:
@@ -156,7 +159,8 @@ class Aes(Cipher):
         # variables are just overwritten because otherwise it is too complex
 
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, overwrites, new_keys_every_round=True)
+                                                                             lt_per_round, extra_xors, overwrites,
+                                                                             new_keys_every_round=True)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
