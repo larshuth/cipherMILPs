@@ -254,7 +254,7 @@ class SBoxAction(CipherAction):
             raise ValueError(
                 "Variable type_of_modeling declared incorrectly. Value should be 'SunEtAl 2013' or 'Baksi 2020'.")
 
-        if self.overwrite_position:
+        if type(self.overwrite_position) == int:
             for i in range(self.sbox.in_bits):
                 self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]
         return

@@ -57,14 +57,14 @@ class LBlock(Cipher):
         # using the previously written code if just due to laziness
         block_size = int(4 / self.orientation)
         for index, shift in enumerate([+2] * 8):
-            permutation += [((index + shift) * block_size + i) % (8*block_size) for i in range(block_size)]
+            permutation += [end_first_half + ((i + (2 * block_size)) % end_first_half) for i in range(end_first_half)]
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7 ...] becomes [8,9,10,11,12,13,14,15 ...]
         list_of_bitshift_actions.append(PermutationAction(permutation, self))
         return list_of_bitshift_actions
 
     def generate_f_output_right_plaintext_xor_actions_for_round(self):
         f_output_right_plaintext_xor_actions_list = list()
-        half_length = int((self.plaintextsize/2)/self.orientation)
+        half_length = int(32 / self.orientation)
         f_output_right_plaintext_xor_actions_list += [XorAction(inputs=(self.A[i], self.A[i + half_length]),
                                                                 cipher_instance=self,
                                                                 a_position_to_overwrite=(i + half_length))
