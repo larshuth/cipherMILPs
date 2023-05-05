@@ -3,11 +3,12 @@ from cipher.differential.enocoro import Enocoro
 from cipher.differential.aes import Aes
 from cipher.differential.lblock import LBlock
 from cipher.linear.enocoro import Enocorolin
+from cipher.differential.gift import Gift64
 
 DEBUG = True
 
-AVAILABLE = [Aes, LBlock]
-BIT_ORIENTED = [Aes, LBlock]
+AVAILABLE = [Aes, LBlock, Gift64]
+BIT_ORIENTED = [Aes, LBlock, Gift64]
 
 
 def main(rounds, cipher, viz, bit_oriented):
@@ -104,7 +105,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented = 1, Aes, 2, True
+        rounds, chosen_cipher, viz, bit_oriented = 1, Gift64, 2, True
         main(rounds, chosen_cipher, viz, bit_oriented)
     else:
         safe_call()

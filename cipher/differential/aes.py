@@ -155,7 +155,7 @@ class Aes(Cipher):
 
             self.sboxes = [self.sbox] * 16
 
-        overwrites = 16 * int(8/self.orientation)   # for the ColumnMix operations in AES where (as off Zhou) the
+        overwrites = 0   # for the ColumnMix operations in AES where (as off Zhou) the
         # variables are just overwritten because otherwise it is too complex
 
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
