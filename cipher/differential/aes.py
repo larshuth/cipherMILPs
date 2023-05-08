@@ -26,7 +26,8 @@ class Aes(Cipher):
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
         for var in range(self.plaintext_vars):
-            list_of_key_xor_actions.append(XorAction((self.A[var], self.K[var]), self))
+            list_of_key_xor_actions.append(XorAction(inputs=(self.A[var], self.K[var]), cipher_instance=self,
+                                                     a_position_to_overwrite=var))
         return list_of_key_xor_actions
 
     def generate_shift_rows_actions_for_round(self):
@@ -85,7 +86,7 @@ class Aes(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False):
+    def __init__(self, rounds=1, model_as_bit_oriented=False, cryptanalysis_type='differential'):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -107,7 +108,7 @@ class Aes(Cipher):
         else:
             super().__init__(rounds, plaintextsize, keysize, orientation=8)
 
-        self.cryptanalysis_type = 'differential'
+        self.cryptanalysis_type = cryptanalysis_type
 
         # Summary of what's happening in AES:
 

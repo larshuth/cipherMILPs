@@ -284,18 +284,61 @@ class XorAction(CipherAction):
         # (4.) output \leq dummy
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
+        input_output_vars = [self.input_var_1, self.input_var_2, self.output_var]
+
         # starting with (1.)
-        self.set_all_to_value(list_of_variables=[self.input_var_1, self.input_var_2], value=1)
+        self.set_all_to_value(list_of_variables=input_output_vars, value=1)
         self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = -2
         self.cipher_instance.line += 1
 
         # then (2.), (3.), and (4.)
         self.for_each_var_set_to_value_plus_dummy(
-            list_of_variables=[self.input_var_1, self.input_var_2, self.output_var], var_value=-1,
+            list_of_variables=input_output_vars, var_value=-1,
             dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
 
         if self.overwrite:
             self.cipher_instance.A[self.a_position_to_overwrite] = self.output_var
+        return
+
+
+class ThreeForkedBranchAction(CipherAction):
+    def __init__(self, input_var, cipher_instance, a_positions_to_overwrite, optional_output_vars):
+        super().__init__("twf", cipher_instance)
+        self.input_var = input_var
+
+        self.output_var_1 = 'x' + str(self.cipher_instance.next['x'])
+        self.cipher_instance.next['x'] += 1
+
+        self.output_var_2 = 'x' + str(self.cipher_instance.next['x'])
+        self.cipher_instance.next['x'] += 1
+
+        self.dummy_var = 'dt' + str(self.cipher_instance.next['dt'])
+        self.cipher_instance.next['dt'] += 1
+        self.a_positions_to_overwrite = a_positions_to_overwrite
+        return
+
+    def run_action(self):
+        print(self.type_of_action, self.input_var, self.output_var_1, self.output_var_2)
+        # inequalities of xor are
+        # (1.) input1 + input2 + output \leq 2*dummy
+        # (2.) input1 \leq dummy
+        # (3.) input2 \leq dummy
+        # (4.) output \leq dummy
+        dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
+
+        input_output_vars = [self.input_var, self.output_var_1, self.output_var_2]
+        # starting with (1.)
+        self.set_all_to_value(list_of_variables=input_output_vars, value=1)
+        self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = -2
+        self.cipher_instance.line += 1
+
+        # then (2.), (3.), and (4.)
+        self.for_each_var_set_to_value_plus_dummy(
+            list_of_variables=input_output_vars, var_value=-1,
+            dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
+
+        self.cipher_instance.A[self.a_positions_to_overwrite[0]] = self.output_var_1
+        self.cipher_instance.A[self.a_positions_to_overwrite[1]] = self.output_var_2
         return
 
 
