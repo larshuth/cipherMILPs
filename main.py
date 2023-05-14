@@ -1,14 +1,14 @@
 import visualization as vis
-from cipher.differential.enocoro import Enocoro
-from cipher.differential.aes import Aes
-from cipher.differential.lblock import LBlock
-from cipher.linear.enocoro import Enocorolin
-from cipher.differential.gift import Gift64
+from cipher.differential.enocoro import Enocoro as EnocoroDifferential
+from cipher.differential.aes import Aes as AesDifferential
+from cipher.differential.lblock import LBlock as LBlockDifferential
+from cipher.differential.gift import Gift64 as Gift64Differential
+from cipher.linear.enocoro import Enocoro as EnocoroLinear
 
 DEBUG = True
 
-AVAILABLE = [Aes, LBlock, Gift64]
-BIT_ORIENTED = [Aes, LBlock, Gift64]
+AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential]
+BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential]
 
 
 def main(rounds, cipher, viz, bit_oriented):
@@ -105,7 +105,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented = 1, Gift64, 2, True
+        rounds, chosen_cipher, viz, bit_oriented = 1, Gift64Differential, 2, True
         main(rounds, chosen_cipher, viz, bit_oriented)
     else:
         safe_call()

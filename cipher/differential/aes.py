@@ -81,7 +81,7 @@ class Aes(Cipher):
         for keyaction in self.generate_key_xor_actions_for_round():
             keyaction.run_action()
 
-        self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
+        self.K = ['k' + str((self.round_number + 1) * self.key_vars + i) for i in range(self.key_vars)]
         print(f"Round {self.round_number} end")
         self.round_number += 1
         return True
