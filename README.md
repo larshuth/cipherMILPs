@@ -14,9 +14,9 @@ What has been done and what we plan on doing:
       - [x] Implementation
       - [ ] Tests
   - [ ] Linear cryptanalysis
-    - [ ] AES
+    - [x] AES
       - [x] Implementation
-      - [ ] Tests
+      - [x] Tests
     - [x] LBlock
       - [x] Implementation
       - [x] Tests
