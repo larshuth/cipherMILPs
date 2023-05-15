@@ -1,6 +1,5 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions.overwriteaction import OverwriteAction
 from cipher.actions.permutationaction import PermutationAction
 from cipher.actions.lineartransformationaction import LinTransformationAction
 from cipher.actions.xoraction import XorAction

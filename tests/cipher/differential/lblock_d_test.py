@@ -1,10 +1,5 @@
 import unittest
 from cipher.differential.lblock import LBlock
-from cipher.actions.overwriteaction import OverwriteAction
-from cipher.actions.permutationaction import PermutationAction
-from cipher.actions.xoraction import XorAction
-from cipher.actions.sboxaction import SBoxAction
-
 
 class LBlockTest(unittest.TestCase):
     def test_round_progression_bit_oriented(self):

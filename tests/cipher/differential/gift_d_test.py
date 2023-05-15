@@ -1,9 +1,5 @@
 import unittest
 from cipher.differential.gift import Gift64
-from cipher.actions.overwriteaction import OverwriteAction
-from cipher.actions.permutationaction import PermutationAction
-from cipher.actions.xoraction import XorAction
-from cipher.actions.sboxaction import SBoxAction
 
 
 class GIFT64Test(unittest.TestCase):
@@ -155,7 +151,86 @@ class GIFT64Test(unittest.TestCase):
         return
 
     def test_correct_actions_performed_round_2_bit_oriented(self):
-        pass
+        cipher_instance = Gift64(rounds=4, model_as_bit_oriented=True)
+
+        cipher_instance.run_round()
+
+        expected_sbox_actions_round_2 = [['sbox', ['x0', 'x1', 'x2', 'x3'], ['x64', 'x65', 'x66', 'x67'], 'a0'],
+                                         ['sbox', ['x4', 'x5', 'x6', 'x7'], ['x68', 'x69', 'x70', 'x71'], 'a1'],
+                                         ['sbox', ['x8', 'x9', 'x10', 'x11'], ['x72', 'x73', 'x74', 'x75'], 'a2'],
+                                         ['sbox', ['x12', 'x13', 'x14', 'x15'], ['x76', 'x77', 'x78', 'x79'], 'a3'],
+                                         ['sbox', ['x16', 'x17', 'x18', 'x19'], ['x80', 'x81', 'x82', 'x83'], 'a4'],
+                                         ['sbox', ['x20', 'x21', 'x22', 'x23'], ['x84', 'x85', 'x86', 'x87'], 'a5'],
+                                         ['sbox', ['x24', 'x25', 'x26', 'x27'], ['x88', 'x89', 'x90', 'x91'], 'a6'],
+                                         ['sbox', ['x28', 'x29', 'x30', 'x31'], ['x92', 'x93', 'x94', 'x95'], 'a7'],
+                                         ['sbox', ['x32', 'x33', 'x34', 'x35'], ['x96', 'x97', 'x98', 'x99'], 'a8'],
+                                         ['sbox', ['x36', 'x37', 'x38', 'x39'], ['x100', 'x101', 'x102', 'x103'], 'a9'],
+                                         ['sbox', ['x40', 'x41', 'x42', 'x43'], ['x104', 'x105', 'x106', 'x107'],
+                                          'a10'],
+                                         ['sbox', ['x44', 'x45', 'x46', 'x47'], ['x108', 'x109', 'x110', 'x111'],
+                                          'a11'],
+                                         ['sbox', ['x48', 'x49', 'x50', 'x51'], ['x112', 'x113', 'x114', 'x115'],
+                                          'a12'],
+                                         ['sbox', ['x52', 'x53', 'x54', 'x55'], ['x116', 'x117', 'x118', 'x119'],
+                                          'a13'],
+                                         ['sbox', ['x56', 'x57', 'x58', 'x59'], ['x120', 'x121', 'x122', 'x123'],
+                                          'a14'],
+                                         ['sbox', ['x60', 'x61', 'x62', 'x63'], ['x124', 'x125', 'x126', 'x127'],
+                                          'a15']]
+
+        round_2_A_before_shift_rows = ['x64', 'x65', 'x66', 'x67', 'x68', 'x69', 'x70', 'x71', 'x72', 'x73', 'x74',
+                                       'x75', 'x76', 'x77', 'x78', 'x79', 'x80', 'x81', 'x82', 'x83', 'x84', 'x85',
+                                       'x86', 'x87', 'x88', 'x89', 'x90', 'x91', 'x92', 'x93', 'x94', 'x95', 'x96',
+                                       'x97', 'x98', 'x99', 'x100', 'x101', 'x102', 'x103', 'x104', 'x105', 'x106',
+                                       'x107', 'x108', 'x109', 'x110', 'x111', 'x112', 'x113', 'x114', 'x115', 'x116',
+                                       'x117', 'x118', 'x119', 'x120', 'x121', 'x122', 'x123', 'x124', 'x125', 'x126',
+                                       'x127']
+
+        round_2_A_after_shift_rows = ['x64', 'x69', 'x74', 'x79', 'x80', 'x85', 'x90', 'x95', 'x96', 'x101', 'x106',
+                                      'x111', 'x112', 'x117', 'x122', 'x127', 'x76', 'x65', 'x70', 'x75', 'x92', 'x81',
+                                      'x86', 'x91', 'x108', 'x97', 'x102', 'x107', 'x124', 'x113', 'x118', 'x123',
+                                      'x72', 'x77', 'x66', 'x71', 'x88', 'x93', 'x82', 'x87', 'x104', 'x109', 'x98',
+                                      'x103', 'x120', 'x125', 'x114', 'x119', 'x68', 'x73', 'x78', 'x67', 'x84', 'x89',
+                                      'x94', 'x83', 'x100', 'x105', 'x110', 'x99', 'x116', 'x121', 'x126', 'x115']
+
+        expected_key_xor_actions_round_2 = [['xor', 'x64', 'k0', 'x128', 'dx0'], ['xor', 'x69', 'k1', 'x129', 'dx1'],
+                                            ['xor', 'x80', 'k2', 'x130', 'dx2'], ['xor', 'x85', 'k3', 'x131', 'dx3'],
+                                            ['xor', 'x96', 'k4', 'x132', 'dx4'], ['xor', 'x101', 'k5', 'x133', 'dx5'],
+                                            ['xor', 'x112', 'k6', 'x134', 'dx6'], ['xor', 'x117', 'k7', 'x135', 'dx7'],
+                                            ['xor', 'x76', 'k8', 'x136', 'dx8'], ['xor', 'x65', 'k9', 'x137', 'dx9'],
+                                            ['xor', 'x92', 'k10', 'x138', 'dx10'],
+                                            ['xor', 'x81', 'k11', 'x139', 'dx11'],
+                                            ['xor', 'x108', 'k12', 'x140', 'dx12'],
+                                            ['xor', 'x97', 'k13', 'x141', 'dx13'],
+                                            ['xor', 'x124', 'k14', 'x142', 'dx14'],
+                                            ['xor', 'x113', 'k15', 'x143', 'dx15'],
+                                            ['xor', 'x72', 'k16', 'x144', 'dx16'],
+                                            ['xor', 'x77', 'k17', 'x145', 'dx17'],
+                                            ['xor', 'x88', 'k18', 'x146', 'dx18'],
+                                            ['xor', 'x93', 'k19', 'x147', 'dx19'],
+                                            ['xor', 'x104', 'k20', 'x148', 'dx20'],
+                                            ['xor', 'x109', 'k21', 'x149', 'dx21'],
+                                            ['xor', 'x120', 'k22', 'x150', 'dx22'],
+                                            ['xor', 'x125', 'k23', 'x151', 'dx23'],
+                                            ['xor', 'x68', 'k24', 'x152', 'dx24'],
+                                            ['xor', 'x73', 'k25', 'x153', 'dx25'],
+                                            ['xor', 'x84', 'k26', 'x154', 'dx26'],
+                                            ['xor', 'x89', 'k27', 'x155', 'dx27'],
+                                            ['xor', 'x100', 'k28', 'x156', 'dx28'],
+                                            ['xor', 'x105', 'k29', 'x157', 'dx29'],
+                                            ['xor', 'x116', 'k30', 'x158', 'dx30'],
+                                            ['xor', 'x121', 'k31', 'x159', 'dx31']]
+
+        expected_xor_with_1_actions_round_2 = [['lin trans', 'x79', 'x160', 'dl0'], ['lin trans', 'x95', 'x161', 'dl1'],
+                                               ['lin trans', 'x111', 'x162', 'dl2'],
+                                               ['lin trans', 'x127', 'x163', 'dl3'],
+                                               ['lin trans', 'x75', 'x164', 'dl4'], ['lin trans', 'x91', 'x165', 'dl5'],
+                                               ['lin trans', 'x115', 'x166', 'dl6']]
+
+        self.round_testing_given_parameters(cipher_instance, expected_sbox_actions_round_2, round_2_A_before_shift_rows,
+                                            round_2_A_after_shift_rows, expected_key_xor_actions_round_2,
+                                            expected_xor_with_1_actions_round_2)
+
         return
 
 

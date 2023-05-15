@@ -1,4 +1,4 @@
-from cipher.actions import CipherAction
+from cipher.action import CipherAction
 
 
 class PermutationAction(CipherAction):

@@ -1,7 +1,7 @@
 from scipy.sparse import lil_matrix
 
 import convexHull
-from cipher.actions import CipherAction
+from cipher.action import CipherAction
 
 
 class SBoxAction(CipherAction):
@@ -227,7 +227,6 @@ class SBoxAction(CipherAction):
 
         # and finally (4.) sbox invertible with branch number 2
         if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
-            # TODO expand to be applicable to ciphers with more than 10 sboxes
             self.branch_number_inequality()
 
         if type_of_modeling == "SunEtAl 2013":

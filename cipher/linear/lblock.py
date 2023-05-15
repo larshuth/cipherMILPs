@@ -1,5 +1,4 @@
 from cipher.differential.lblock import LBlock
-from cipher.sbox import SBox
 from cipher.actions.permutationaction import PermutationAction
 from cipher.actions.threeforkedbranchaction import ThreeForkedBranchAction
 from cipher.actions.sboxaction import SBoxAction

@@ -1,10 +1,9 @@
 from cipher.differential.gift import Gift64
-from cipher.cipher import Cipher
 from cipher.sbox import SBox
 from cipher.actions.threeforkedbranchaction import ThreeForkedBranchAction
 
 
-class Gift64_linear(Gift64):
+class Gift64(Gift64):
     """
     Class in which all functions for AES are defined.
     """
