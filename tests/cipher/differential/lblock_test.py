@@ -1,6 +1,9 @@
 import unittest
 from cipher.differential.lblock import LBlock
-from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction
+from cipher.actions.overwriteaction import OverwriteAction
+from cipher.actions.permutationaction import PermutationAction
+from cipher.actions.xoraction import XorAction
+from cipher.actions.sboxaction import SBoxAction
 
 
 class LBlockTest(unittest.TestCase):

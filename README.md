@@ -1,7 +1,7 @@
 # cipherMILPs
-We are building a small framework for us to use in the analysis of MILPs + cryptanalysis
+We are building a small framework for us to use in the analysis of the block structures of MILPs used in linear and differential cryptanalysis
 
-What has been done and what we plan on doing:
+### What has been done and what we plan on doing:
 - [ ] Modular implementation of ciphers
   - [ ] Differential cryptanalysis
     - [x] AES

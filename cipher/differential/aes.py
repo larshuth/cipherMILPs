@@ -1,6 +1,10 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction, LinTransformationAction
+from cipher.actions.overwriteaction import OverwriteAction
+from cipher.actions.permutationaction import PermutationAction
+from cipher.actions.lineartransformationaction import LinTransformationAction
+from cipher.actions.xoraction import XorAction
+from cipher.actions.sboxaction import SBoxAction
 
 from scipy.sparse import lil_matrix
 

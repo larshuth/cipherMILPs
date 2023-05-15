@@ -4,11 +4,13 @@ from cipher.differential.aes import Aes as AesDifferential
 from cipher.differential.lblock import LBlock as LBlockDifferential
 from cipher.differential.gift import Gift64 as Gift64Differential
 from cipher.linear.enocoro import Enocoro as EnocoroLinear
+from cipher.linear.aes import Aes as AesLinear
+from cipher.linear.lblock import LBlock as LBlockLinear
 
 DEBUG = True
 
-AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential]
-BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential]
+AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
+BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
 
 
 def main(rounds, cipher, viz, bit_oriented):

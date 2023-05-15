@@ -1,7 +1,7 @@
 from cipher.differential.gift import Gift64
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import ThreeForkedBranchAction
+from cipher.actions.threeforkedbranchaction import ThreeForkedBranchAction
 
 
 class Gift64_linear(Gift64):
