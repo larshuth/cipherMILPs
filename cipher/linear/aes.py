@@ -1,7 +1,7 @@
 from cipher.differential.aes import Aes
 
 
-class AesLin(Aes):
+class Aes(Aes):
     """
     So far, for Aes the MILP modelling of the linear cryptanalysis is made up of the same inequalities as the MILP
     modelling of its differential cryptanalysis
@@ -23,6 +23,6 @@ class AesLin(Aes):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False,):
+    def __init__(self, rounds=1, model_as_bit_oriented=False):
         super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type='linear')
         return

@@ -8,6 +8,13 @@ class LBlock(Cipher):
     Class in which all functions for LBlock cipher [Wu et al 2011] are defined.
     """
 
+    def get_permutation(self, extra_shift=0):
+        permutation = list()
+        block_size = int(4 / self.orientation)
+        for index, shift in enumerate([+1, +2, -2, -1, +1, +2, -2, -1]):
+            permutation += [(index + shift) * block_size + i + extra_shift for i in range(block_size)]
+        return permutation
+
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
         start_first_half = 0
@@ -21,27 +28,22 @@ class LBlock(Cipher):
     def generate_sbox_actions_for_round(self):
         list_of_sbox_actions = list()
         if self.orientation == 1:
-            extract_int_from_x_var = lambda x_var_name: int(x_var_name[1:])
             for i in range(8):
-                first_input_element_position_in_A = sum(self.sboxes[prior].in_bits for prior in range(i))
-                input_start = extract_int_from_x_var(self.A[first_input_element_position_in_A])
-                list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[i], input_start=input_start,
+                sbox_input_vars = [self.A[4*i + var] for var in range(self.sboxes[i].in_bits)]
+                list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[i], input_vars=sbox_input_vars,
                                                        cipher_instance=self,
-                                                       first_a_position_to_overwrite=first_input_element_position_in_A))
+                                                       first_a_position_to_overwrite=4*i))
         else:
             pass
         return list_of_sbox_actions
 
     def generate_permutation_after_sbox_actions_for_round(self):
         list_of_permutation_actions = list()
-        permutation = list()
-        block_size = int(4/self.orientation)
-        for index, shift in enumerate([+1, +2, -2, -1, +1, +2, -2, -1]):
-            permutation += [(index + shift) * block_size + i for i in range(block_size)]
+        permutation = self.get_permutation()
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7,8,9 ...] becomes [4,5,6,7,12,13,14,15,0,1 ...]
 
-        start_second_half = int((self.plaintextsize/2)/self.orientation)
-        end_second_half = int(self.plaintextsize/self.orientation)
+        start_second_half = int((self.plaintextsize / 2) / self.orientation)
+        end_second_half = int(self.plaintextsize / self.orientation)
         permutation += list(range(start_second_half, end_second_half))
         # permutation needs to span the whole A list, even if not all of them are changed
         list_of_permutation_actions.append(PermutationAction(permutation, self))
@@ -104,7 +106,7 @@ class LBlock(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, convex_hull_applied=True):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, convex_hull_applied=True, cryptanalysis_type="differential"):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -125,7 +127,7 @@ class LBlock(Cipher):
         else:
             super().__init__(rounds, plaintextsize, keysize, orientation=4)
 
-        self.cryptanalysis_type = 'differential'
+        self.cryptanalysis_type = cryptanalysis_type
 
         # note that convex hull application (as shown in Sun et al. 2013 and Baksi 2020 is only used for sboxes which
         # are only modeled in bit-oriented ciphers)

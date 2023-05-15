@@ -1,64 +1,29 @@
+from cipher.differential.gift import Gift64
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions import SBoxAction, XorAction, PermutationAction, OverwriteAction, LinTransformationAction
-
-from scipy.sparse import lil_matrix
+from cipher.actions import ThreeForkedBranchAction
 
 
-class Gift64(Cipher):
+class Gift64_linear(Gift64):
     """
     Class in which all functions for AES are defined.
     """
+    def generate_threeforkedbranch_actions_for_round(self):
+        list_of_threeforkedbranch_actions = list()
+        for i in range():
 
-    def generate_sbox_actions_for_round(self):
-        list_of_sbox_actions = list()
-        rounds_til_now = self.rounds - 1
-        for index, sbox in enumerate(self.sboxes):
-            sbox_input_vars = [self.A[index * 4 + var] for var in range(sbox.in_bits)]
-            list_of_sbox_actions.append(SBoxAction(sbox=sbox, input_vars=sbox_input_vars, cipher_instance=self,
-                                                   first_a_position_to_overwrite=index * 4))
-        return list_of_sbox_actions
-
-    def generate_permutation_actions_for_round(self):
-        new_position_of_x = lambda x: (4 * (x // 16)) + (16 * (((3 * ((x % 16) // 4)) + (x % 4)) % 4)) + (x % 4)
-        permutation = [0 for _ in range(64)]
-        for i in range(64):
-            permutation[new_position_of_x(i)] = i
-        list_of_permutation_actions = [PermutationAction(permutation, self)]
-        return list_of_permutation_actions
-
-    def generate_key_xor_actions_for_round(self):
-        list_of_key_xor_actions = list()
-        set_of_xor_positions = set([4 * i for i in range(16)] + [(4 * i) + 1 for i in range(16)])
-        xors_so_far = 0
-        for a_index, a_var in enumerate(self.A):
-            if a_index in set_of_xor_positions:
-                list_of_key_xor_actions.append(
-                    XorAction((a_var, self.K[xors_so_far]), self, a_position_to_overwrite=a_index))
-                xors_so_far += 1
-        return list_of_key_xor_actions
-
-    def generate_single_bit_xor_actions(self):
-        list_of_single_bit_xor_actions = list()
-        single_bit_xor_positions = [self.plaintextsize - 1, 23, 19, 15, 11, 7, 3]
-        for pos in single_bit_xor_positions:
-            list_of_single_bit_xor_actions.append(LinTransformationAction([self.A[pos]], self, 1, [pos]))
-        return list_of_single_bit_xor_actions
+        return
 
     def run_round(self):
         print(f"Round {self.round_number} start")
+        for threewayforkaction in self.generate_threewayfork_actions_for_round():
+            threewayforkaction.run_action()
 
         for sboxaction in self.generate_sbox_actions_for_round():
             sboxaction.run_action()
 
         for permutationsaction in self.generate_permutation_actions_for_round():
             permutationsaction.run_action()
-
-        for keyaction in self.generate_key_xor_actions_for_round():
-            keyaction.run_action()
-
-        for single_bit_xor_action in self.generate_single_bit_xor_actions():
-            single_bit_xor_action.run_action()
 
         self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
         print(f"Round {self.round_number} end")

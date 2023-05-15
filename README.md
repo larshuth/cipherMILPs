@@ -17,9 +17,9 @@ What has been done and what we plan on doing:
     - [ ] AES
       - [x] Implementation
       - [ ] Tests
-    - [ ] LBlock
-      - [ ] Implementation
-      - [ ] Tests
+    - [x] LBlock
+      - [x] Implementation
+      - [x] Tests
     - [ ] Gift64
       - [ ] Implementation
       - [ ] Tests

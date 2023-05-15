@@ -2,7 +2,7 @@ from cipher.cipher import Cipher
 from scipy.sparse import lil_matrix
 
 
-class Enocorolin(Cipher):
+class Enocoro(Cipher):
     """
     Class in which all functions for Enocoro are defined.
     """

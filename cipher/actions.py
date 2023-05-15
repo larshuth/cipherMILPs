@@ -29,14 +29,23 @@ class CipherAction:
 
 
 class SBoxAction(CipherAction):
-    def __init__(self, sbox, input_start, cipher_instance, first_a_position_to_overwrite=None):
+    def __init__(self, sbox, input_vars, cipher_instance, first_a_position_to_overwrite=None, optional_output_vars=None):
         super().__init__("sbox", cipher_instance)
         self.sbox = sbox
 
-        self.input_vars = ['x' + str(input_start + i) for i in range(self.sbox.in_bits)]
+        self.input_vars = input_vars
 
-        self.output_vars = ['x' + str(self.cipher_instance.next['x'] + i) for i in range(self.sbox.out_bits)]
-        self.cipher_instance.next['x'] += self.sbox.out_bits
+        if optional_output_vars is None:
+            self.output_vars = ['x' + str(self.cipher_instance.next['x'] + i) for i in range(self.sbox.out_bits)]
+            self.cipher_instance.next['x'] += self.sbox.out_bits
+        else:
+            self.output_vars = [None for _ in range(self.sbox.out_bits)]
+            for i in range(self.sbox.out_bits):
+                if optional_output_vars[i] is None:
+                    self.output_vars[i] = 'x' + str(self.cipher_instance.next['x'])
+                    self.cipher_instance.next['x'] += 1
+                else:
+                    self.output_vars[i] = optional_output_vars[i]
 
         self.dummy_var = 'a' + str(self.cipher_instance.next['a'])
         self.cipher_instance.next['a'] += 1
@@ -302,19 +311,27 @@ class XorAction(CipherAction):
 
 
 class ThreeForkedBranchAction(CipherAction):
-    def __init__(self, input_var, cipher_instance, a_positions_to_overwrite, optional_output_vars):
+    def __init__(self, input_var, cipher_instance, a_positions_to_overwrite=(None, None),
+                 linear_helper_positions_to_overwrite=(None, None), optional_output_vars=(None, None)):
         super().__init__("twf", cipher_instance)
         self.input_var = input_var
 
-        self.output_var_1 = 'x' + str(self.cipher_instance.next['x'])
-        self.cipher_instance.next['x'] += 1
+        if optional_output_vars[0] is None:
+            self.output_var_1 = 'x' + str(self.cipher_instance.next['x'])
+            self.cipher_instance.next['x'] += 1
+        else:
+            self.output_var_1 = optional_output_vars[0]
 
-        self.output_var_2 = 'x' + str(self.cipher_instance.next['x'])
-        self.cipher_instance.next['x'] += 1
+        if optional_output_vars[1] is None:
+            self.output_var_2 = 'x' + str(self.cipher_instance.next['x'])
+            self.cipher_instance.next['x'] += 1
+        else:
+            self.output_var_2 = optional_output_vars[1]
 
         self.dummy_var = 'dt' + str(self.cipher_instance.next['dt'])
         self.cipher_instance.next['dt'] += 1
         self.a_positions_to_overwrite = a_positions_to_overwrite
+        self.linear_helper_positions_to_overwrite = linear_helper_positions_to_overwrite
         return
 
     def run_action(self):
@@ -337,8 +354,16 @@ class ThreeForkedBranchAction(CipherAction):
             list_of_variables=input_output_vars, var_value=-1,
             dummy_pos=dummy_var_pos_in_matrix, dum_value=1)
 
-        self.cipher_instance.A[self.a_positions_to_overwrite[0]] = self.output_var_1
-        self.cipher_instance.A[self.a_positions_to_overwrite[1]] = self.output_var_2
+        if self.a_positions_to_overwrite[0] is not None:
+            self.cipher_instance.A[self.a_positions_to_overwrite[0]] = self.output_var_1
+        if self.a_positions_to_overwrite[1] is not None:
+            self.cipher_instance.A[self.a_positions_to_overwrite[1]] = self.output_var_2
+
+        if self.linear_helper_positions_to_overwrite[0] is not None:
+            self.cipher_instance.linear_helper[self.linear_helper_positions_to_overwrite[0]] = self.output_var_1
+        if self.linear_helper_positions_to_overwrite[1] is not None:
+            self.cipher_instance.linear_helper[self.linear_helper_positions_to_overwrite[1]] = self.output_var_2
+
         return
 
 
