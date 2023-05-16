@@ -2,27 +2,27 @@
 We are building a small framework for us to use in the analysis of the block structures of MILPs used in linear and differential cryptanalysis
 
 ### What has been done and what we plan on doing:
-- [ ] Modular implementation of ciphers
-  - [ ] Differential cryptanalysis
+- [x] Modular implementation of ciphers
+  - [x] Differential cryptanalysis
     - [x] AES
       - [x] Implementation
       - [x] Tests
     - [x] LBlock
       - [x] Implementation
       - [x] Tests
-    - [ ] Gift64
+    - [x] Gift64
       - [x] Implementation
-      - [ ] Tests
-  - [ ] Linear cryptanalysis
+      - [x] Tests
+  - [x] Linear cryptanalysis
     - [x] AES
       - [x] Implementation
       - [x] Tests
     - [x] LBlock
       - [x] Implementation
       - [x] Tests
-    - [ ] Gift64
-      - [ ] Implementation
-      - [ ] Tests
+    - [x] Gift64
+      - [x] Implementation
+      - [x] Tests
 
 - [ ] Different approaches to the modeling
   - [ ] Model S-boxes using Convex Hull

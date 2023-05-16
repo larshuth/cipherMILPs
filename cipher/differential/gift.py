@@ -5,8 +5,6 @@ from cipher.actions.lineartransformationaction import LinTransformationAction
 from cipher.actions.xoraction import XorAction
 from cipher.actions.sboxaction import SBoxAction
 
-from scipy.sparse import lil_matrix
-
 
 class Gift64(Cipher):
     """
@@ -43,7 +41,7 @@ class Gift64(Cipher):
 
     def generate_single_bit_xor_actions(self):
         list_of_single_bit_xor_actions = list()
-        single_bit_xor_positions = [self.plaintextsize - 1, 23, 19, 15, 11, 7, 3]
+        single_bit_xor_positions = [3, 7, 11, 15, 19, 23, self.plaintextsize - 1]
         for pos in single_bit_xor_positions:
             list_of_single_bit_xor_actions.append(LinTransformationAction([self.A[pos]], self, 1, [pos]))
         return list_of_single_bit_xor_actions
@@ -68,7 +66,7 @@ class Gift64(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False):
+    def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential'):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -84,9 +82,13 @@ class Gift64(Cipher):
         plaintextsize = 64
         keysize = 32
 
+        if not model_as_bit_oriented:
+            raise Exception(
+                "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
+
         super().__init__(rounds, plaintextsize, keysize, orientation=1)
 
-        self.cryptanalysis_type = 'differential'
+        self.cryptanalysis_type = cryptanalysis_type
 
         # Summary of what's happening in GIFT:
 
@@ -111,15 +113,14 @@ class Gift64(Cipher):
         lt_per_round = [1 for _ in range(7)]
 
         #   determine sbox output vars, dummy vars, and constraints
-        if self.orientation == 1:
-            # instantiating all SBoxes
-            sbox_aes_subs = {index: value for index, value in
-                             enumerate(
-                                 [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
-            # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
-            self.sbox = SBox(sbox_aes_subs, 4, 4)
+        # instantiating all SBoxes
+        sbox_aes_subs = {index: value for index, value in
+                         enumerate(
+                             [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
+        # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
+        self.sbox = SBox(sbox_aes_subs, 4, 4)
 
-            self.sboxes = [self.sbox] * 16
+        self.sboxes = [self.sbox] * 16
 
         overwrites = 0  # for the ColumnMix operations in AES where (as off Zhou) the
         # variables are just overwritten because otherwise it is too complex
