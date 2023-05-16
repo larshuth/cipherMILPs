@@ -13,7 +13,7 @@ class Gift64(Cipher):
 
     def generate_sbox_actions_for_round(self):
         list_of_sbox_actions = list()
-        rounds_til_now = self.rounds - 1
+        self.rounds - 1
         for index, sbox in enumerate(self.sboxes):
             sbox_input_vars = [self.A[index * 4 + var] for var in range(sbox.in_bits)]
             list_of_sbox_actions.append(SBoxAction(sbox=sbox, input_vars=sbox_input_vars, cipher_instance=self,
@@ -21,7 +21,8 @@ class Gift64(Cipher):
         return list_of_sbox_actions
 
     def generate_permutation_actions_for_round(self):
-        new_position_of_x = lambda x: (4 * (x // 16)) + (16 * (((3 * ((x % 16) // 4)) + (x % 4)) % 4)) + (x % 4)
+        def new_position_of_x(x):
+            return 4 * (x // 16) + 16 * ((3 * (x % 16 // 4) + x % 4) % 4) + x % 4
         permutation = [0 for _ in range(64)]
         for i in range(64):
             permutation[new_position_of_x(i)] = i
@@ -125,7 +126,7 @@ class Gift64(Cipher):
         overwrites = 0  # for the ColumnMix operations in AES where (as off Zhou) the
         # variables are just overwritten because otherwise it is too complex
 
-        sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
+        self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                                                              lt_per_round, extra_xors, overwrites,
                                                                              new_keys_every_round=True)
 

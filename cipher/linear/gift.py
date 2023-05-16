@@ -1,5 +1,4 @@
 from cipher.differential.gift import Gift64
-from cipher.sbox import SBox
 
 
 class Gift64(Gift64):

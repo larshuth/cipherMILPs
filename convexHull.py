@@ -1,8 +1,5 @@
-import numpy as np
 from sage.all import *
 import sage.geometry.polyhedron.base
-from scipy.sparse import csr_matrix, lil_matrix
-import cipher as cip
 
 
 def ch_hrep_from_sbox(sbox_instance):

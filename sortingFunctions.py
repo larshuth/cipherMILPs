@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sps
 import generateConstraints as gc
 import cipher as cip
 import numpy as np
@@ -234,13 +233,13 @@ def changedvar(M, V):
 
     # vertikale striche
     leng = (M.get_shape()[1]) - 17 - count
-    teil = leng / 16
+    leng / 16
     # for e in range(int(teil)+2):
     # plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
 
     # horizontale linien
     leng2 = (M.get_shape()[0]) - 1 - count
-    teil2 = leng2 / 32
+    leng2 / 32
     # for e in range(int(teil2)+1):
     # plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
     # plt.show()
@@ -264,7 +263,7 @@ def block_structure(M, V):
             break
     ind = [i for i in range(count)]
     out1 = M.tocsc()[:, ind]
-    blockC = out1.tocsr()[ind, :]
+    out1.tocsr()[ind, :]
     # Block C (tc) has to be AT LEAST this big
 
     # jetzt: wie höhe von Block A und B bestimmen? eig nur rundenanzahl aber wie findet man die raus?
@@ -279,7 +278,7 @@ def block_structure(M, V):
     a = np.array(numofvarinrow)
     num = (np.where(a == 2)[0][0])  # row of first constraint that contains 2 elements
     sc = num - 0.5
-    test = M.toarray()
+    M.toarray()
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()

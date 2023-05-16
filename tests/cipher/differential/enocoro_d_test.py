@@ -1,5 +1,4 @@
 import unittest
-from cipher.differential.enocoro import Enocoro
 
 
 class EnocoroTestCase(unittest.TestCase):

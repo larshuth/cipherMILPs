@@ -2,6 +2,10 @@ from cipher.action import CipherAction
 
 
 class OverwriteAction(CipherAction):
+    """
+    A class to perform tasks of overwriting variables if required.
+    Never required so far, was created due to a misunderstanding.
+    """
     def __init__(self, input_indices, cipher_instance):
         super().__init__("overwrite", cipher_instance)
         self.input_indices = input_indices

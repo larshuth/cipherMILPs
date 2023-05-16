@@ -1,12 +1,10 @@
 from cipher.cipher import Cipher
 from cipher.sbox import SBox
-from cipher.actions.overwriteaction import OverwriteAction
 from cipher.actions.permutationaction import PermutationAction
 from cipher.actions.lineartransformationaction import LinTransformationAction
 from cipher.actions.xoraction import XorAction
 from cipher.actions.sboxaction import SBoxAction
 
-from scipy.sparse import lil_matrix
 
 
 class Aes(Cipher):
@@ -16,7 +14,7 @@ class Aes(Cipher):
 
     def generate_sbox_actions_for_round(self):
         list_of_sbox_actions = list()
-        rounds_til_now = self.rounds - 1
+        self.rounds - 1
         if self.orientation == 1:
             for i in range(16):
                 sbox_input_vars = [self.A[i*8 + var] for var in range(self.sboxes[i].in_bits)]
@@ -163,7 +161,7 @@ class Aes(Cipher):
         overwrites = 0   # for the ColumnMix operations in AES where (as off Zhou) the
         # variables are just overwritten because otherwise it is too complex
 
-        sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
+        self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                                                              lt_per_round, extra_xors, overwrites,
                                                                              new_keys_every_round=True)
 

@@ -94,7 +94,7 @@ class Enocoro(Cipher):
             self.next = self.next + 2
 
         # updating the last constraint
-        indicesofsboxinput = Enocorolin.input_sbox(r + 1)  # plus one so that the last round isnt missing
+        indicesofsboxinput = self.input_sbox(r + 1)  # plus one so that the last round isnt missing
 
         for i in indicesofsboxinput:
             if "x" + str(i) in self.V:

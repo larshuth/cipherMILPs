@@ -1,7 +1,3 @@
-from turtle import color
-import matplotlib
-from scipy.sparse import csr_matrix
-import scipy.sparse as sparse
 import generateConstraints as gc
 import sortingFunctions as sf
 import cipher as cip
@@ -41,7 +37,7 @@ def matplotlibvis(rounds, cipher, bit_oriented):
     M = cipher_instance.M.copy()
     sf.long_constraints_to_top(cipher_instance)
     B = cipher_instance.M.copy()
-    #sf.create_fourblock(cipher_instance)
+    # sf.create_fourblock(cipher_instance)
     C = cipher_instance.M
 
     axs[0].set_title('native')
@@ -241,10 +237,10 @@ def gen_pdf(rounds, cipher, bit_oriented):
     cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
     A = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
-    #sf.d_var_to_beginning(cipher_instance)
+    # sf.d_var_to_beginning(cipher_instance)
     M = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
-    #sf.long_constraints_to_top(cipher_instance)
+    # sf.long_constraints_to_top(cipher_instance)
     B = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
     # sf.create_fourblock(cipher_instance)
@@ -263,7 +259,8 @@ def gen_pdf(rounds, cipher, bit_oriented):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds_bitoriented_' + str(bit_oriented), A=A, V=cipher_instance.V, title=title, dpi=300)
+    mainly(title[0] + title[1] + 'rounds_bitoriented_' + str(bit_oriented), A=A, V=cipher_instance.V, title=title,
+           dpi=300)
 
 
 def no_viz_just_testrun(rounds, cipher, bit_oriented):
@@ -278,5 +275,5 @@ def no_viz_just_testrun(rounds, cipher, bit_oriented):
     cipher  :   class
                 Class of the wanted cipher
     """
-    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
+    gc.new_generate_constraints(rounds, cipher, bit_oriented)
     return True

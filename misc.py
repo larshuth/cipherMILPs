@@ -12,7 +12,8 @@ def branch_number_to_x_val(input_val):
     if input_1s > branch_number_after_last_rounds:
         return branch_number_after_last_rounds
 
-    bit_to_int = lambda x: int(x, 2)
+    def bit_to_int(x):
+        return int(x, 2)
     input_list = [bit_to_int(input_bitstring[i * 8:(i + 1) * 8]) for i in range(4)]
     output_list = [2 * input_list[0] + 3 * input_list[1] + 1 * input_list[2] + 1 * input_list[3],
                    1 * input_list[0] + 2 * input_list[1] + 3 * input_list[2] + 1 * input_list[3],

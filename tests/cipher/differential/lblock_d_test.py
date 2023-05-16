@@ -1,6 +1,7 @@
 import unittest
 from cipher.differential.lblock import LBlock
 
+
 class LBlockTest(unittest.TestCase):
     def test_round_progression_bit_oriented(self):
         cipher_instance = LBlock(rounds=4, model_as_bit_oriented=True)

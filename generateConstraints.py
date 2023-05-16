@@ -1,10 +1,5 @@
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix, vstack
-from cipher.differential.lblock import LBlock as LBlock_differential
-from cipher.differential.aes import Aes as Aes_differential
-from cipher.differential.enocoro import Enocoro as Enocoro_differential
-import pickle
-import cipher
+from scipy.sparse import vstack
 
 
 def removezerocols(M, V):

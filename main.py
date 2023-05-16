@@ -1,9 +1,7 @@
 import visualization as vis
-from cipher.differential.enocoro import Enocoro as EnocoroDifferential
 from cipher.differential.aes import Aes as AesDifferential
 from cipher.differential.lblock import LBlock as LBlockDifferential
 from cipher.differential.gift import Gift64 as Gift64Differential
-from cipher.linear.enocoro import Enocoro as EnocoroLinear
 from cipher.linear.aes import Aes as AesLinear
 from cipher.linear.lblock import LBlock as LBlockLinear
 

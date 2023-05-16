@@ -42,7 +42,8 @@ class Enocoro(Cipher):
             dummies_so_far_prior_rounds = new_dummies_per_round * rounds_til_now
 
             # the actions are handled in the order of the numbering of their output variable in Fig.3 of Mouha et al
-            new_variable = lambda i: "x" + str(x_vars_so_far + i)
+            def new_variable(i):
+                return "x" + str(x_vars_so_far + i)
             dummies_so_far_this_round = 0
             new_x_variables_this_round = 0
 
@@ -101,7 +102,8 @@ class Enocoro(Cipher):
             dummies_so_far_prior_rounds = new_dummies_per_round * rounds_til_now
 
             # the actions are handled in the order of the numbering of their output variable in Fig.3 of Mouha et al
-            new_variable = lambda i: "x" + str(x_vars_so_far + i)
+            def new_variable(i):
+                return "x" + str(x_vars_so_far + i)
             list_of_xor_inputs = [(self.A[31], self.A[32]), (self.A[2], self.A[32]), (self.A[7], self.A[33])]
             for index, xor_input in enumerate(list_of_xor_inputs):  # total of 3 xors
                 list_of_actions.append(XorAction(inputs=xor_input, output=new_variable(index),
