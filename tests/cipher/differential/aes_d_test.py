@@ -1,6 +1,7 @@
 import unittest
 from cipher.differential.aes import Aes
 
+
 class AESTest(unittest.TestCase):
     def test_round_progression_bit_oriented(self):
         cipher_instance = Aes(rounds=4, model_as_bit_oriented=True)

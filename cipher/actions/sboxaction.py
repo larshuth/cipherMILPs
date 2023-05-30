@@ -1,4 +1,5 @@
 from scipy.sparse import lil_matrix
+import re
 
 import convexHull
 from cipher.action import CipherAction
@@ -10,7 +11,9 @@ class SBoxAction(CipherAction):
     Quite a few methods are introduced in this part since we are implementing a few different approaches to how the
     inequalities which represent S-boxes and make sure e.g. that no impossible transitions are allowed.
     """
-    def __init__(self, sbox, input_vars, cipher_instance, first_a_position_to_overwrite=None, optional_output_vars=None) -> None:
+
+    def __init__(self, sbox, input_vars, cipher_instance, first_a_position_to_overwrite=None,
+                 optional_output_vars=None, type_of_modeling="SunEtAl 2013") -> None:
         """
         Constructs an instance of SBoxAction.
 
@@ -57,6 +60,7 @@ class SBoxAction(CipherAction):
 
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
+        self.type_of_modeling = type_of_modeling
         # variables for the approach to S-box modelling described in Baksi 2020.
         # TODO rename vars
         self.qijp_vars = list()
@@ -142,75 +146,74 @@ class SBoxAction(CipherAction):
         self.for_each_var_set_to_value_plus_dummy(self.output_vars, -1, extra_constraint_dummy_var_pos_in_matrix, 1)
         return
 
+    def inequality_to_constraint_matrix(self, inequality: tuple[list[int], int, set[int]], convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos):
+        multipliers, value_right_of_inequality, _ = inequality
+        for index, val in enumerate(multipliers):
+            if (index < self.sbox.in_bits) and (val != 0):
+                # here we check strictly smaller since the variable numbers start at 0
+                variable_name_for_key = self.input_vars[index - 1]
+                var_pos_in_matrix = self.cipher_instance.V[variable_name_for_key]
+                convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, var_pos_in_matrix] = val
+            elif val != 0:
+                variable_name_for_key = self.output_vars[index - self.sbox.in_bits - 1]
+                var_pos_in_matrix = self.cipher_instance.V[variable_name_for_key]
+                convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, var_pos_in_matrix] = val
+        convex_hull_inequality_matrix[
+            convex_hull_inequality_matrix_line, constant_pos] = value_right_of_inequality
+        convex_hull_inequality_matrix_line += 1
+        return convex_hull_inequality_matrix_line
+
     def create_convex_hull_matrices(self, choice_of_inequalities='all', baksi_extension=True) -> None:
+        """
+        Sun et al. 2013 introduces the concept of applying a convex hull over a set of vectors representing the feasible
+        transitions of an S-box in order to generate constraints which should only be fulfilled iff the (variables
+        representing the) input and output bits have taken values of a feasible transition.
+
+        :param str choice_of_inequalities: "all" or "greedy" to decide which of the convex hull constraints are included
+                in our matrix
+        :param bool baksi_extension: deciding whether to use the extension introduced in Basksi 2020
+        """
         constant_pos = self.cipher_instance.V["constant"]
 
-        inequalities = convexHull.ch_hrep_from_sbox(self.sbox)
-        print(inequalities)
-        number_of_inequalities = len(inequalities)
-        # we get a string along the self.lines of
-        #          -x6 + x7  >=   0
-        #               -x7  >=  -1
-        #          -x4 + x5  >=   0
-        #                x0  >=   0
-        # x1 - x3 + x4 - x5  >=  -1
-        # as a return value from convexHull.ch_hrep_from_sbox in inequalities
-
+        inequalities_readable = self.sbox.feasible_transition_inequalities_sun_2013_extracted.copy()
         # adding a new sparse scipy matrix convex_hull_inequality_matrix for the constraints as we cannot count
         # them prior to this even and self.M would otherwise overflow
-        convex_hull_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
+        convex_hull_inequality_matrix = lil_matrix((len(inequalities_readable), self.cipher_instance.number_variables),
                                                    dtype=int)
         convex_hull_inequality_matrix_line = 0
 
-        # split inequalities in a list with one inequality per entry
+        # either we are going to include all constraints in the
         if choice_of_inequalities == 'all':
-            for inequality in inequalities:
-                try:
-                    inequality = inequality.replace(' ', '')
-                    [greater, lesser] = inequality.split(
-                        ">=")  # get left part, right part, something along the self.lines of
-                    # ["         -x4 + x5 ", "  0"]
-                except AttributeError:
-                    continue
-
-                modifier = 1
-                # TODO input the actual values into the matrix and not just a 1 for non-zero
-                variables_not_zero = set()
-                for character in greater:
-                    if character == "-":
-                        modifier = -1
-                    elif character == "+":
-                        modifier = +1
-                    elif character == "x":
-                        continue
-                    else:  # i.e. the character is number coming after x
-                        variables_not_zero |= {modifier * int(character)}
-
-                for index, i in enumerate(self.input_vars):
-                    if index in variables_not_zero:
-                        input_var_pos_in_matrix = self.cipher_instance.V[i]
-                        convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, input_var_pos_in_matrix] = 1
-                    elif -index in variables_not_zero:
-                        input_var_pos_in_matrix = self.cipher_instance.V[i]
-                        convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, input_var_pos_in_matrix] = -1
-
-                for index, i in enumerate(self.output_vars):
-                    if index + self.sbox.in_bits in variables_not_zero:
-                        input_var_pos_in_matrix = self.cipher_instance.V[i]
-                        convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, input_var_pos_in_matrix] = 1
-                    elif -(index + self.sbox.in_bits) in variables_not_zero:
-                        input_var_pos_in_matrix = self.cipher_instance.V[i]
-                        convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, input_var_pos_in_matrix] = -1
-
-                value_right_of_inequality = -int(lesser)
-                convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, constant_pos] = value_right_of_inequality
-                convex_hull_inequality_matrix_line += 1
+            for inequality in inequalities_readable:
+                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(inequality, convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos)
+        # or just greedily choose those which include the most
         elif choice_of_inequalities == 'greedy':
-            # TODO: calculate excluded points and include inequalities by the amount of points they exclude until no
-            #  more impossible transitions can be excluded by the inequalities
-            pass
+            if inequalities_readable == list():
+                raise Exception(
+                    "the 'extract_sun_inequalities' argument has not been set in the construction of the currently " +
+                    "worked on S-box. Therefore, since we have not calculated the impossible transitions, we cannot " +
+                    "perform a greedy choice on them.")
+            still_impossible_transitions_left = True
+            while still_impossible_transitions_left:
+                still_impossible_transitions_left = False
+                max_inequal = (list(), 0, set())
+                for inequality in inequalities_readable:
+                    if len(inequality[2]) > len(max_inequal[2]):
+                        max_inequal = inequality
+                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(max_inequal, convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos)
+                inequalities_readable.remove(max_inequal)
+                # finally we remove the impossible transitions which have been removed by adding max_inequal from the
+                # remaining inequalities such that we can always greedily choose the inequality, which removes as many
+                # impossible transitions as possible, as the next constraint
+                for inequality in inequalities_readable:
+                    inequality[2] = inequality[2] - max_inequal[2]
+                    if len(inequality[2]) > 0:
+                        still_impossible_transitions_left = True
 
         if baksi_extension:
+            # Baksi suggests that adding equality constraints provided by the sage API and not only inequality
+            # constraints "will likely not appear"
+
             pass
 
         self.cipher_instance.sbox_inequality_matrices.append(convex_hull_inequality_matrix)
@@ -274,7 +277,7 @@ class SBoxAction(CipherAction):
 
         return
 
-    def run_action(self, type_of_modeling="SunEtAl 2013") -> None:
+    def run_action(self) -> None:
         """
         Substitutes variables in the cipher instance such that the input variables are replaced and not mistakenly used
         further on in the cryptanalysis process.
@@ -312,14 +315,20 @@ class SBoxAction(CipherAction):
         if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
             self.branch_number_inequality()
 
-        if type_of_modeling == "SunEtAl 2013":
-            self.create_convex_hull_matrices()
-        elif type_of_modeling == "Baksi 2020":
+        if self.type_of_modeling == "SunEtAl 2013":
+            self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=False)
+        elif self.type_of_modeling == "SunEtAl 2013 Greedy":
+            self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=False)
+        elif self.type_of_modeling == "SunEtAl with 2013 Baksi extension 2020":
+            self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=True)
+        elif self.type_of_modeling == "SunEtAl 2013 with Baksi extension 2020 Greedy":
+            self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=True)
+        elif self.type_of_modeling == "Baksi 2020":
             self.create_baksi_inequalities()
             pass
         else:
             raise ValueError(
-                "Variable type_of_modeling declared incorrectly. Value should be 'SunEtAl 2013' or 'Baksi 2020'.")
+                "Variable type_of_modeling declared incorrectly. Value should be one of those listed in the docstring.")
 
         if type(self.overwrite_position) == int:
             for i in range(self.sbox.in_bits):

@@ -6,7 +6,7 @@ class Cipher:
     Superclass for better readability in code
     """
 
-    def __init__(self, rounds=1, plaintextsize=1, keysize=0, orientation=1):
+    def __init__(self, rounds=1, plaintextsize=1, keysize=0, orientation=1, type_of_modeling='SunEtAl 2013'):
         self.S = [0, 0, 0, 0]
         self.rounds = rounds
         self.orientation = orientation
@@ -38,6 +38,9 @@ class Cipher:
 
         self.next = {'dx': 0, 'dt': 0, 'dl': 0, 'k': int(self.keysize / self.orientation), 'a': 0, 'ds': 0,
                      'x': int(self.plaintextsize / self.orientation)}
+
+        # so far, this only applies to bit oriented ciphers as we only have multiple modelling approaches for S-boxes
+        self.type_of_modeling = type_of_modeling
         return
 
     def gen_long_constraint(self, action):

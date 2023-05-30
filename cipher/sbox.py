@@ -1,3 +1,7 @@
+import numpy as np
+
+import convexHull
+import re
 
 
 class SBox:
@@ -61,7 +65,7 @@ class SBox:
         else:
             return
 
-    def __init__(self, substitutions, in_bits, out_bits):
+    def __init__(self, substitutions, in_bits, out_bits, extract_sun_inequalities=False):
         self.substitutions, self.in_bits, self.out_bits = substitutions, in_bits, out_bits
 
         self.check_subs_match_bits()
@@ -89,6 +93,9 @@ class SBox:
 
         self.transitions_built = False
         self.probability_transitions = dict()
+
+        self.feasible_transition_inequalities_sun_2013 = convexHull.ch_hrep_from_sbox(self)
+        self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=extract_sun_inequalities)
         return
 
     def build_ddt(self):
@@ -120,19 +127,19 @@ class SBox:
             self.build_ddt()
 
         self.vectors = set()
-        for x, y in (self.non_zero_ddt_entries ^ {(0, 0)}):
+        for x, y in self.non_zero_ddt_entries:
             vector = list()
-            for i in range(0, self.in_bits):
-                if 2 ** i >= x:
+            for i in range(self.in_bits - 1, -1, -1):
+                if (2 ** i) <= x:
                     vector.append(1)
-                    x -= 2 ** i
+                    x -= (2 ** i)
                 else:
                     vector.append(0)
 
-            for i in range(0, self.out_bits):
-                if 2 ** i >= y:
+            for i in range(self.out_bits - 1, -1, -1):
+                if (2 ** i) <= y:
                     vector.append(1)
-                    y -= 2 ** i
+                    y -= (2 ** i)
                 else:
                     vector.append(0)
             self.vectors |= {tuple(vector.copy())}
@@ -203,7 +210,7 @@ class SBox:
         if self.transitions_built:
             return
         for i in range(max(self.in_bits, self.out_bits)):
-            self.probability_transitions[1] = 0
+            self.probability_transitions[i] = 0
         set_not_to_remove = set()
         for in_diff, out_diff in self.non_zero_ddt_entries:
             probability = self.ddt[in_diff][out_diff]
@@ -215,3 +222,78 @@ class SBox:
         self.probability_transitions.pop(16)
         self.transitions_built = True
         return
+
+    def find_impossible_transitions_for_each_sun_2013_inequality(self, extract_sun_inequalities=False) -> list[tuple[list[int], int, set[int]]]:
+        # we prepare all the inequalities but in another format in inequalities_readable
+        inequalities_readable = list()
+
+        # we define the following before going into the loop as to not be redundant in the compiling for them
+        # first we split our inequality into a list of its variables. E.g. using the findall() method on
+        # 'x1 - x3 + x4 - x5  ' will return ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
+        split_into_variables = re.compile('[+-]* *[0-9]*x[0-9]+ ')
+
+        # on '+34x4'[1:] find_variable_multiplier will return '34x'
+        find_variable_multiplier = re.compile('^[0-9]*x')
+        # on '+34x4' find_variable_name will return 'x4'
+        find_variable_name = re.compile('x[0-9]+$')
+
+        # split inequalities in a list with one inequality per entry
+        for inequality in self.feasible_transition_inequalities_sun_2013:
+            try:
+                [greater, lesser] = inequality.split(">=")
+                # get left part, right part, something along the self.lines of
+                # ["         -x4 + x5 ", "  0"]
+            except ValueError:
+                try:
+                    [greater, lesser] = inequality.split("==")
+                    # get left part, right part, something along the self.lines of
+                    # ["         -x4 + x5 ", "  0"]
+                    continue
+                except ValueError as a:
+                    print('Non-matching inequality:', inequality)
+                    raise AttributeError(a)
+
+            multipliers = [0 for _ in range(self.in_bits + self.out_bits)]
+
+            # first we split our inequality into a list of its variables. E.g. using the findall() method on
+            # 'x1 - x3 + x4 - x5  ' yields ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
+            list_of_all_variables = split_into_variables.findall(greater)
+
+            # then we take each of the variables and
+            for variable_string in list_of_all_variables:
+                # first remove the spaces
+                variable_string = variable_string.replace(' ', '')
+                # determine whether we are dealing with a '+ a x123' or '- a x123'
+                if variable_string[0] == '-':
+                    modifier = -1
+                elif variable_string[0] == '+':
+                    modifier = +1
+                else:
+                    variable_string = '+' + variable_string
+                    modifier = +1
+                # we shortly remove the variable name (except for x) after removing all of th
+                multiplication_factor_search = find_variable_multiplier.findall(variable_string[1:])
+                if multiplication_factor_search[0] != 'x':
+                    multiplication_factor = int(multiplication_factor_search[0][:-1])
+                else:
+                    multiplication_factor = 1
+                variable_name = int(find_variable_name.findall(variable_string)[0][1:])
+                multipliers[variable_name] = (modifier * multiplication_factor)
+
+            constant = int(lesser)
+
+            # At this point, I would like to say that I do not condone people being excluded from transitioning.
+            # Trans rights are human rights!
+            impossible_transitions_as_int = set()
+
+            if extract_sun_inequalities:
+                multipliers_vector = np.array(multipliers)
+                for i in range(2 ** (self.in_bits + self.out_bits)):
+                    x = np.unpackbits(np.array([i], dtype=np.uint8), count=(self.in_bits + self.out_bits),
+                                      bitorder='little')
+                    inequality_result = np.dot(multipliers_vector, x)
+                    if inequality_result < constant:
+                        impossible_transitions_as_int.add(i)
+            inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+
+        return inequalities_readable
