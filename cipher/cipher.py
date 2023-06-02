@@ -1,4 +1,5 @@
 from scipy.sparse import lil_matrix
+from itertools import chain
 
 
 class Cipher:
@@ -6,7 +7,10 @@ class Cipher:
     Superclass for better readability in code
     """
 
-    def __init__(self, rounds=1, plaintextsize=1, keysize=0, orientation=1, type_of_modeling='SunEtAl 2013'):
+    def __init__(self, rounds=1, plaintextsize=1, keysize=0, orientation=1, type_of_modeling='SunEtAl 2013',
+                 cryptanalysis_type='differential'):
+        self.cryptanalysis_type = cryptanalysis_type
+
         self.S = [0, 0, 0, 0]
         self.rounds = rounds
         self.orientation = orientation
@@ -25,6 +29,9 @@ class Cipher:
 
         self.number_a_vars = 0
         self.number_ds_vars = 0
+
+        self.number_qijp_vars = 0
+        self.number_qijlp_vars = 0
 
         self.plaintext_vars = int(self.plaintextsize / self.orientation)
         self.key_vars = int(self.keysize / self.orientation)
@@ -102,14 +109,26 @@ class Cipher:
         sbox_new_x_variables_per_round = sum(sbox.out_bits for sbox in self.sboxes) * bool(sboxes_per_round)
         sbox_dummy_variables_per_round = sboxes_per_round
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
-        sbox_constraints_per_round_following_sun = sboxes_per_round + sum(sbox.in_bits for sbox in self.sboxes) + (bijective_sboxes_per_round * 2) + extra_constraint_sboxes_per_round * (1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(sbox.in_bits for sbox in self.sboxes))
+        sbox_constraints_per_round_following_sun = sboxes_per_round + sum(sbox.in_bits for sbox in self.sboxes) + (
+                    bijective_sboxes_per_round * 2) + extra_constraint_sboxes_per_round * (
+                                                               1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(
+                                                           sbox.in_bits for sbox in self.sboxes))
+
+        if self.type_of_modeling == 'Baksi 2020':
+            qijp_variables_per_round = sum([len(sbox.set_of_transition_values) for sbox in self.sboxes])
+            qijlp_variables_per_round = sum([sbox.value_frequencies[sbox] for sbox in self.sboxes])
+            baksi_variables_per_round = qijp_variables_per_round + qijlp_variables_per_round
+        else:
+            qijp_variables_per_round = 0
+            qijlp_variables_per_round = 0
+            baksi_variables_per_round = 0
 
         # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
 
         number_constraints = ((xor_constraints_per_round +
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
-                               lt_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
+                               lt_constraints_per_round + baksi_variables_per_round) * self.rounds) + extra_xor_constraints + 1
         number_constraints = int(number_constraints)
         print("# Constraints:", number_constraints)
 
@@ -138,6 +157,14 @@ class Cipher:
 
         self.number_a_vars = int(sbox_dummy_variables_per_round * self.rounds)
         self.number_ds_vars = int(sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large * self.rounds)
+
+        self.prepare_for_type_of_modeling()
+
+        if self.type_of_modeling == 'Baksi 2020':
+            self.number_qijp_vars = qijp_variables_per_round * self.rounds
+            self.number_qijlp_vars = qijlp_variables_per_round * self.rounds
+        else:
+            pass
 
         self.V = {'x' + str(i): i for i in range(self.number_x_vars)}
         self.V |= {i: 'x' + str(i) for i in range(self.number_x_vars)}
@@ -169,7 +196,34 @@ class Cipher:
         self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
                    for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
 
+        qijp_vars = chain.from_iterable([chain.from_iterable([[(index + (round_number * len(self.sboxes)), p, round_number, sbox) for p in sbox.set_of_transition_values] for index, sbox in enumerate(self.sboxes)]) for round_number in range(self.rounds)])
+        qijlp_vars = [[(qijp_var[0], qijp_var[1], qijp_var[2], l) for l in range(qijp_var[3].value_frquencies[qijp_var[1]])] for qijp_var in qijp_vars]
+
+        self.V |= {f'a{qijp_var[0]}p{qijp_var[1]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * ((new_keys_every_round * self.rounds) + 1) for i, qijp_var in enumerate(qijp_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * ((new_keys_every_round * self.rounds) + 1): f'a{qijp_var[0]}p{qijp_var[1]}' for i, qijp_var in enumerate(qijp_vars)}
+
+        self.V |= {f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * ((new_keys_every_round * self.rounds) + 1) + len(qijp_vars) for i, qijlp_var in enumerate(qijlp_vars)}
+        self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * ((new_keys_every_round * self.rounds) + 1) + len(qijp_vars): f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}' for i, qijlp_var in enumerate(qijlp_vars)}
+        print(set(self.V))
+
         self.V['constant'] = self.M.get_shape()[1] - 1
         self.V[self.M.get_shape()[1] - 1] = 'constant'
 
         return sbox_dummy_variables_per_round
+
+    def prepare_for_type_of_modeling(self):
+        if self.type_of_modeling == 'Baksi 2020':
+            if self.cryptanalysis_type == 'differential':
+                for sbox in self.sboxes:
+                    sbox.build_ddt()
+                    sbox.build_list_of_transition_values_and_frequencies(sbox.ddt)
+            elif self.cryptanalysis_type == 'linear':
+                for sbox in self.sboxes:
+                    sbox.build_lat()
+                    sbox.build_list_of_transition_values_and_frequencies(sbox.lat)
+            else:
+                pass
+        else:
+            # TODO: Add remaining modelings
+            pass
+        return

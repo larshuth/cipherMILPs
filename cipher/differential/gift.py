@@ -87,9 +87,7 @@ class Gift64(Cipher):
             raise Exception(
                 "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
 
-        super().__init__(rounds, plaintextsize, keysize, orientation=1)
-
-        self.cryptanalysis_type = cryptanalysis_type
+        super().__init__(rounds, plaintextsize, keysize, orientation=1, cryptanalysis_type=cryptanalysis_type)
 
         # Summary of what's happening in GIFT:
 
@@ -139,6 +137,8 @@ class Gift64(Cipher):
 
         # adding a set to include the matrices of possible convex hull
         self.sbox_inequality_matrices = list()
+
+        super().prepare_for_type_of_modeling()
 
         self.line = 0
         self.round_number = 1

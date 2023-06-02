@@ -125,11 +125,9 @@ class LBlock(Cipher):
         keysize = 32
 
         if model_as_bit_oriented:
-            super().__init__(rounds, plaintextsize, keysize, orientation=1)
+            super().__init__(rounds, plaintextsize, keysize, orientation=1, cryptanalysis_type=cryptanalysis_type)
         else:
-            super().__init__(rounds, plaintextsize, keysize, orientation=4)
-
-        self.cryptanalysis_type = cryptanalysis_type
+            super().__init__(rounds, plaintextsize, keysize, orientation=4, cryptanalysis_type=cryptanalysis_type)
 
         # note that convex hull application (as shown in Sun et al. 2013 and Baksi 2020 is only used for sboxes which
         # are only modeled in bit-oriented ciphers)
@@ -217,6 +215,8 @@ class LBlock(Cipher):
 
         # adding a set to include the matrices of possible convex hull
         self.sbox_inequality_matrices = list()
+
+        super().prepare_for_type_of_modeling()
 
         self.line = 0
         self.round_number = 1

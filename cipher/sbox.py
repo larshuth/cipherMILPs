@@ -95,7 +95,12 @@ class SBox:
         self.probability_transitions = dict()
 
         self.feasible_transition_inequalities_sun_2013 = convexHull.ch_hrep_from_sbox(self)
-        self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=extract_sun_inequalities)
+        self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(
+            extract_sun_inequalities=extract_sun_inequalities)
+
+        self.transition_values_and_frequencies_built = False
+        self.set_of_transition_values = set()
+        self.value_frequencies = dict()
         return
 
     def build_ddt(self):
@@ -206,24 +211,57 @@ class SBox:
     def build_lat(self):
         return
 
-    def build_transitions(self):
-        if self.transitions_built:
-            return
-        for i in range(max(self.in_bits, self.out_bits)):
-            self.probability_transitions[i] = 0
-        set_not_to_remove = set()
-        for in_diff, out_diff in self.non_zero_ddt_entries:
-            probability = self.ddt[in_diff][out_diff]
-            self.probability_transitions[probability] += 1
-            set_not_to_remove |= {probability}
-        for key in self.probability_transitions:
-            if key not in set_not_to_remove:
-                self.probability_transitions.pop(key)
-        self.probability_transitions.pop(16)
-        self.transitions_built = True
-        return
+    def calculate_multipliers(self, greater, lesser, split_into_variables, find_variable_multiplier, find_variable_name,
+                              extract_sun_inequalities=False, invert_greater=False):
+        multipliers = [0 for _ in range(self.in_bits + self.out_bits)]
+        if invert_greater:
+            inverter = -1
+        else:
+            inverter = 1
 
-    def find_impossible_transitions_for_each_sun_2013_inequality(self, extract_sun_inequalities=False) -> list[tuple[list[int], int, set[int]]]:
+        # first we split our inequality into a list of its variables. E.g. using the findall() method on
+        # 'x1 - x3 + x4 - x5  ' yields ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
+        list_of_all_variables = split_into_variables.findall(greater)
+
+        # then we take each of the variables and
+        for variable_string in list_of_all_variables:
+            # first remove the spaces
+            variable_string = variable_string.replace(' ', '')
+            # determine whether we are dealing with a '+ a x123' or '- a x123'
+            if variable_string[0] == '-':
+                modifier = -1
+            elif variable_string[0] == '+':
+                modifier = +1
+            else:
+                variable_string = '+' + variable_string
+                modifier = +1
+            # we shortly remove the variable name (except for x) after removing all of th
+            multiplication_factor_search = find_variable_multiplier.findall(variable_string[1:])
+            if multiplication_factor_search[0] != 'x':
+                multiplication_factor = int(multiplication_factor_search[0][:-1])
+            else:
+                multiplication_factor = 1
+            variable_name = int(find_variable_name.findall(variable_string)[0][1:])
+            multipliers[variable_name] = (inverter * modifier * multiplication_factor)
+
+        constant = inverter * int(lesser)
+
+        # At this point, I would like to say that I do not condone people being excluded from transitioning.
+        # Trans rights are human rights!
+        impossible_transitions_as_int = set()
+
+        if extract_sun_inequalities:
+            multipliers_vector = np.array(multipliers)
+            for i in range(2 ** (self.in_bits + self.out_bits)):
+                x = np.unpackbits(np.array([i], dtype=np.uint8), count=(self.in_bits + self.out_bits),
+                                  bitorder='little')
+                inequality_result = np.dot(multipliers_vector, x)
+                if inequality_result < constant:
+                    impossible_transitions_as_int.add(i)
+        return multipliers, constant, impossible_transitions_as_int
+
+    def find_impossible_transitions_for_each_sun_2013_inequality(self, extract_sun_inequalities=False) -> list[
+        tuple[list[int], int, set[int]]]:
         # we prepare all the inequalities but in another format in inequalities_readable
         inequalities_readable = list()
 
@@ -243,57 +281,45 @@ class SBox:
                 [greater, lesser] = inequality.split(">=")
                 # get left part, right part, something along the self.lines of
                 # ["         -x4 + x5 ", "  0"]
+                multipliers, constant, impossible_transitions_as_int = self.calculate_multipliers(greater, lesser,
+                                                                                                  split_into_variables,
+                                                                                                  find_variable_multiplier,
+                                                                                                  find_variable_name,
+                                                                                                  extract_sun_inequalities)
+                inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
             except ValueError:
                 try:
                     [greater, lesser] = inequality.split("==")
                     # get left part, right part, something along the self.lines of
                     # ["         -x4 + x5 ", "  0"]
-                    continue
+                    # for a == b we'd have both a >= b and b >= a
+                    multipliers, constant, impossible_transitions_as_int = self.calculate_multipliers(greater, lesser,
+                                                                                                      split_into_variables,
+                                                                                                      find_variable_multiplier,
+                                                                                                      find_variable_name,
+                                                                                                      extract_sun_inequalities)
+                    inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+
+                    multipliers, constant, impossible_transitions_as_int = self.calculate_multipliers(greater, lesser,
+                                                                                                      split_into_variables,
+                                                                                                      find_variable_multiplier,
+                                                                                                      find_variable_name,
+                                                                                                      extract_sun_inequalities,
+                                                                                                      invert_greater=True)
+
+                    inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+
                 except ValueError as a:
                     print('Non-matching inequality:', inequality)
                     raise AttributeError(a)
 
-            multipliers = [0 for _ in range(self.in_bits + self.out_bits)]
-
-            # first we split our inequality into a list of its variables. E.g. using the findall() method on
-            # 'x1 - x3 + x4 - x5  ' yields ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
-            list_of_all_variables = split_into_variables.findall(greater)
-
-            # then we take each of the variables and
-            for variable_string in list_of_all_variables:
-                # first remove the spaces
-                variable_string = variable_string.replace(' ', '')
-                # determine whether we are dealing with a '+ a x123' or '- a x123'
-                if variable_string[0] == '-':
-                    modifier = -1
-                elif variable_string[0] == '+':
-                    modifier = +1
-                else:
-                    variable_string = '+' + variable_string
-                    modifier = +1
-                # we shortly remove the variable name (except for x) after removing all of th
-                multiplication_factor_search = find_variable_multiplier.findall(variable_string[1:])
-                if multiplication_factor_search[0] != 'x':
-                    multiplication_factor = int(multiplication_factor_search[0][:-1])
-                else:
-                    multiplication_factor = 1
-                variable_name = int(find_variable_name.findall(variable_string)[0][1:])
-                multipliers[variable_name] = (modifier * multiplication_factor)
-
-            constant = int(lesser)
-
-            # At this point, I would like to say that I do not condone people being excluded from transitioning.
-            # Trans rights are human rights!
-            impossible_transitions_as_int = set()
-
-            if extract_sun_inequalities:
-                multipliers_vector = np.array(multipliers)
-                for i in range(2 ** (self.in_bits + self.out_bits)):
-                    x = np.unpackbits(np.array([i], dtype=np.uint8), count=(self.in_bits + self.out_bits),
-                                      bitorder='little')
-                    inequality_result = np.dot(multipliers_vector, x)
-                    if inequality_result < constant:
-                        impossible_transitions_as_int.add(i)
-            inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
-
         return inequalities_readable
+
+    def build_list_of_transition_values_and_frequencies(self, ddt_or_lat):
+        if self.transition_values_and_frequencies_built:
+            return
+
+        list_of_transition_values = list(val for key, val in ddt_or_lat.items())
+        self.set_of_transition_values = set(list_of_transition_values)
+        self.value_frequencies = {value: list_of_transition_values.count(value) for value in list_of_transition_values}
+        return

@@ -6,7 +6,6 @@ from cipher.actions.xoraction import XorAction
 from cipher.actions.sboxaction import SBoxAction
 
 
-
 class Aes(Cipher):
     """
     Class in which all functions for AES are defined.
@@ -106,11 +105,10 @@ class Aes(Cipher):
         keysize = 16 * 8
 
         if model_as_bit_oriented:
-            super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling)
+            super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
         else:
-            super().__init__(rounds, plaintextsize, keysize, orientation=8, type_of_modeling=type_of_modeling)
+            super().__init__(rounds, plaintextsize, keysize, orientation=8, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
 
-        self.cryptanalysis_type = cryptanalysis_type
 
         # Summary of what's happening in AES:
 
@@ -162,8 +160,8 @@ class Aes(Cipher):
         # variables are just overwritten because otherwise it is too complex
 
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, overwrites,
-                                                                             new_keys_every_round=True)
+                                            lt_per_round, extra_xors, overwrites,
+                                            new_keys_every_round=True)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
@@ -178,6 +176,8 @@ class Aes(Cipher):
 
         # adding a set to include the matrices of possible convex hull
         self.sbox_inequality_matrices = list()
+
+        super().prepare_for_type_of_modeling()
 
         self.line = 0
         self.round_number = 1

@@ -1,6 +1,6 @@
 from scipy.sparse import lil_matrix
 import re
-
+from itertools import chain
 import convexHull
 from cipher.action import CipherAction
 
@@ -26,11 +26,12 @@ class SBoxAction(CipherAction):
                 cipher/linear/ that we are operating on.
         :param int first_a_position_to_overwrite: index of the first element in cipher_instance.A to be overwritten,
                 i.e. first position where we the save the names of the variable representing the output of the sbox
-        :param list of (str or None) or None optional_output_vars: Optional output variables are used if we are
+        :param list [str | None] | None optional_output_vars: Optional output variables are used if we are
                 interested in not getting just any new x variables in accordance with cipher_instance.next['x'] but
                 instead want specific outputs. Either None if not no prefered output variables or list with None in
                 positions we are not interested in and string like 'x123' in the i-th position if we want the i-th bit to
                 be represented by this specific variable. optional_output_vars is arranged like input_vars
+        :param str type_of_modeling: Either 'SunEtAl 2013', 'Baksi 2020' or 'Boura 2020'
         """
         # ensuring self.type_of_action, self.cipher_instance are set and functions set_all_to_value and
         # for_each_var_set_to_value_plus_dummy are inherited
@@ -61,8 +62,8 @@ class SBoxAction(CipherAction):
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         self.type_of_modeling = type_of_modeling
+
         # variables for the approach to S-box modelling described in Baksi 2020.
-        # TODO rename vars
         self.qijp_vars = list()
         self.qijlp_vars = list()
 
@@ -233,16 +234,17 @@ class SBoxAction(CipherAction):
         # we split this up in 2 inequalities since our matrix strictly represents \geq
         # (2.1) Q_{i,j} \geq sum over all Q_{i,j}^p
         # (2.2) - Q_{i,j} \geq -(sum over all Q_{i,j}^p)
+        #
+        # for each p transition do
+        # (3.)
 
-        constant_pos = self.cipher_instance.V["constant"]
         big_m = 2 * self.sbox.in_bits
 
-        self.sbox.build_transitions()
+        qijp_vars = [self.dummy_var + f'p{p}' for p in self.sbox.set_of_transition_values]
 
         # TODO find number of inequalities
-        MORE = 0
-        number_of_inequalities = 3 + 2 * len(self.sbox.probability_transitions) + sum(
-            [value for key, value in self.sbox.probability_transitions.items]) + MORE
+        number_of_inequalities = 1 + 2 + 2 * len(self.sbox.set_of_transition_values) + sum(
+            [value for key, value in self.sbox.probability_transitions.items])
 
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
@@ -256,24 +258,44 @@ class SBoxAction(CipherAction):
         sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = big_m
         sbox_inequality_matrix_line += 1
 
-        # build/find Q_{i,j}^p variables
-        self.qijp_vars = list()
-        # TODO include Q_{i,j}^p variables in the calculation of the number of variables in cipher classes __init__
-
         # (2.1)
         self.set_all_to_value(list_of_variables=self.qijp_vars, value=-1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = 1
         sbox_inequality_matrix_line += 1
+
         # (2.2)
         self.set_all_to_value(list_of_variables=self.qijp_vars, value=1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = -1
         sbox_inequality_matrix_line += 1
 
-        # build/find Q_{i,j}^p variables
-        self.qijlp_vars = list()
-        # TODO include Q_{i,j,l}^p variables in the calculation of the number of variables in cipher classes __init__
+        # (3.)
+        extract_p = lambda qijp_var: int(qijp_var[len(self.dummy_var):])
+        for qijp_var in qijp_vars:
+            p = extract_p(qijp_var)
+            qijlp_vars = [qijp_var + f'l{l}' for l in range(self.sbox.value_frequencies[p])]
+
+            self.set_all_to_value(list_of_variables=qijlp_vars, value=1, line_var=sbox_inequality_matrix_line,
+                                  matrix_to_be_set=sbox_inequality_matrix)
+            sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = -1
+            sbox_inequality_matrix_line += 1
+
+            self.set_all_to_value(list_of_variables=qijlp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                                  matrix_to_be_set=sbox_inequality_matrix)
+            sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = 1
+            sbox_inequality_matrix_line += 1
+            for qijlp_var in qijlp_vars:
+                # extract transition from qijlp_var
+                # extract bit representation from transition
+                # sum up bits which would be 1 for constant
+                # set all value: variables for bits which should be 1 to 1
+                # set all value: variables for bits which should be 0 to -1
+
+                self.set_all_to_value(list_of_variables=qijlp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                                      matrix_to_be_set=sbox_inequality_matrix)
+                sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijlp_var]] = big_m
+                sbox_inequality_matrix_line += 1
 
         return
 
@@ -290,10 +312,6 @@ class SBoxAction(CipherAction):
         (4.1) sum over inputs + sum over outputs \\geq branch * new dummy
         (4.2) input \\leq new dummy for all inputs
         (4.3) output \\leq dummy for all outputs
-
-        :param str type_of_modeling: Either 'SunEtAl 2013', 'Baksi 2020' or 'Boura 2020'
-
-        Disclaimer: Baksi and Boura are yet to be implemented
         """
 
         print(self.type_of_action, self.input_vars)
