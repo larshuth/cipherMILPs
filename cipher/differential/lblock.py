@@ -108,7 +108,7 @@ class LBlock(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, convex_hull_applied=True, cryptanalysis_type="differential"):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential", type_of_modeling='SunEtAl. 2013'):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -125,13 +125,9 @@ class LBlock(Cipher):
         keysize = 32
 
         if model_as_bit_oriented:
-            super().__init__(rounds, plaintextsize, keysize, orientation=1, cryptanalysis_type=cryptanalysis_type)
+            super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
         else:
-            super().__init__(rounds, plaintextsize, keysize, orientation=4, cryptanalysis_type=cryptanalysis_type)
-
-        # note that convex hull application (as shown in Sun et al. 2013 and Baksi 2020 is only used for sboxes which
-        # are only modeled in bit-oriented ciphers)
-        self.convex_hull_applied = convex_hull_applied
+            super().__init__(rounds, plaintextsize, keysize, orientation=4, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
 
         # Summary of what's happening in LBlock:
         #   1. Teile Input in vordere Hälfte X_1, hintere Hälfte X_0

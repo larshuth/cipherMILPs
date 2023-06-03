@@ -67,7 +67,7 @@ class Gift64(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential'):
+    def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential', type_of_modeling='SunEtAl. 2013'):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -87,7 +87,7 @@ class Gift64(Cipher):
             raise Exception(
                 "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
 
-        super().__init__(rounds, plaintextsize, keysize, orientation=1, cryptanalysis_type=cryptanalysis_type)
+        super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
 
         # Summary of what's happening in GIFT:
 

@@ -10,7 +10,7 @@ import matplotlib.pylab as plt
 plt.rcParams.update({'font.size': 5})
 
 
-def matplotlibvis(rounds, cipher, bit_oriented):
+def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     """
     Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
     Generates 4 visualizations of the same sparse matrix.
@@ -31,7 +31,7 @@ def matplotlibvis(rounds, cipher, bit_oriented):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
     A = cipher_instance.M.copy()
     sf.d_var_to_beginning(cipher_instance)
     M = cipher_instance.M.copy()
@@ -216,7 +216,7 @@ def mainly(fname, A, V, title, *args, **kwargs):
     doc.generate_pdf(clean_tex=False)
 
 
-def gen_pdf(rounds, cipher, bit_oriented):
+def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -234,7 +234,7 @@ def gen_pdf(rounds, cipher, bit_oriented):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
     A = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
     # sf.d_var_to_beginning(cipher_instance)
@@ -263,7 +263,7 @@ def gen_pdf(rounds, cipher, bit_oriented):
            dpi=300)
 
 
-def no_viz_just_testrun(rounds, cipher, bit_oriented):
+def no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -275,5 +275,5 @@ def no_viz_just_testrun(rounds, cipher, bit_oriented):
     cipher  :   class
                 Class of the wanted cipher
     """
-    gc.new_generate_constraints(rounds, cipher, bit_oriented)
+    gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
     return True

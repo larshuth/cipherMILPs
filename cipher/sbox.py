@@ -1,5 +1,5 @@
 import numpy as np
-
+from itertools import chain
 import convexHull
 import re
 
@@ -101,6 +101,7 @@ class SBox:
         self.transition_values_and_frequencies_built = False
         self.set_of_transition_values = set()
         self.value_frequencies = dict()
+        self.dict_value_to_list_of_transition = dict()
         return
 
     def build_ddt(self):
@@ -133,21 +134,10 @@ class SBox:
 
         self.vectors = set()
         for x, y in self.non_zero_ddt_entries:
-            vector = list()
-            for i in range(self.in_bits - 1, -1, -1):
-                if (2 ** i) <= x:
-                    vector.append(1)
-                    x -= (2 ** i)
-                else:
-                    vector.append(0)
+            vector_in = [1 if (((2 ** i) & x) > 0) else 0 for i in range(self.in_bits - 1, -1, -1)]
+            vector_out = [1 if (((2 ** i) & y) > 0) else 0 for i in range(self.in_bits - 1, -1, -1)]
 
-            for i in range(self.out_bits - 1, -1, -1):
-                if (2 ** i) <= y:
-                    vector.append(1)
-                    y -= (2 ** i)
-                else:
-                    vector.append(0)
-            self.vectors |= {tuple(vector.copy())}
+            self.vectors |= {tuple(vector_in.copy() + vector_out.copy())}
         return
 
     def build_differential_patterns_input_to_output(self):
@@ -319,7 +309,14 @@ class SBox:
         if self.transition_values_and_frequencies_built:
             return
 
-        list_of_transition_values = list(val for key, val in ddt_or_lat.items())
-        self.set_of_transition_values = set(list_of_transition_values)
-        self.value_frequencies = {value: list_of_transition_values.count(value) for value in list_of_transition_values}
+        list_of_transition_values = list(chain.from_iterable(ddt_or_lat))
+        self.set_of_transition_values = set(list_of_transition_values) - {0}
+        self.value_frequencies = {value: list_of_transition_values.count(value) for value in self.set_of_transition_values}
+        self.dict_value_to_list_of_transition = {val: list() for val in self.set_of_transition_values}
+        for input_diff, sub_ddt_or_lat in enumerate(ddt_or_lat):
+            for output_diff, value in enumerate(sub_ddt_or_lat):
+                if value != 0:
+                    self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
+
+        self.transition_values_and_frequencies_built = True
         return

@@ -95,7 +95,7 @@ class LBlock(LBlock):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, convex_hull_applied=True):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, type_of_modeling='SunEtAl. 2013'):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -108,7 +108,7 @@ class LBlock(LBlock):
                                     Argument on whether LBlock should be modeled as a bit-oriented cipher instead
                                     of as a 4-bit word-oriented cipher.
         """
-        super().__init__(rounds, model_as_bit_oriented, convex_hull_applied, cryptanalysis_type="linear")
+        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type="linear", type_of_modeling=type_of_modeling)
 
         self.linear_helper = [None for _ in range(int(self.plaintext_vars / 2))]
         return

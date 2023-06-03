@@ -11,7 +11,7 @@ AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear,
 BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
 
 
-def main(rounds, cipher, viz, bit_oriented):
+def main(rounds, cipher, viz, bit_oriented, chosen_type):
     """
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
 
@@ -32,11 +32,11 @@ def main(rounds, cipher, viz, bit_oriented):
     """
 
     if viz == 0:
-        return vis.no_viz_just_testrun(rounds, cipher, bit_oriented)
+        return vis.no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type)
     elif viz == 1:
-        vis.matplotlibvis(rounds, cipher, bit_oriented)
+        vis.matplotlibvis(rounds, cipher, bit_oriented, chosen_type)
     elif viz == 2:
-        vis.gen_pdf(rounds, cipher, bit_oriented)
+        vis.gen_pdf(rounds, cipher, bit_oriented, chosen_type)
     return
 
 
@@ -75,7 +75,7 @@ def safe_call():
         while True:
             try:
                 ciphelp = int(input())
-                if viz not in set(range(len(AVAILABLE))):
+                if ciphelp not in set(range(len(AVAILABLE))):
                     print("I like the spirit but that is not a number corresponding with one of the ciphers. Try again, fool.")
                 else:
                     break
@@ -87,16 +87,28 @@ def safe_call():
             print("Would you like to model the cipher bit-oriented (0) or word/byte-oriented (1)?")
             while True:
                 try:
-                    bit_oriented = bool(int(input()))
+                    bit_oriented = int(input())
                     if bit_oriented not in {0, 1}:
                         print(
                             "I like the spirit but that is not a 0 or 1. Try again, fool.")
                     else:
+                        bit_oriented = bool(bit_oriented)
                         break
                 except ValueError:
                     print("I like the spirit but that is not a number. Try again, fool.")
+        else:
+            bit_oriented = False
 
-        main(rounds, chosen_cipher, viz, bit_oriented)
+        print('choose a type of modelling: "SunEtAl 2013",  "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy", and "Baksi 2020"')
+        while True:
+            chosen_type = input()
+            if chosen_type not in {"SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
+                                   "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020"}:
+                print('try again')
+            else:
+                break
+
+        main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     except Exception as e:
         print('\n\n!!! Error in input, restart script !!!\n\n')
         print(e)
@@ -105,7 +117,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented = 1, Gift64Differential, 2, True
-        main(rounds, chosen_cipher, viz, bit_oriented)
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, Gift64Differential, 2, True, "SunEtAl 2013 Greedy"
+        main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
         safe_call()

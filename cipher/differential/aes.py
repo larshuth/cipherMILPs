@@ -13,13 +13,12 @@ class Aes(Cipher):
 
     def generate_sbox_actions_for_round(self):
         list_of_sbox_actions = list()
-        self.rounds - 1
         if self.orientation == 1:
             for i in range(16):
                 sbox_input_vars = [self.A[i*8 + var] for var in range(self.sboxes[i].in_bits)]
                 list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[i], input_vars=sbox_input_vars,
                                                        cipher_instance=self,
-                                                       first_a_position_to_overwrite=i*8, type_of_modeling=self.type_of_modeling))
+                                                       first_a_position_to_overwrite=i*8))
         else:
             pass
         return list_of_sbox_actions

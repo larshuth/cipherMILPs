@@ -13,7 +13,7 @@ class SBoxAction(CipherAction):
     """
 
     def __init__(self, sbox, input_vars, cipher_instance, first_a_position_to_overwrite=None,
-                 optional_output_vars=None, type_of_modeling="SunEtAl 2013") -> None:
+                 optional_output_vars=None) -> None:
         """
         Constructs an instance of SBoxAction.
 
@@ -60,8 +60,6 @@ class SBoxAction(CipherAction):
         self.cipher_instance.next['a'] += 1
 
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
-
-        self.type_of_modeling = type_of_modeling
 
         # variables for the approach to S-box modelling described in Baksi 2020.
         self.qijp_vars = list()
@@ -238,13 +236,12 @@ class SBoxAction(CipherAction):
         # for each p transition do
         # (3.)
 
+        constant_pos = self.cipher_instance.V["constant"]
         big_m = 2 * self.sbox.in_bits
-
         qijp_vars = [self.dummy_var + f'p{p}' for p in self.sbox.set_of_transition_values]
 
         # TODO find number of inequalities
-        number_of_inequalities = 1 + 2 + 2 * len(self.sbox.set_of_transition_values) + sum(
-            [value for key, value in self.sbox.probability_transitions.items])
+        number_of_inequalities = 1 + 2 + (2 * len(qijp_vars)) + sum([len(table_column) for table_column, value in self.sbox.dict_value_to_list_of_transition.items()])
 
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
@@ -272,28 +269,53 @@ class SBoxAction(CipherAction):
 
         # (3.)
         extract_p = lambda qijp_var: int(qijp_var[len(self.dummy_var):])
+
         for qijp_var in qijp_vars:
             p = extract_p(qijp_var)
-            qijlp_vars = [qijp_var + f'l{l}' for l in range(self.sbox.value_frequencies[p])]
+            qijlp_vars = {qijp_var + f'l{l}': transition for l, transition in enumerate(self.sbox.dict_value_to_list_of_transition[p])}
+            list_of_qijlp_vars = list(qijlp_vars)
+            print(qijlp_vars)
 
-            self.set_all_to_value(list_of_variables=qijlp_vars, value=1, line_var=sbox_inequality_matrix_line,
+            self.set_all_to_value(list_of_variables=list_of_qijlp_vars, value=1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
             sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = -1
             sbox_inequality_matrix_line += 1
 
-            self.set_all_to_value(list_of_variables=qijlp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+            self.set_all_to_value(list_of_variables=list_of_qijlp_vars, value=-1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
             sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = 1
             sbox_inequality_matrix_line += 1
-            for qijlp_var in qijlp_vars:
-                # extract transition from qijlp_var
+            for qijlp_var, transition in qijlp_vars.items():
                 # extract bit representation from transition
-                # sum up bits which would be 1 for constant
-                # set all value: variables for bits which should be 1 to 1
-                # set all value: variables for bits which should be 0 to -1
+                bitwise_input_diff = [1 if (((2 ** i) & transition[0]) > 0) else 0 for i in range(self.sbox.in_bits - 1, -1, -1)]
+                bitwise_output_diff = [1 if (((2 ** i) & transition[1]) > 0) else 0 for i in range(self.sbox.in_bits - 1, -1, -1)]
 
-                self.set_all_to_value(list_of_variables=qijlp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                # sum up bits which would be 1 for constant
+                sum_of_all_bits = sum(bitwise_input_diff) + sum(bitwise_output_diff)
+                sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = sum_of_all_bits
+
+                # set all value: variables for bits which should be 0 to -1
+                # set all value: variables for bits which should be 1 to 1
+                plus_vars = list()
+                minus_vars = list()
+                for index, in_bit in enumerate(bitwise_input_diff):
+                    if in_bit:
+                        minus_vars.append(self.input_vars[index])
+                    else:
+                        plus_vars.append(self.input_vars[index])
+                for index, out_bit in enumerate(bitwise_output_diff):
+                    if out_bit:
+                        minus_vars.append(self.output_vars[index])
+                    else:
+                        plus_vars.append(self.output_vars[index])
+
+                self.set_all_to_value(list_of_variables=minus_vars, value=-1, line_var=sbox_inequality_matrix_line,
                                       matrix_to_be_set=sbox_inequality_matrix)
+                self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
+                                      matrix_to_be_set=sbox_inequality_matrix)
+                # the next one, I do not entirely understand
+                # it would be 0 iff the transition we look at is chosen
+                # the comparison with the big M leads to
                 sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijlp_var]] = big_m
                 sbox_inequality_matrix_line += 1
 
@@ -333,15 +355,15 @@ class SBoxAction(CipherAction):
         if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
             self.branch_number_inequality()
 
-        if self.type_of_modeling == "SunEtAl 2013":
+        if self.cipher_instance.type_of_modeling == "SunEtAl 2013":
             self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=False)
-        elif self.type_of_modeling == "SunEtAl 2013 Greedy":
+        elif self.cipher_instance.type_of_modeling == "SunEtAl 2013 Greedy":
             self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=False)
-        elif self.type_of_modeling == "SunEtAl with 2013 Baksi extension 2020":
+        elif self.cipher_instance.type_of_modeling == "SunEtAl with 2013 Baksi extension 2020":
             self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=True)
-        elif self.type_of_modeling == "SunEtAl 2013 with Baksi extension 2020 Greedy":
+        elif self.cipher_instance.type_of_modeling == "SunEtAl 2013 with Baksi extension 2020 Greedy":
             self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=True)
-        elif self.type_of_modeling == "Baksi 2020":
+        elif self.cipher_instance.type_of_modeling == "Baksi 2020":
             self.create_baksi_inequalities()
             pass
         else:

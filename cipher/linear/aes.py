@@ -23,6 +23,6 @@ class Aes(Aes):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False):
-        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type='linear')
+    def __init__(self, rounds=1, model_as_bit_oriented=False, type_of_modeling='SunEtAl. 2013'):
+        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type='linear', type_of_modeling=type_of_modeling)
         return

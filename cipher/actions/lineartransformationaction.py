@@ -19,7 +19,7 @@ class LinTransformationAction(CipherAction):
         :param int branch_number: The branch number of the linear transformation that is being performed. These have to be
                 calculated by hand by the user (or searched up on the internet) e.g. the branch number of the linear
                 transformation in Enocoro-128v2 is 3 according to Mouha et al.
-        :param list of str or None a_positions_to_overwrite: Each cipher_instance has an attribute A (list) which notes down the currently
+        :param list of int or None a_positions_to_overwrite: Each cipher_instance has an attribute A (list) which notes down the currently
                 worked on variables. Give that we describe the output of a linear transformation using a new variable,
                 e.g. 'x35' and 'x36' in Mouha et al. Enocoro, we overwrite the positions that 'x34' and 'x35' were saved
                 on previously.

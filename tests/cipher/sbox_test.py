@@ -97,7 +97,27 @@ class SBoxTest(unittest.TestCase):
                                       (10, 10), (1, 7), (13, 9), (13, 15), (15, 12)}
         self.assertEqual(non_zero_transitions_baksi, testbox.non_zero_ddt_entries)
 
-        expected_convex_hull_inequalities = ['-x1>=-1', '-x4>=-1', '-x2>=-1', '-x3>=-1', '-x5>=-1', '-x6>=-1', '-x7>=-1', 'x1-2x2-x3+x4+2x5+3x6+3x7>=0', '-x1-x2-x4+x5-x6+x7>=-3', '-x1-x2-x3+x5+x7>=-2', '3x1+3x2+3x3+2x4-x5-x6-x7>=0', 'x6>=0', 'x1-2x2-x3+x5+2x6+2x7>=-1', '-x1-x2+x3+x5+x6-x7>=-2', '2x1-x2+x3-2x4-x5+2x6+x7>=-2', '-x1+x2-x3+x4-x5-x6-x7>=-4', 'x1+x2-x3-x4+x5-x6>=-2', 'x5>=0', 'x1-x2-x3+x4+x5+2x6+2x7>=0', 'x3>=0', 'x1+x2+x3-x5-x6-x7>=-2', 'x1+x2+x3+x4-x6>=0', 'x2+x3-x4+x5+x6-x7>=-1', 'x1+x2+x3-x5+x6+x7>=0', 'x1+x2+x3+x5+x6-x7>=0', 'x1+x2+x4-x5+x6-x7>=-1', 'x1+x2+x3+x4-x7>=0', 'x2+x3+x4+x5-x6-x7>=-1', '-x2-x3+x5+x6+x7>=-1', '2x1+x2+2x3+2x4-x5-x6+x7>=0', 'x1>=0', '2x1+2x2+x3+2x4-x5+x6-x7>=0', 'x1+2x2+2x3+2x4+x5-x6-x7>=0', 'x1+x2+x3+x4-x5>=0', 'x7>=0', '-x3+x4+x5+x6+x7>=0', 'x1+x2-x3-x5+x6-x7>=-2', 'x1-x2+x3-x4-x5+x6>=-2', '-x1+x3-x4+x5-x7>=-2', 'x1+x3+x4-x5-x6+x7>=-1', 'x1-x2-x4+x6+x7>=-1', 'x1-x2-x3+x6+x7>=-1', 'x2>=0', '-x1+x2+x3-x4-x6-x7>=-3', '-x1+x2+x3+x5-x6-x7>=-2', 'x1-x2+x5+x6+x7>=0', '-x2-x3+x4+2x5+2x6+2x7>=0', '-x1-x2+x3-x4+x5-x6>=-3', '-x1-x2-x3+2x4+3x5+2x6+3x7>=0', 'x4>=0', 'x2+x3-x4-x5-x6-x7>=-3', '-x1+x4+x5+x6+x7>=0', '-x1-x2+x3+2x4+2x5+2x6+x7>=0', '-x1-x2+x3+x4+x5+x6>=-1', '-x2+x4+x5+x6+x7>=0', '-2x1+x2+2x3-x4+x5-x6-2x7>=-4', 'x1+x3-x4-x5+x6+x7>=-1', 'x1-x2-x3-x4-x5-x6-x7>=-5', '-x1-x2-x3-x4-x5+x6-x7>=-5']
+        expected_convex_hull_inequalities = ['-x1>=-1', '-x4>=-1', '-x2>=-1', '-x3>=-1', '-x5>=-1', '-x6>=-1',
+                                             '-x7>=-1', 'x1-2x2-x3+x4+2x5+3x6+3x7>=0', '-x1-x2-x4+x5-x6+x7>=-3',
+                                             '-x1-x2-x3+x5+x7>=-2', '3x1+3x2+3x3+2x4-x5-x6-x7>=0', 'x6>=0',
+                                             'x1-2x2-x3+x5+2x6+2x7>=-1', '-x1-x2+x3+x5+x6-x7>=-2',
+                                             '2x1-x2+x3-2x4-x5+2x6+x7>=-2', '-x1+x2-x3+x4-x5-x6-x7>=-4',
+                                             'x1+x2-x3-x4+x5-x6>=-2', 'x5>=0', 'x1-x2-x3+x4+x5+2x6+2x7>=0', 'x3>=0',
+                                             'x1+x2+x3-x5-x6-x7>=-2', 'x1+x2+x3+x4-x6>=0', 'x2+x3-x4+x5+x6-x7>=-1',
+                                             'x1+x2+x3-x5+x6+x7>=0', 'x1+x2+x3+x5+x6-x7>=0', 'x1+x2+x4-x5+x6-x7>=-1',
+                                             'x1+x2+x3+x4-x7>=0', 'x2+x3+x4+x5-x6-x7>=-1', '-x2-x3+x5+x6+x7>=-1',
+                                             '2x1+x2+2x3+2x4-x5-x6+x7>=0', 'x1>=0', '2x1+2x2+x3+2x4-x5+x6-x7>=0',
+                                             'x1+2x2+2x3+2x4+x5-x6-x7>=0', 'x1+x2+x3+x4-x5>=0', 'x7>=0',
+                                             '-x3+x4+x5+x6+x7>=0', 'x1+x2-x3-x5+x6-x7>=-2', 'x1-x2+x3-x4-x5+x6>=-2',
+                                             '-x1+x3-x4+x5-x7>=-2', 'x1+x3+x4-x5-x6+x7>=-1', 'x1-x2-x4+x6+x7>=-1',
+                                             'x1-x2-x3+x6+x7>=-1', 'x2>=0', '-x1+x2+x3-x4-x6-x7>=-3',
+                                             '-x1+x2+x3+x5-x6-x7>=-2', 'x1-x2+x5+x6+x7>=0', '-x2-x3+x4+2x5+2x6+2x7>=0',
+                                             '-x1-x2+x3-x4+x5-x6>=-3', '-x1-x2-x3+2x4+3x5+2x6+3x7>=0', 'x4>=0',
+                                             'x2+x3-x4-x5-x6-x7>=-3', '-x1+x4+x5+x6+x7>=0',
+                                             '-x1-x2+x3+2x4+2x5+2x6+x7>=0', '-x1-x2+x3+x4+x5+x6>=-1',
+                                             '-x2+x4+x5+x6+x7>=0', '-2x1+x2+2x3-x4+x5-x6-2x7>=-4',
+                                             'x1+x3-x4-x5+x6+x7>=-1', 'x1-x2-x3-x4-x5-x6-x7>=-5',
+                                             '-x1-x2-x3-x4-x5+x6-x7>=-5']
         actual_convex_hull_inequalities = list(testbox.feasible_transition_inequalities_sun_2013).copy()
         to_be_removed = set()
         for index, inequality in enumerate(actual_convex_hull_inequalities):
@@ -115,6 +135,34 @@ class SBoxTest(unittest.TestCase):
         actual_convex_hull_inequalities.sort()
 
         self.assertEqual(expected_convex_hull_inequalities, actual_convex_hull_inequalities)
+        return
+
+    def test_build_list_of_transition_values_and_frequencies(self):
+        # sbox from Baksi 2020 section 4.1
+        # expected values are read from table 2
+        substitutions = {index: value for index, value in
+                         enumerate([4, 0, 1, 3, 2, 5, 6, 7, 14, 8, 10, 9, 12, 13, 11, 15])}
+        testbox = SBox(substitutions, 4, 4, extract_sun_inequalities=True)
+        testbox.build_ddt()
+        testbox.build_list_of_transition_values_and_frequencies(testbox.ddt)
+
+        expected_set_of_transition_values = {2, 4, 6, 16}
+        self.assertEqual(expected_set_of_transition_values, testbox.set_of_transition_values)
+
+        expected_value_frequencies = {16: 1, 2: 57, 4: 21, 6: 7}
+        self.assertEqual(expected_value_frequencies, testbox.value_frequencies)
+
+        expected_dict_value_to_list_of_transition = {
+            2: [(1, 2), (1, 3), (1, 6), (1, 7), (2, 1), (2, 3), (2, 5), (2, 7), (3, 1), (3, 2), (3, 5), (3, 6), (4, 1),
+                (4, 2), (4, 4), (4, 7), (5, 1), (5, 3), (5, 4), (5, 6), (6, 2), (6, 3), (6, 4), (6, 5), (7, 4), (7, 5),
+                (7, 6), (7, 7), (8, 11), (8, 13), (8, 14), (9, 8), (9, 14), (9, 15), (10, 11), (10, 14), (10, 15),
+                (11, 9), (11, 10), (11, 14), (12, 8), (12, 10), (12, 14), (13, 8), (13, 9), (13, 10), (13, 11),
+                (13, 12), (13, 13), (13, 14), (13, 15), (14, 12), (14, 13), (14, 14), (15, 9), (15, 12), (15, 14)],
+            4: [(1, 1), (1, 4), (2, 2), (2, 4), (3, 3), (3, 7), (4, 5), (4, 6), (5, 2), (5, 5), (6, 6), (6, 7), (7, 1),
+                (7, 3), (8, 10), (9, 12), (10, 9), (11, 11), (12, 13), (14, 8), (15, 15)],
+            6: [(8, 8), (9, 9), (10, 10), (11, 13), (12, 12), (14, 15), (15, 11)],
+            16: [(0, 0)]}
+        self.assertEqual(expected_dict_value_to_list_of_transition, testbox.dict_value_to_list_of_transition)
         return
 
 
