@@ -13,7 +13,6 @@ class Gift64(Cipher):
 
     def generate_sbox_actions_for_round(self):
         list_of_sbox_actions = list()
-        self.rounds - 1
         for index, sbox in enumerate(self.sboxes):
             sbox_input_vars = [self.A[index * 4 + var] for var in range(sbox.in_bits)]
             list_of_sbox_actions.append(SBoxAction(sbox=sbox, input_vars=sbox_input_vars, cipher_instance=self,
@@ -23,6 +22,7 @@ class Gift64(Cipher):
     def generate_permutation_actions_for_round(self):
         def new_position_of_x(x):
             return 4 * (x // 16) + 16 * ((3 * (x % 16 // 4) + x % 4) % 4) + x % 4
+
         permutation = [0 for _ in range(64)]
         for i in range(64):
             permutation[new_position_of_x(i)] = i
@@ -117,13 +117,14 @@ class Gift64(Cipher):
                          enumerate(
                              [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
         # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
-        self.sbox = SBox(sbox_aes_subs, 4, 4)
+        self.sbox = SBox(sbox_aes_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
         self.sboxes = [self.sbox] * 16
 
         overwrites = 0  # for the ColumnMix operations in AES where (as off Zhou) the
         # variables are just overwritten because otherwise it is too complex
 
+        self.prepare_for_type_of_modeling()
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                                                              lt_per_round, extra_xors, overwrites,
                                                                              new_keys_every_round=True)
@@ -137,8 +138,6 @@ class Gift64(Cipher):
 
         # adding a set to include the matrices of possible convex hull
         self.sbox_inequality_matrices = list()
-
-        super().prepare_for_type_of_modeling()
 
         self.line = 0
         self.round_number = 1

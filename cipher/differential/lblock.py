@@ -159,41 +159,42 @@ class LBlock(Cipher):
             # instantiating all SBoxes
             s_0_subs = {index: value for index, value in
                         enumerate([14, 9, 15, 0, 13, 4, 10, 11, 1, 2, 8, 3, 7, 6, 12, 5])}
-            sbox_0 = SBox(s_0_subs, 4, 4)
+            sbox_0 = SBox(s_0_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_1_subs = {index: value for index, value in
                         enumerate([4, 11, 14, 9, 15, 13, 0, 10, 7, 12, 5, 6, 2, 8, 1, 3])}
-            sbox_1 = SBox(s_1_subs, 4, 4)
+            sbox_1 = SBox(s_1_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_2_subs = {index: value for index, value in
                         enumerate([1, 14, 7, 12, 15, 13, 0, 6, 11, 5, 9, 3, 2, 4, 8, 10])}
-            sbox_2 = SBox(s_2_subs, 4, 4)
+            sbox_2 = SBox(s_2_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_3_subs = {index: value for index, value in
                         enumerate([7, 6, 8, 11, 0, 15, 3, 14, 9, 10, 12, 13, 5, 2, 4, 1])}
-            sbox_3 = SBox(s_3_subs, 4, 4)
+            sbox_3 = SBox(s_3_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_4_subs = {index: value for index, value in
                         enumerate([14, 5, 15, 0, 7, 2, 12, 13, 1, 8, 4, 9, 11, 10, 6, 3])}
-            sbox_4 = SBox(s_4_subs, 4, 4)
+            sbox_4 = SBox(s_4_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_5_subs = {index: value for index, value in
                         enumerate([2, 13, 11, 12, 15, 14, 0, 9, 7, 10, 6, 3, 1, 8, 4, 5])}
-            sbox_5 = SBox(s_5_subs, 4, 4)
+            sbox_5 = SBox(s_5_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_6_subs = {index: value for index, value in
                         enumerate([11, 9, 4, 14, 0, 15, 10, 13, 6, 12, 5, 7, 3, 8, 1, 2])}
-            sbox_6 = SBox(s_6_subs, 4, 4)
+            sbox_6 = SBox(s_6_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             s_7_subs = {index: value for index, value in
                         enumerate([13, 10, 15, 0, 14, 4, 9, 11, 2, 1, 8, 3, 7, 5, 12, 6])}
-            sbox_7 = SBox(s_7_subs, 4, 4)
+            sbox_7 = SBox(s_7_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
 
             self.sboxes = [sbox_0, sbox_1, sbox_2, sbox_3, sbox_4, sbox_5, sbox_6, sbox_7]
 
         extra_xors = 0
         overwrites = 0
 
+        self.prepare_for_type_of_modeling()
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                                                              lt_per_round, extra_xors, overwrites, new_keys_every_round=True)
 

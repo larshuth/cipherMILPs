@@ -117,7 +117,7 @@ def safe_call():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, Gift64Differential, 2, True, "SunEtAl 2013 Greedy"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, Gift64Differential, 2, True, "Baksi 2020"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
         safe_call()

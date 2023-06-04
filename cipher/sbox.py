@@ -119,6 +119,7 @@ class SBox:
                     self.ddt[in_val_xorwise_diff][out_val_xorwise_diff] += 1
                 except:
                     print(in_val_xorwise_diff, out_val_xorwise_diff, self.in_bits, self.out_bits)
+                    raise Exception('This one prior did not work')
 
                 self.non_zero_ddt_entries |= {(in_val_xorwise_diff, out_val_xorwise_diff)}
         self.non_zero_ddt_entries_built = True
@@ -211,8 +212,8 @@ class SBox:
 
         # first we split our inequality into a list of its variables. E.g. using the findall() method on
         # 'x1 - x3 + x4 - x5  ' yields ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
+        greater = greater.replace('*', '')
         list_of_all_variables = split_into_variables.findall(greater)
-        print(list_of_all_variables)
 
         # then we take each of the variables and
         for variable_string in list_of_all_variables:
@@ -228,7 +229,6 @@ class SBox:
                 modifier = +1
             # we shortly remove the variable name (except for x) after removing all of th
             multiplication_factor_search = find_variable_multiplier.findall(variable_string[1:])
-            print(multiplication_factor_search)
 
             if multiplication_factor_search[0] != 'x':
                 multiplication_factor = int(multiplication_factor_search[0][:-1])
@@ -254,7 +254,7 @@ class SBox:
         return multipliers, constant, impossible_transitions_as_int
 
     def find_impossible_transitions_for_each_sun_2013_inequality(self, extract_sun_inequalities=False) -> list[
-        tuple[list[int], int, set[int]]]:
+        list[list[int], int, set[int]]]:
         # we prepare all the inequalities but in another format in inequalities_readable
         inequalities_readable = list()
 
@@ -279,7 +279,7 @@ class SBox:
                                                                                                   find_variable_multiplier,
                                                                                                   find_variable_name,
                                                                                                   extract_sun_inequalities)
-                inequalities_readable.append((multipliers.copy(), - constant, impossible_transitions_as_int.copy()))
+                inequalities_readable.append([multipliers, - constant, impossible_transitions_as_int])
             except ValueError:
                 try:
                     [greater, lesser] = inequality.split("==")
@@ -291,7 +291,7 @@ class SBox:
                                                                                                       find_variable_multiplier,
                                                                                                       find_variable_name,
                                                                                                       extract_sun_inequalities)
-                    inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+                    inequalities_readable.append([multipliers, - constant, impossible_transitions_as_int])
 
                     multipliers, constant, impossible_transitions_as_int = self.calculate_multipliers(greater, lesser,
                                                                                                       split_into_variables,
@@ -300,7 +300,7 @@ class SBox:
                                                                                                       extract_sun_inequalities,
                                                                                                       invert_greater=True)
 
-                    inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+                    inequalities_readable.append([multipliers, - constant, impossible_transitions_as_int])
 
                 except ValueError as a:
                     print('Non-matching inequality:', inequality)
@@ -314,12 +314,14 @@ class SBox:
 
         list_of_transition_values = list(chain.from_iterable(ddt_or_lat))
         self.set_of_transition_values = set(list_of_transition_values) - {0}
+        print(self.set_of_transition_values)
         self.value_frequencies = {value: list_of_transition_values.count(value) for value in self.set_of_transition_values}
+        print(self.value_frequencies)
         self.dict_value_to_list_of_transition = {val: list() for val in self.set_of_transition_values}
         for input_diff, sub_ddt_or_lat in enumerate(ddt_or_lat):
             for output_diff, value in enumerate(sub_ddt_or_lat):
                 if value != 0:
                     self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
-
+        print(self.dict_value_to_list_of_transition)
         self.transition_values_and_frequencies_built = True
         return

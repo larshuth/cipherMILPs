@@ -145,7 +145,9 @@ class SBoxAction(CipherAction):
         self.for_each_var_set_to_value_plus_dummy(self.output_vars, -1, extra_constraint_dummy_var_pos_in_matrix, 1)
         return
 
-    def inequality_to_constraint_matrix(self, inequality: tuple[list[int], int, set[int]], convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos):
+    def inequality_to_constraint_matrix(self, inequality: tuple[list[int], int, set[int]],
+                                        convex_hull_inequality_matrix, convex_hull_inequality_matrix_line,
+                                        constant_pos):
         multipliers, value_right_of_inequality, _ = inequality
         for index, val in enumerate(multipliers):
             if (index < self.sbox.in_bits) and (val != 0):
@@ -184,7 +186,10 @@ class SBoxAction(CipherAction):
         # either we are going to include all constraints in the
         if choice_of_inequalities == 'all':
             for inequality in inequalities_readable:
-                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(inequality, convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos)
+                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(inequality,
+                                                                                          convex_hull_inequality_matrix,
+                                                                                          convex_hull_inequality_matrix_line,
+                                                                                          constant_pos)
         # or just greedily choose those which include the most
         elif choice_of_inequalities == 'greedy':
             if inequalities_readable == list():
@@ -192,21 +197,23 @@ class SBoxAction(CipherAction):
                     "the 'extract_sun_inequalities' argument has not been set in the construction of the currently " +
                     "worked on S-box. Therefore, since we have not calculated the impossible transitions, we cannot " +
                     "perform a greedy choice on them.")
-            still_impossible_transitions_left = True
+
+            still_impossible_transitions_left = False
+            for inequality in inequalities_readable:
+                if len(inequality[2]) > 0:
+                    still_impossible_transitions_left = True
+
             while still_impossible_transitions_left:
-                print(len(inequalities_readable))
                 still_impossible_transitions_left = False
                 max_inequal = (list(), 0, set())
                 for inequality in inequalities_readable:
                     if len(inequality[2]) > len(max_inequal[2]):
                         max_inequal = inequality
-                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(max_inequal, convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos)
+                convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(max_inequal,
+                                                                                          convex_hull_inequality_matrix,
+                                                                                          convex_hull_inequality_matrix_line,
+                                                                                          constant_pos)
 
-                if max_inequal in inequalities_readable:
-                    print('Should be in there')
-                else:
-                    print(inequalities_readable)
-                    print(max_inequal)
                 inequalities_readable.remove(max_inequal)
                 # finally we remove the impossible transitions which have been removed by adding max_inequal from the
                 # remaining inequalities such that we can always greedily choose the inequality, which removes as many
@@ -248,7 +255,8 @@ class SBoxAction(CipherAction):
         qijp_vars = [self.dummy_var + f'p{p}' for p in self.sbox.set_of_transition_values]
 
         # TODO find number of inequalities
-        number_of_inequalities = 1 + 2 + (2 * len(qijp_vars)) + sum([len(table_column) for table_column, value in self.sbox.dict_value_to_list_of_transition.items()])
+        number_of_inequalities = 1 + 2 + (2 * len(qijp_vars)) + sum(
+            [len(value) for table_column, value in self.sbox.dict_value_to_list_of_transition.items()])
 
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
@@ -275,13 +283,13 @@ class SBoxAction(CipherAction):
         sbox_inequality_matrix_line += 1
 
         # (3.)
-        extract_p = lambda qijp_var: int(qijp_var[len(self.dummy_var):])
+        extract_p = lambda qijp_var: int(qijp_var[len(self.dummy_var) + 1:])
 
         for qijp_var in qijp_vars:
             p = extract_p(qijp_var)
-            qijlp_vars = {qijp_var + f'l{l}': transition for l, transition in enumerate(self.sbox.dict_value_to_list_of_transition[p])}
+            qijlp_vars = {qijp_var + f'l{l}': transition for l, transition in
+                          enumerate(self.sbox.dict_value_to_list_of_transition[p])}
             list_of_qijlp_vars = list(qijlp_vars)
-            print(qijlp_vars)
 
             self.set_all_to_value(list_of_variables=list_of_qijlp_vars, value=1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
@@ -294,8 +302,10 @@ class SBoxAction(CipherAction):
             sbox_inequality_matrix_line += 1
             for qijlp_var, transition in qijlp_vars.items():
                 # extract bit representation from transition
-                bitwise_input_diff = [1 if (((2 ** i) & transition[0]) > 0) else 0 for i in range(self.sbox.in_bits - 1, -1, -1)]
-                bitwise_output_diff = [1 if (((2 ** i) & transition[1]) > 0) else 0 for i in range(self.sbox.in_bits - 1, -1, -1)]
+                bitwise_input_diff = [1 if (((2 ** i) & transition[0]) > 0) else 0 for i in
+                                      range(self.sbox.in_bits - 1, -1, -1)]
+                bitwise_output_diff = [1 if (((2 ** i) & transition[1]) > 0) else 0 for i in
+                                       range(self.sbox.in_bits - 1, -1, -1)]
 
                 # sum up bits which would be 1 for constant
                 sum_of_all_bits = sum(bitwise_input_diff) + sum(bitwise_output_diff)
@@ -326,6 +336,7 @@ class SBoxAction(CipherAction):
                 sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijlp_var]] = big_m
                 sbox_inequality_matrix_line += 1
 
+        self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
         return
 
     def run_action(self) -> None:
@@ -362,14 +373,9 @@ class SBoxAction(CipherAction):
         if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
             self.branch_number_inequality()
 
-        if self.cipher_instance.type_of_modeling == "SunEtAl 2013":
-            self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=False)
-        elif self.cipher_instance.type_of_modeling == "SunEtAl 2013 Greedy":
-            self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=False)
-        elif self.cipher_instance.type_of_modeling == "SunEtAl with 2013 Baksi extension 2020":
-            self.create_convex_hull_matrices(choice_of_inequalities='all', baksi_extension=True)
-        elif self.cipher_instance.type_of_modeling == "SunEtAl 2013 with Baksi extension 2020 Greedy":
-            self.create_convex_hull_matrices(choice_of_inequalities='greedy', baksi_extension=True)
+        if "SunEtAl 2013" in self.cipher_instance.type_of_modeling:
+            self.create_convex_hull_matrices(choice_of_inequalities=self.cipher_instance.choice_of_inequalities,
+                                             baksi_extension=self.cipher_instance.baksi_extension)
         elif self.cipher_instance.type_of_modeling == "Baksi 2020":
             self.create_baksi_inequalities()
             pass

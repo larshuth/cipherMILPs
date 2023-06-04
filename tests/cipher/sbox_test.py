@@ -37,7 +37,7 @@ class SBoxTest(unittest.TestCase):
 
         # here, all the transitions should be impossible as (no matter what the other variables look like) x1 and x2
         # cannot be greater or equal than 13
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality()
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
 
         self.assertEqual([([0, 1, -8, 0, 0, 0, 0, 0], -13,
                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
@@ -59,7 +59,7 @@ class SBoxTest(unittest.TestCase):
 
         # here, all the transitions should be feasible as (no matter what the other variables look like) x0
         # will always be greater or equal than 0
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality()
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
         self.assertEqual(inequalities_readable, [([1, 0, 0, 0, 0, 0, 0, 0], 0, set())])
 
         testbox.feasible_transition_inequalities_sun_2013 = ["    x2 - 2*x1 >= 0"]
@@ -68,7 +68,7 @@ class SBoxTest(unittest.TestCase):
         # given x2 - 2x1 >= 0, those transitions where x1 = 1 should all be impossible
         # since we transform x2 - 2x1 to [0, -2, 1, 0, 0, 0, 0, 0], all integer like [*, 1, *, *, , *, *, *, *], i.e.
         # all those whose binary sum (is that a correct term?) includes 2  should be found here
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality()
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
         self.assertEqual([([0, -2, 1, 0, 0, 0, 0, 0], 0,
                            {2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31, 34, 35, 38, 39, 42, 43, 46, 47,
                             50, 51, 54, 55, 58, 59, 62, 63, 66, 67, 70, 71, 74, 75, 78, 79, 82, 83, 86, 87, 90, 91, 94,
