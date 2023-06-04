@@ -212,6 +212,7 @@ class SBox:
         # first we split our inequality into a list of its variables. E.g. using the findall() method on
         # 'x1 - x3 + x4 - x5  ' yields ['x1 ', '- x3 ', '+ x4 ', '- x5 ']
         list_of_all_variables = split_into_variables.findall(greater)
+        print(list_of_all_variables)
 
         # then we take each of the variables and
         for variable_string in list_of_all_variables:
@@ -227,6 +228,8 @@ class SBox:
                 modifier = +1
             # we shortly remove the variable name (except for x) after removing all of th
             multiplication_factor_search = find_variable_multiplier.findall(variable_string[1:])
+            print(multiplication_factor_search)
+
             if multiplication_factor_search[0] != 'x':
                 multiplication_factor = int(multiplication_factor_search[0][:-1])
             else:
@@ -276,7 +279,7 @@ class SBox:
                                                                                                   find_variable_multiplier,
                                                                                                   find_variable_name,
                                                                                                   extract_sun_inequalities)
-                inequalities_readable.append((multipliers, - constant, impossible_transitions_as_int))
+                inequalities_readable.append((multipliers.copy(), - constant, impossible_transitions_as_int.copy()))
             except ValueError:
                 try:
                     [greater, lesser] = inequality.split("==")

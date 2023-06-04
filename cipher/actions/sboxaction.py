@@ -194,12 +194,19 @@ class SBoxAction(CipherAction):
                     "perform a greedy choice on them.")
             still_impossible_transitions_left = True
             while still_impossible_transitions_left:
+                print(len(inequalities_readable))
                 still_impossible_transitions_left = False
                 max_inequal = (list(), 0, set())
                 for inequality in inequalities_readable:
                     if len(inequality[2]) > len(max_inequal[2]):
                         max_inequal = inequality
                 convex_hull_inequality_matrix_line = self.inequality_to_constraint_matrix(max_inequal, convex_hull_inequality_matrix, convex_hull_inequality_matrix_line, constant_pos)
+
+                if max_inequal in inequalities_readable:
+                    print('Should be in there')
+                else:
+                    print(inequalities_readable)
+                    print(max_inequal)
                 inequalities_readable.remove(max_inequal)
                 # finally we remove the impossible transitions which have been removed by adding max_inequal from the
                 # remaining inequalities such that we can always greedily choose the inequality, which removes as many
