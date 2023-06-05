@@ -450,6 +450,34 @@ class SBoxAction(CipherAction):
         self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
         return transitions
 
+    def create_sun_logical_condition_modeling_for_all_impossible_transitions(self):
+        constant_pos = self.cipher_instance.V["constant"]
+
+        inequalities_readable = self.sbox.feasible_transition_inequalities_sun_2013_extracted.copy()
+        # adding a new sparse scipy matrix convex_hull_inequality_matrix for the constraints as we cannot count
+        # them prior to this even and self.M would otherwise overflow
+        sbox_inequality_matrix = lil_matrix((len(inequalities_readable), self.cipher_instance.number_variables),
+                                                   dtype=int)
+        sbox_inequality_matrix_line = 0
+
+        all_transitions = set(tuple([1 if (((2 ** i) & counter) > 0) else 0 for i in range((self.sbox.in_bits + self.sbox.out_bits) - 1, -1, -1)]) for counter in range(2 ** (self.sbox.in_bits + self.sbox.out_bits)))
+        feasible_transitions = self.sbox.vectors
+        impossible_transitions = all_transitions - feasible_transitions
+        for vector in impossible_transitions:
+            multiplier = [-1 if bit == 1 else +1 for bit in vector]
+            constant = 1 - sum(vector)
+            inequality_format_of_transition = (multiplier, constant, set())
+            sbox_inequality_matrix_line = self.inequality_to_constraint_matrix(inequality_format_of_transition,
+                                                                                      sbox_inequality_matrix,
+                                                                                      sbox_inequality_matrix_line,
+                                                                                      constant_pos)
+        self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
+        return
+
+    def create_boura_coggia_inequalities(self):
+        pass
+        return
+
     def run_action(self) -> None:
         """
         Substitutes variables in the cipher instance such that the input variables are replaced and not mistakenly used

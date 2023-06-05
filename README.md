@@ -25,9 +25,9 @@ We are building a small framework for us to use in the analysis of the block str
       - [x] Tests
 
 - [ ] Different approaches to the modeling
-  - [ ] Model S-boxes using Convex Hull
+  - [x] Model S-boxes using Convex Hull
     - [x] Original modeling (Sun et al. 2013)
-    - [ ] Extension to fix mistakenly included transitions (Baksi 2020)
+    - [x] Extension to fix mistakenly included transitions (Baksi 2020)
   - [x] Logical condition modeling (Sun et al. 2013) 
   - [x] New MILP S-box modeling (Baksi 2020)
   - [ ] New MILP S-box modeling (Boura and Coggia 2020)
