@@ -460,10 +460,7 @@ class SBoxAction(CipherAction):
                                                    dtype=int)
         sbox_inequality_matrix_line = 0
 
-        all_transitions = set(tuple([1 if (((2 ** i) & counter) > 0) else 0 for i in range((self.sbox.in_bits + self.sbox.out_bits) - 1, -1, -1)]) for counter in range(2 ** (self.sbox.in_bits + self.sbox.out_bits)))
-        feasible_transitions = self.sbox.vectors
-        impossible_transitions = all_transitions - feasible_transitions
-        for vector in impossible_transitions:
+        for vector in self.sbox.impossible_transitions:
             multiplier = [-1 if bit == 1 else +1 for bit in vector]
             constant = 1 - sum(vector)
             inequality_format_of_transition = (multiplier, constant, set())
@@ -472,10 +469,6 @@ class SBoxAction(CipherAction):
                                                                                       sbox_inequality_matrix_line,
                                                                                       constant_pos)
         self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
-        return
-
-    def create_boura_coggia_inequalities(self):
-        pass
         return
 
     def run_action(self) -> None:
@@ -526,3 +519,104 @@ class SBoxAction(CipherAction):
             for i in range(self.sbox.in_bits):
                 self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]
         return
+
+    def create_boura_coggia_inequalities(self, algorithm=2):
+        constant_pos = self.cipher_instance.V["constant"]
+
+        if algorithm == 2:
+            all_vectors_for_boura = self.affineprec()
+            sbox_inequality_matrix = lil_matrix((len(all_vectors_for_boura), self.cipher_instance.number_variables),
+                                                dtype=int)
+            sbox_inequality_matrix_line = 0
+            for a, u in all_vectors_for_boura:
+                self.generate_inequality_for_a_u(a, u, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos)
+        else:
+            pass
+        return
+
+    def affineprec(self):
+        # this is the algorithm 2 from the 2020 Boura and Coggia paper
+        p = self.sbox.impossible_transitions
+        s_out = set()
+        m = self.sbox.in_bits + self.sbox.out_bits
+        s_i = dict()
+        u_i = dict()
+
+        hamming_weight = lambda u: sum(
+            [1 if ((2 ** i & u) > 0) else 0 for i in range(m)])
+
+        for a in p:
+            s_interesting = set()
+            for i in range(m + 1):
+                s_i[i] = set()
+                u_i[i] = set()
+            for impossible_transition in p:
+                u = a ^ impossible_transition
+                if (self.supp(a) & self.supp(u)) == set():
+                    hamming_weight_u = hamming_weight(u)
+                    u_i[hamming_weight_u] |= {u}
+            # switching the order of the next 2 for computation's time sage
+            for i in [0, 1]:
+                s_i[i] = set(chain.from_iterable(set(self.a_xor_prec_u(a, u) for u in u_i[1])))
+
+            if u_i[1] == set():
+                s_interesting = s_i[0].copy()
+            else:
+                s_interesting = s_i[1].copy()
+
+            for k in range(2, m+1):
+                for u in u_i[k]:
+                    all_v = self.prec(u)
+                    all_v_with_hamming_weight_k_minus_one = set(v if hamming_weight(v) == (k-1) else None for v in all_v) - {None}
+                    set_of_truth = set(self.a_xor_prec_u(a, v) in s_i[k-1] for v in all_v_with_hamming_weight_k_minus_one)
+                    if False not in set_of_truth:
+                        s_i[k] = s_i[k] | self.a_xor_prec_u(a, u)
+                        for v in all_v_with_hamming_weight_k_minus_one:
+                            s_interesting = s_interesting - self.a_xor_prec_u(a, v)
+                s_interesting |= s_i[k]
+
+            s_out |= s_interesting
+        return s_out
+
+    def supp(self, u) -> set[int]:
+        # let u be of the form tuple[int] with each bit being either 0 or 1 and length self.in_bits + self.out_bits
+        supp = set(index if bit_value else None for index, bit_value in enumerate(u)) - {None}
+        return supp
+
+    def prec(self, u) -> set[list[int]]:
+        # let u be of the form tuple[int] with each bit being either 0 or 1 and length self.in_bits + self.out_bits
+        value_u = sum([(2 ** (len(u) - index - 1)) * bit for index, bit in enumerate(u)])
+        prec = set(i & value_u for i in range(2 ** len(u)))
+        return prec
+
+    def a_xor_prec_u(self, a, u):
+        prec = self.prec(u)
+        value_u = sum([(2 ** (len(u) - index - 1)) * bit for index, bit in enumerate(u)])
+        value_a = sum([(2 ** (len(a) - index - 1)) * bit for index, bit in enumerate(a)])
+        a_xor_prec_as_int = set(from_prec ^ u for from_prec in prec)
+        a_xor_prec_as_vector = set([1 if ((2 ** i & a_xor_prec) > 0) else 0 for i in range(len(u) - 1, -1, -1)] for a_xor_prec in a_xor_prec_as_int)
+        return a_xor_prec_as_vector
+
+    def generate_inequality_for_a_u(self, a, u, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos):
+        indices = set(range(len(a) + len(u))) - (self.supp(a) | self.supp(u))
+
+        plus_vars = list()
+        minus_vars = list()
+        for in_bit in range(self.sbox.in_bits):
+            if in_bit in indices:
+                plus_vars.append(self.input_vars[in_bit])
+            else:
+                minus_vars.append(self.input_vars[in_bit])
+        for out_bit in range(self.sbox.out_bits):
+            if in_bit in indices:
+                plus_vars.append(self.output_vars[out_bit])
+            else:
+                minus_vars.append(self.output_vars[out_bit])
+
+        self.set_all_to_value(list_of_variables=minus_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = len(minus_vars) - 1
+        sbox_inequality_matrix_line += 1
+        return sbox_inequality_matrix_line

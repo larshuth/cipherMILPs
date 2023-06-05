@@ -88,6 +88,7 @@ class SBox:
 
         self.non_zero_ddt_entries_vectors_built = False
         self.vectors = set()
+        self.impossible_transitions = set()
 
         self.dummy_vars_for_bit_oriented_modeling_all = 1
         self.dummy_vars_for_bit_oriented_modeling_sbox_dependent = 1 ^ int(
@@ -105,6 +106,7 @@ class SBox:
         self.set_of_transition_values = set()
         self.value_frequencies = dict()
         self.dict_value_to_list_of_transition = dict()
+
         return
 
     def build_ddt(self):
@@ -142,9 +144,14 @@ class SBox:
         self.vectors = set()
         for x, y in self.non_zero_ddt_entries:
             vector_in = [1 if (((2 ** i) & x) > 0) else 0 for i in range(self.in_bits - 1, -1, -1)]
-            vector_out = [1 if (((2 ** i) & y) > 0) else 0 for i in range(self.in_bits - 1, -1, -1)]
+            vector_out = [1 if (((2 ** i) & y) > 0) else 0 for i in range(self.out_bits - 1, -1, -1)]
 
             self.vectors |= {tuple(vector_in.copy() + vector_out.copy())}
+
+        all_transitions = set(tuple([1 if (((2 ** i) & counter) > 0) else 0 for i in
+                                     range((self.in_bits + self.out_bits) - 1, -1, -1)]) for counter in
+                              range(2 ** (self.in_bits + self.out_bits)))
+        self.impossible_transitions = all_transitions - self.vectors
         return
 
     def build_differential_patterns_input_to_output(self):
