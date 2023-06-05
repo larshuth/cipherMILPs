@@ -10,8 +10,11 @@ def ch_hrep_and_equations_from_sbox(sbox_instance):
 
 
 def ch_hrep_from_sbox(sbox_instance):
+    print('start convex hull')
     sbox_instance.build_non_zero_ddt_entries_vectors()
+    print('done with build_non_zero_ddt_entries_vectors')
     con_hul_hrep_split_into_lines = ch_hrep_from_vectors(sbox_instance.vectors)
+    print('end convex hull')
     return con_hul_hrep_split_into_lines
 
 

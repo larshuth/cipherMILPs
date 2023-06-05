@@ -28,7 +28,7 @@ We are building a small framework for us to use in the analysis of the block str
   - [ ] Model S-boxes using Convex Hull
     - [x] Original modeling (Sun et al. 2013)
     - [ ] Extension to fix mistakenly included transitions (Baksi 2020)
-  - [ ] Logical condition modeling (Sun et al. 2013) 
+  - [x] Logical condition modeling (Sun et al. 2013) 
   - [x] New MILP S-box modeling (Baksi 2020)
   - [ ] New MILP S-box modeling (Boura and Coggia 2020)
   - [ ] Extra constraints used in evaluation (Zhoui 2019)

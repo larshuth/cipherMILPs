@@ -1,5 +1,7 @@
 import unittest
 from cipher.sbox import SBox
+from cipher.differential.gift import Gift64
+from cipher.actions.sboxaction import SBoxAction
 
 
 class SBoxTest(unittest.TestCase):
@@ -37,7 +39,8 @@ class SBoxTest(unittest.TestCase):
 
         # here, all the transitions should be impossible as (no matter what the other variables look like) x1 and x2
         # cannot be greater or equal than 13
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(
+            extract_sun_inequalities=True)
 
         self.assertEqual([([0, 1, -8, 0, 0, 0, 0, 0], -13,
                            {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
@@ -59,7 +62,8 @@ class SBoxTest(unittest.TestCase):
 
         # here, all the transitions should be feasible as (no matter what the other variables look like) x0
         # will always be greater or equal than 0
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(
+            extract_sun_inequalities=True)
         self.assertEqual(inequalities_readable, [([1, 0, 0, 0, 0, 0, 0, 0], 0, set())])
 
         testbox.feasible_transition_inequalities_sun_2013 = ["    x2 - 2*x1 >= 0"]
@@ -68,7 +72,8 @@ class SBoxTest(unittest.TestCase):
         # given x2 - 2x1 >= 0, those transitions where x1 = 1 should all be impossible
         # since we transform x2 - 2x1 to [0, -2, 1, 0, 0, 0, 0, 0], all integer like [*, 1, *, *, , *, *, *, *], i.e.
         # all those whose binary sum (is that a correct term?) includes 2  should be found here
-        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(extract_sun_inequalities=True)
+        inequalities_readable = testbox.find_impossible_transitions_for_each_sun_2013_inequality(
+            extract_sun_inequalities=True)
         self.assertEqual([([0, -2, 1, 0, 0, 0, 0, 0], 0,
                            {2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 22, 23, 26, 27, 30, 31, 34, 35, 38, 39, 42, 43, 46, 47,
                             50, 51, 54, 55, 58, 59, 62, 63, 66, 67, 70, 71, 74, 75, 78, 79, 82, 83, 86, 87, 90, 91, 94,
@@ -121,8 +126,6 @@ class SBoxTest(unittest.TestCase):
         actual_convex_hull_inequalities = list(testbox.feasible_transition_inequalities_sun_2013).copy()
         to_be_removed = set()
         for index, inequality in enumerate(actual_convex_hull_inequalities):
-            for char in inequality:
-                pass
             if '==' in inequality:
                 to_be_removed.add(inequality)
             else:
@@ -163,6 +166,29 @@ class SBoxTest(unittest.TestCase):
             6: [(8, 8), (9, 9), (10, 10), (11, 13), (12, 12), (14, 15), (15, 11)],
             16: [(0, 0)]}
         self.assertEqual(expected_dict_value_to_list_of_transition, testbox.dict_value_to_list_of_transition)
+        return
+
+    def test_sun_logical_condition_modeling(self):
+        # using the present sbox since that one was used in Sun et al. 2013
+        present_substitutions = {index: value for index, value in
+                                 enumerate([12, 5, 6, 11, 9, 0, 10, 13, 3, 14, 15, 8, 4, 7, 1, 2])}
+        testbox = SBox(present_substitutions, 4, 4)
+        testcipher = Gift64(model_as_bit_oriented=True)
+        testaction = SBoxAction(sbox=testbox, input_vars=['x0', 'x1', 'x2', 'x3'], cipher_instance=testcipher,
+                                first_a_position_to_overwrite=0)
+
+        expected_logical_condition_modeling = [([1, 0, 0, 1], ['*', '*', '*', 0]), ([0, 0, 0, 1], ['*', '*', '*', 1]),
+                                               ([1, 0, 0, 0], ['*', '*', '*', 1]), (['*', '*', '*', 1], [0, 0, 0, 1]),
+                                               (['*', '*', '*', 1], [0, 1, 0, 0]), (['*', '*', '*', 0], [0, 1, 0, 1])]
+        actual_logical_condition_modeling = testaction.sun_logical_condition_modeling()
+
+        expected_logical_condition_modeling_sortable = [([str(c) for c in x], [str(c) for c in y]) for x, y in expected_logical_condition_modeling]
+        actual_logical_condition_modeling_sortable = [([str(c) for c in x], [str(c) for c in y]) for x, y in actual_logical_condition_modeling]
+
+        expected_logical_condition_modeling_sortable.sort()
+        actual_logical_condition_modeling_sortable.sort()
+
+        self.assertEqual(expected_logical_condition_modeling_sortable, actual_logical_condition_modeling_sortable)
         return
 
 

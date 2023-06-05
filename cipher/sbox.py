@@ -80,6 +80,9 @@ class SBox:
         self.non_zero_ddt_entries_built = False
         self.non_zero_ddt_entries = set()
 
+        self.dict_of_transitions_i2o = dict()
+        self.dict_of_transitions_o2i = dict()
+
         self.differential_properties_built = False
         self.differential_properties = set()
 
@@ -109,8 +112,10 @@ class SBox:
             return
 
         self.ddt = [[0].copy() * (2 ** self.out_bits) for i in range(2 ** self.in_bits)]
-
         self.non_zero_ddt_entries = set()
+        self.dict_of_transitions_i2o = {i: set() for i in range(2 ** self.in_bits)}
+        self.dict_of_transitions_o2i = {i: set() for i in range(2 ** self.in_bits)}
+
         for in_val_1, out_val_1 in self.substitutions.items():
             for in_val_2, out_val_2 in self.substitutions.items():
                 in_val_xorwise_diff = in_val_1 ^ in_val_2
@@ -120,7 +125,8 @@ class SBox:
                 except:
                     print(in_val_xorwise_diff, out_val_xorwise_diff, self.in_bits, self.out_bits)
                     raise Exception('This one prior did not work')
-
+                self.dict_of_transitions_i2o[in_val_xorwise_diff].add(out_val_xorwise_diff)
+                self.dict_of_transitions_o2i[out_val_xorwise_diff].add(in_val_xorwise_diff)
                 self.non_zero_ddt_entries |= {(in_val_xorwise_diff, out_val_xorwise_diff)}
         self.non_zero_ddt_entries_built = True
         self.ddt_built = True
@@ -269,7 +275,7 @@ class SBox:
         find_variable_name = re.compile('x[0-9]+$')
 
         # split inequalities in a list with one inequality per entry
-        for inequality in self.feasible_transition_inequalities_sun_2013:
+        for index, inequality in enumerate(self.feasible_transition_inequalities_sun_2013):
             try:
                 [greater, lesser] = inequality.split(">=")
                 # get left part, right part, something along the self.lines of

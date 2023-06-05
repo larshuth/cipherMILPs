@@ -86,7 +86,7 @@ class Aes(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False, cryptanalysis_type='differential', type_of_modeling='SunEtAl. 2013'):
+    def __init__(self, rounds=1, model_as_bit_oriented=False, cryptanalysis_type='differential', type_of_modeling='SunEtAl 2013'):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -107,9 +107,6 @@ class Aes(Cipher):
             super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
         else:
             super().__init__(rounds, plaintextsize, keysize, orientation=8, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
-
-
-        # Summary of what's happening in AES:
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -151,6 +148,7 @@ class Aes(Cipher):
                                   225, 248, 152, 17, 105, 217, 142, 148, 155, 30, 135, 233, 206, 85, 40, 223, 140, 161,
                                   137, 13, 191, 230, 66, 104, 65, 153, 45, 15, 176, 84, 187, 22])}
             # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
+            print('Now running AES SBox')
             self.sbox = SBox(sbox_aes_subs, 8, 8, extract_sun_inequalities=self.extract_sun_inequalities)
 
             self.sboxes = [self.sbox] * 16
