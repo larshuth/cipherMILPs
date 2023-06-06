@@ -366,7 +366,8 @@ class SBoxAction(CipherAction):
                 [bit * (2 ** (self.sbox.in_bits - 1 - index)) for index, bit in enumerate(list_of_bits)])
 
             list_of_output_diffs_for_vector_as_int = list(chain.from_iterable(
-                [self.sbox.dict_of_transitions_i2o[int_from_vector(input_diff)] for input_diff in list_of_input_diffs_for_vector]))
+                [self.sbox.dict_of_transitions_i2o[int_from_vector(input_diff)] for input_diff in
+                 list_of_input_diffs_for_vector]))
             list_of_output_diffs_for_vector = [
                 [1 if (((2 ** i) & output_diff_as_int) > 0) else 0 for i in range(self.sbox.out_bits - 1, -1, -1)] for
                 output_diff_as_int in list_of_output_diffs_for_vector_as_int]
@@ -457,7 +458,7 @@ class SBoxAction(CipherAction):
         # adding a new sparse scipy matrix convex_hull_inequality_matrix for the constraints as we cannot count
         # them prior to this even and self.M would otherwise overflow
         sbox_inequality_matrix = lil_matrix((len(inequalities_readable), self.cipher_instance.number_variables),
-                                                   dtype=int)
+                                            dtype=int)
         sbox_inequality_matrix_line = 0
 
         for vector in self.sbox.impossible_transitions:
@@ -465,9 +466,9 @@ class SBoxAction(CipherAction):
             constant = 1 - sum(vector)
             inequality_format_of_transition = (multiplier, constant, set())
             sbox_inequality_matrix_line = self.inequality_to_constraint_matrix(inequality_format_of_transition,
-                                                                                      sbox_inequality_matrix,
-                                                                                      sbox_inequality_matrix_line,
-                                                                                      constant_pos)
+                                                                               sbox_inequality_matrix,
+                                                                               sbox_inequality_matrix_line,
+                                                                               constant_pos)
         self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
         return
 
@@ -528,13 +529,14 @@ class SBoxAction(CipherAction):
             sbox_inequality_matrix = lil_matrix((len(all_vectors_for_boura), self.cipher_instance.number_variables),
                                                 dtype=int)
             sbox_inequality_matrix_line = 0
-            for a, u in all_vectors_for_boura:
-                self.generate_inequality_for_a_u(a, u, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos)
-        else:
-            pass
+            for (a, u), _ in all_vectors_for_boura:
+                self.generate_inequality_for_a_u(a, u, sbox_inequality_matrix, sbox_inequality_matrix_line,
+                                                 constant_pos)
+        elif algorithm == 3:
+            self.addthreeballs(self.sbox.impossible_transitions)
         return
 
-    def affineprec(self):
+    def affineprec(self) -> set[tuple[tuple[list[int]], set[list[int]]]]:
         # this is the algorithm 2 from the 2020 Boura and Coggia paper
         p = self.sbox.impossible_transitions
         s_out = set()
@@ -542,11 +544,10 @@ class SBoxAction(CipherAction):
         s_i = dict()
         u_i = dict()
 
-        hamming_weight = lambda u: sum(
-            [1 if ((2 ** i & u) > 0) else 0 for i in range(m)])
+        hamming_weight = lambda x: sum(
+            [1 if ((2 ** i & x) > 0) else 0 for i in range(m)])
 
         for a in p:
-            s_interesting = set()
             for i in range(m + 1):
                 s_i[i] = set()
                 u_i[i] = set()
@@ -557,26 +558,71 @@ class SBoxAction(CipherAction):
                     u_i[hamming_weight_u] |= {u}
             # switching the order of the next 2 for computation's time sage
             for i in [0, 1]:
-                s_i[i] = set(chain.from_iterable(set(self.a_xor_prec_u(a, u) for u in u_i[1])))
+                s_i[i] = {((a, u), set(self.a_xor_prec_u(a, u))) for u in u_i[1]}
 
             if u_i[1] == set():
                 s_interesting = s_i[0].copy()
             else:
                 s_interesting = s_i[1].copy()
 
-            for k in range(2, m+1):
+            for k in range(2, m + 1):
                 for u in u_i[k]:
                     all_v = self.prec(u)
-                    all_v_with_hamming_weight_k_minus_one = set(v if hamming_weight(v) == (k-1) else None for v in all_v) - {None}
-                    set_of_truth = set(self.a_xor_prec_u(a, v) in s_i[k-1] for v in all_v_with_hamming_weight_k_minus_one)
+                    all_v_with_hamming_weight_k_minus_one = set(
+                        v if hamming_weight(v) == (k - 1) else None for v in all_v) - {None}
+                    set_of_truth = set(
+                        self.a_xor_prec_u(a, v) in s_i[k - 1] for v in all_v_with_hamming_weight_k_minus_one)
                     if False not in set_of_truth:
-                        s_i[k] = s_i[k] | self.a_xor_prec_u(a, u)
+                        s_i[k] |= {((a, u), set(self.a_xor_prec_u(a, u)))}
                         for v in all_v_with_hamming_weight_k_minus_one:
-                            s_interesting = s_interesting - self.a_xor_prec_u(a, v)
+                            s_interesting = s_interesting - {((a, u), set(self.a_xor_prec_u(a, v)))}
                 s_interesting |= s_i[k]
 
             s_out |= s_interesting
         return s_out
+
+    def addthreeballs(self, impossible_transitions):
+        # this is the algorithm 2 from the 2020 Boura and Coggia paper
+        constant_pos = self.cipher_instance.V["constant"]
+
+        p = self.sbox.impossible_transitions
+        s_out = set()
+        m = self.sbox.in_bits + self.sbox.out_bits
+        s_i = dict()
+        u_i = dict()
+        hamming_weight = lambda x: sum(
+            [1 if ((2 ** i & x) > 0) else 0 for i in range(m)])
+        int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
+        vector_of_int = lambda value, length: [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)]
+
+        c = set()
+        p = {i: set() for i in range(2 ** m)}
+        r = {i: set() for i in range(2 ** m)}
+        for a in impossible_transitions:
+            a_int = int_of_vector(a)
+            for b in impossible_transitions:
+                b_int = int_of_vector(b)
+                for c in impossible_transitions:
+                    c_int = int_of_vector(c)
+                    if (hamming_weight(a_int ^ b_int) != 1) or (hamming_weight(a_int ^ c_int) != 1) or (b == c):
+                        continue
+                    p_a = self.ball_d_c(1, a) - impossible_transitions
+                    p_b = self.ball_d_c(1, b) - impossible_transitions
+                    r_a = p_a | {c}
+                    r_b = p_b
+                    r_c = self.ball_d_c(1, c) - impossible_transitions
+                    for p in p_a:
+                        r_b |= {vector_of_int(int_of_vector(p) ^ a_int ^ b_int, m)}
+                        r_c |= {vector_of_int(int_of_vector(p) ^ a_int ^ c_int, m)}
+                    for p in p_b:
+                        r_c |= {vector_of_int(int_of_vector(p) ^ b_int ^ c_int, m)}
+                    for x in self.ball_d_c(1, a) - r_a:
+                        sbox_inequality_matrix = lil_matrix((3, self.cipher_instance.number_variables), dtype=int)
+                        sbox_inequality_matrix_line = 0
+                        sbox_inequality_matrix_line = self.proposition_3(1, a, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
+                        sbox_inequality_matrix_line = self.proposition_3(1, b, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
+                        self.proposition_3(1, c, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
+        return
 
     def supp(self, u) -> set[int]:
         # let u be of the form tuple[int] with each bit being either 0 or 1 and length self.in_bits + self.out_bits
@@ -590,12 +636,32 @@ class SBoxAction(CipherAction):
         return prec
 
     def a_xor_prec_u(self, a, u):
+        int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
+        vector_of_int = lambda value, length: [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)]
+
         prec = self.prec(u)
-        value_u = sum([(2 ** (len(u) - index - 1)) * bit for index, bit in enumerate(u)])
-        value_a = sum([(2 ** (len(a) - index - 1)) * bit for index, bit in enumerate(a)])
-        a_xor_prec_as_int = set(from_prec ^ u for from_prec in prec)
-        a_xor_prec_as_vector = set([1 if ((2 ** i & a_xor_prec) > 0) else 0 for i in range(len(u) - 1, -1, -1)] for a_xor_prec in a_xor_prec_as_int)
+        value_u = int_of_vector(u)
+
+        a_xor_prec_as_int = set(int_of_vector(from_prec) ^ value_u for from_prec in prec)
+        a_xor_prec_as_vector = set(vector_of_int(a_xor_prec, len(u)) for a_xor_prec in a_xor_prec_as_int)
         return a_xor_prec_as_vector
+
+    def ball_d_c(self, d, c):
+        # let c be of the form tuple[int] with each bit being either 0 or 1
+        hamming_weight = lambda u: sum(
+            [1 if ((2 ** i & u) > 0) else 0 for i in range(len(u))])
+
+        value_c = sum([(2 ** (len(c) - index - 1)) * bit for index, bit in enumerate(c)])
+        ball = set(i if hamming_weight(i ^ value_c) <= d else None for i in range(2 ** len(c))) - {None}
+        return ball
+
+    def sphere_d_c(self, d, c):
+        hamming_weight = lambda u: sum(
+            [1 if ((2 ** i & u) > 0) else 0 for i in range(len(u))])
+
+        value_c = sum([(2 ** (len(c) - index - 1)) * bit for index, bit in enumerate(c)])
+        sphere = set(i if hamming_weight(i ^ value_c) == d else None for i in range(2 ** len(c))) - {None}
+        return sphere
 
     def generate_inequality_for_a_u(self, a, u, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos):
         indices = set(range(len(a) + len(u))) - (self.supp(a) | self.supp(u))
@@ -608,7 +674,7 @@ class SBoxAction(CipherAction):
             else:
                 minus_vars.append(self.input_vars[in_bit])
         for out_bit in range(self.sbox.out_bits):
-            if in_bit in indices:
+            if out_bit in indices:
                 plus_vars.append(self.output_vars[out_bit])
             else:
                 minus_vars.append(self.output_vars[out_bit])
@@ -618,5 +684,50 @@ class SBoxAction(CipherAction):
         self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = len(minus_vars) - 1
+        sbox_inequality_matrix_line += 1
+        return sbox_inequality_matrix_line
+
+    def generate_inequality_removing_ball_d_c(self, d, c, sbox_inequality_matrix, sbox_inequality_matrix_line,
+                                              constant_pos):
+        plus_vars = list()
+        minus_vars = list()
+        for in_bit in range(self.sbox.in_bits):
+            if c[in_bit]:
+                minus_vars.append(self.input_vars[in_bit])
+            else:
+                plus_vars.append(self.input_vars[in_bit])
+        for out_bit in range(self.sbox.out_bits):
+            if c[out_bit + self.sbox.in_bits]:
+                minus_vars.append(self.output_vars[out_bit])
+            else:
+                plus_vars.append(self.output_vars[out_bit])
+
+        self.set_all_to_value(list_of_variables=minus_vars, value=-1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
+                              matrix_to_be_set=sbox_inequality_matrix)
+        sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = len(minus_vars) - (d + 1)
+        sbox_inequality_matrix_line += 1
+        return sbox_inequality_matrix_line
+
+    def proposition_3(self, d, c, q, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos):
+        a = [1 if not i == 1 else (d + 1) / d for i in q]
+        constant = 0
+        for index, input_var in self.input_vars:
+            if c[index]:
+                sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[input_var]] = -a[index]
+                constant += a[index]
+            else:
+                sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[input_var]] = a[index]
+        for index, output_var in self.output_vars:
+            if c[index + self.sbox.in_bits]:
+                sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[output_var]] = -a[
+                    index + self.sbox.in_bits]
+                constant += a[index + self.sbox.in_bits]
+            else:
+                sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[output_var]] = a[
+                    index + self.sbox.in_bits]
+
+        sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = constant - (d + 1)
         sbox_inequality_matrix_line += 1
         return sbox_inequality_matrix_line
