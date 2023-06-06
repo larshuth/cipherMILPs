@@ -259,7 +259,7 @@ def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds_bitoriented_' + str(bit_oriented), A=A, V=cipher_instance.V, title=title,
+    mainly(f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}', A=A, V=cipher_instance.V, title=title,
            dpi=300)
 
 

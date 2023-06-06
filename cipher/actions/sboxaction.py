@@ -575,9 +575,12 @@ class SBoxAction(CipherAction):
                     if False not in set_of_truth:
                         s_i[k] |= {((a, u), set(self.a_xor_prec_u(a, u)))}
                         for v in all_v_with_hamming_weight_k_minus_one:
+                            v_calculated = set(self.a_xor_prec_u(a, v))
+                            for interest in s_interesting:
+                                if interest[1] == v_calculated:
+                                    s_interesting -= {interest}
                             s_interesting = s_interesting - {((a, u), set(self.a_xor_prec_u(a, v)))}
                 s_interesting |= s_i[k]
-
             s_out |= s_interesting
         return s_out
 
@@ -595,9 +598,7 @@ class SBoxAction(CipherAction):
         int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
         vector_of_int = lambda value, length: [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)]
 
-        c = set()
-        p = {i: set() for i in range(2 ** m)}
-        r = {i: set() for i in range(2 ** m)}
+        output_set = set()
         for a in impossible_transitions:
             a_int = int_of_vector(a)
             for b in impossible_transitions:
@@ -622,7 +623,7 @@ class SBoxAction(CipherAction):
                         sbox_inequality_matrix_line = self.proposition_3(1, a, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
                         sbox_inequality_matrix_line = self.proposition_3(1, b, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
                         self.proposition_3(1, c, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
-        return
+        return output_set
 
     def supp(self, u) -> set[int]:
         # let u be of the form tuple[int] with each bit being either 0 or 1 and length self.in_bits + self.out_bits
