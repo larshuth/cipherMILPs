@@ -2,6 +2,7 @@ import numpy as np
 from itertools import chain
 import convexHull
 import re
+import pickle
 
 
 class SBox:
@@ -98,9 +99,13 @@ class SBox:
         self.transitions_built = False
         self.probability_transitions = dict()
 
-        self.feasible_transition_inequalities_sun_2013 = convexHull.ch_hrep_from_sbox(self)
-        self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(
-            extract_sun_inequalities=extract_sun_inequalities)
+        if extract_sun_inequalities:
+            self.feasible_transition_inequalities_sun_2013 = self.retrieve_inequalities()
+            self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(
+                    extract_sun_inequalities=extract_sun_inequalities)
+        else:
+            self.feasible_transition_inequalities_sun_2013 = list()
+            self.feasible_transition_inequalities_sun_2013_extracted = list()
 
         self.transition_values_and_frequencies_built = False
         self.set_of_transition_values = set()
@@ -108,6 +113,19 @@ class SBox:
         self.dict_value_to_list_of_transition = dict()
 
         return
+
+    def retrieve_inequalities(self):
+        filename = ''.join([hex(value)[2:] for key, value in self.substitutions.items()])
+        try:
+            file = open(f'{filename}.pkl', 'rb')
+            inequalities = pickle.load(file)
+            file.close()
+        except:
+            inequalities = convexHull.ch_hrep_from_sbox(self)
+            file = open(f'{filename}.pkl', 'wb')
+            pickle.dump(inequalities, file)
+            file.close()
+        return inequalities
 
     def build_ddt(self):
         if self.ddt_built:
@@ -327,14 +345,11 @@ class SBox:
 
         list_of_transition_values = list(chain.from_iterable(ddt_or_lat))
         self.set_of_transition_values = set(list_of_transition_values) - {0}
-        print(self.set_of_transition_values)
         self.value_frequencies = {value: list_of_transition_values.count(value) for value in self.set_of_transition_values}
-        print(self.value_frequencies)
         self.dict_value_to_list_of_transition = {val: list() for val in self.set_of_transition_values}
         for input_diff, sub_ddt_or_lat in enumerate(ddt_or_lat):
             for output_diff, value in enumerate(sub_ddt_or_lat):
                 if value != 0:
                     self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
-        print(self.dict_value_to_list_of_transition)
         self.transition_values_and_frequencies_built = True
         return

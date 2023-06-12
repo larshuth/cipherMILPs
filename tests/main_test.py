@@ -12,7 +12,7 @@ class MyTestCase(unittest.TestCase):
             if cipher in main.BIT_ORIENTED:
                 running_cipher_bit_oriented = main.main(rounds, cipher, viz, bit_oriented=True)
                 self.assertEqual(True, running_cipher_bit_oriented)
-            return
+        return
 
 
 if __name__ == '__main__':

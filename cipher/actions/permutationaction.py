@@ -14,7 +14,7 @@ class PermutationAction(CipherAction):
         return
 
     def run_action(self):
-        print(self.type_of_action, self.permutation)
+        # print(self.type_of_action, self.permutation)
         backup = self.cipher_instance.A.copy()
         for i in range(self.cipher_instance.plaintext_vars):
             self.cipher_instance.A[i] = backup[self.permutation[i]]

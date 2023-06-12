@@ -129,17 +129,18 @@ def d_var_to_beginning(cipher_instance):
             List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
     pos_first_d_var = cipher_instance.number_x_vars
-    sorted_indices = list(range(pos_first_d_var, pos_first_d_var + cipher_instance.number_d_vars)) + list(
+    number_d_vars = cipher_instance.number_dx_vars + cipher_instance.number_dt_vars + cipher_instance.number_dl_vars
+    sorted_indices = list(range(pos_first_d_var, pos_first_d_var + number_d_vars)) + list(
         range(pos_first_d_var)) + list(
-        range(pos_first_d_var + cipher_instance.number_d_vars, cipher_instance.M.get_shape()[1]))
+        range(pos_first_d_var + number_d_vars, cipher_instance.M.get_shape()[1]))
 
     for key, value in cipher_instance.V.items():
         try:
-            if key[0] == 'd':
+            if key[0] in {'dx', 'dt', 'dl'}:
                 cipher_instance.V[key] -= pos_first_d_var
             elif key[0] == 'x':
                 cipher_instance.V[key] += (pos_first_d_var - cipher_instance.number_d_vars)
-        except:
+        except TypeError:
             pass
 
     cipher_instance.M = permutate_columns(cipher_instance.M, sorted_indices)

@@ -12,7 +12,7 @@ class OverwriteAction(CipherAction):
         return
 
     def run_action(self):
-        print(self.type_of_action, self.input_indices)
+        # print(self.type_of_action, self.input_indices)
         for i in self.input_indices:
             new_var = 'x' + str(self.cipher_instance.next['x'])
             self.cipher_instance.A[i] = new_var

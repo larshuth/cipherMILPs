@@ -48,24 +48,21 @@ class Cipher:
 
         # so far, this only applies to bit oriented ciphers as we only have multiple modelling approaches for S-boxes
         self.type_of_modeling = type_of_modeling
-        if self.type_of_modeling == "SunEtAl 2013":
-            self.choice_of_inequalities = 'all'
-            self.baksi_extension = False
-            self.extract_sun_inequalities = True
-        elif self.type_of_modeling == "SunEtAl 2013 Greedy":
-            self.choice_of_inequalities = 'greedy'
-            self.baksi_extension = False
-            self.extract_sun_inequalities = True
-        elif self.type_of_modeling == "SunEtAl with 2013 Baksi extension 2020":
-            self.choice_of_inequalities = 'all'
-            self.baksi_extension = True
-            self.extract_sun_inequalities = True
-        elif self.type_of_modeling == "SunEtAl 2013 with Baksi extension 2020 Greedy":
-            self.choice_of_inequalities = 'greedy'
-            self.baksi_extension = True
-            self.extract_sun_inequalities = True
+        if "SunEtAl 2013" in self.type_of_modeling:
+            if "Greedy" in self.type_of_modeling:
+                self.choice_of_inequalities = 'greedy'
+                self.extract_sun_inequalities = True
+            else:
+                self.choice_of_inequalities = 'all'
+                self.extract_sun_inequalities = True
+            if "Baksi extension 2020" in self.type_of_modeling:
+                self.baksi_extension = True
+            else:
+               self.baksi_extension = False
         else:
+            self.choice_of_inequalities = None
             self.extract_sun_inequalities = False
+            self.baksi_extension = False
 
         return
 
@@ -238,7 +235,6 @@ class Cipher:
             i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * (
                         (new_keys_every_round * self.rounds) + 1) + len(
                 qijp_vars): f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}' for i, qijlp_var in enumerate(qijlp_vars)}
-        print(set(self.V))
 
         self.V['constant'] = self.M.get_shape()[1] - 1
         self.V[self.M.get_shape()[1] - 1] = 'constant'

@@ -487,7 +487,7 @@ class SBoxAction(CipherAction):
         (4.3) output \\leq dummy for all outputs
         """
 
-        print(self.type_of_action, self.input_vars)
+        # print(self.type_of_action, self.input_vars)
 
         # starting with (1.)
         self.input_leq_dummy()
@@ -509,13 +509,16 @@ class SBoxAction(CipherAction):
         if "SunEtAl 2013" in self.cipher_instance.type_of_modeling:
             self.create_convex_hull_matrices(choice_of_inequalities=self.cipher_instance.choice_of_inequalities,
                                              baksi_extension=self.cipher_instance.baksi_extension)
+            self.sun_logical_condition_modeling()
+        elif "Baksi extension 2020" in self.cipher_instance.type_of_modeling:
+            self.create_sun_logical_condition_modeling_for_all_impossible_transitions()
         elif self.cipher_instance.type_of_modeling == "Baksi 2020":
             self.create_baksi_inequalities()
-            pass
+        elif self.cipher_instance.type_of_modeling == "Boura 2020 Algo 2":
+            self.create_boura_coggia_inequalities(algorithm=2)
         else:
             raise ValueError(
                 "Variable type_of_modeling declared incorrectly. Value should be one of those listed in the docstring.")
-
         if type(self.overwrite_position) == int:
             for i in range(self.sbox.in_bits):
                 self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]

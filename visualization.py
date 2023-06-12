@@ -4,8 +4,11 @@ import cipher as cip
 import numpy as np
 from pylatex import Document, Section, Figure, NoEscape, NewPage, Matrix, Math, Alignat, Command, Subsection
 # matplotlib.use('Agg')  # Not to use X server. For TravisCI.
+import matplotlib as mpl
 import matplotlib.pyplot as plt  # noqa
-import matplotlib.pylab as plt
+import matplotlib.pylab as pylab
+import pickle
+from pandas import DataFrame
 
 plt.rcParams.update({'font.size': 5})
 
@@ -19,10 +22,13 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     -----------
     rounds  :   int
                 number of rounds
-    
+
     cipher  :   class
                 class of the wanted cipher
     """
+    title = [str(cipher)[15:-2], str(rounds)]
+    filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+
     fig, axs = plt.subplots(1, 4)
     fig.canvas.manager.set_window_title(
         'Mit schönen Farben vom Meer damit es für Leo wie Heimat ist (weil Nordsee und so)')
@@ -32,6 +38,28 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     ax4 = axs[3]
 
     cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+
+    columns = cipher_instance.M.get_shape()[1]
+    rows = cipher_instance.M.get_shape()[0]
+    fig = pylab.figure(figsize=(columns * 0.01, rows * 0.01))
+    df = DataFrame(cipher_instance.M.toarray())
+    # s = df.select_dtypes(include='object').columns
+    # print(s)
+    df = df.astype("bool")
+    df = df.astype("float")
+    # print(df)
+
+    pylab.figimage(df, cmap='binary', origin='lower')
+    fig.savefig(f"{filename}.png")
+
+    file = open(f'{filename}_matrix.pkl', 'wb')
+    pickle.dump(cipher_instance.M.copy(), file)
+    file.close()
+
+    file = open(f'{filename}_variables.pkl', 'wb')
+    pickle.dump(cipher_instance.V.copy(), file)
+    file.close()
+
     A = cipher_instance.M.copy()
     sf.d_var_to_beginning(cipher_instance)
     M = cipher_instance.M.copy()
@@ -52,6 +80,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
 
     plt.show()
     print("plot should have been shown")
+    return
 
 
 def matplot_scatterplot():

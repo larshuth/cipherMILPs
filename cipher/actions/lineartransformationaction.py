@@ -41,7 +41,7 @@ class LinTransformationAction(CipherAction):
 
         self.branch_number = branch_number
         self.a_positions_to_overwrite = a_positions_to_overwrite
-        print("created", self.type_of_action, self.input_list, self.dummy_var)
+        # print("created", self.type_of_action, self.input_list, self.dummy_var)
         return
 
     def run_action(self) -> None:
@@ -52,7 +52,7 @@ class LinTransformationAction(CipherAction):
         (2.) input_i \\leq dummy, for all input_i in {input_vars}
         (3.) output_i \\leq dummy, for all output_i in {output_vars}
         """
-        print("run", self.type_of_action, self.input_list, self.dummy_var)
+        # print("run", self.type_of_action, self.input_list, self.dummy_var)
         dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
         all_io_variables = self.input_list + self.output_list

@@ -17,7 +17,7 @@ class XorAction(CipherAction):
         return
 
     def run_action(self):
-        print(self.type_of_action, self.input_var_1, self.input_var_2)
+        # print(self.type_of_action, self.input_var_1, self.input_var_2)
         # inequalities of xor are
         # (1.) input1 + input2 + output \leq 2*dummy
         # (2.) input1 \leq dummy

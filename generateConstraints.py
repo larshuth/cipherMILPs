@@ -34,6 +34,35 @@ def removezerocols(M, V):
     return M
 
 
+def removezerorows(matrix):
+    """
+    Removes all rows that have no non-zero value.
+
+    Parameters:
+    ---------
+    M:  csr_matrix
+        Matrix where the Columns will be deleted
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+
+    Returns:
+    --------
+    M:  csr_matrix
+        New matrix that has only columns with an non zero entry.
+
+    V:  list
+        List of all variable names. Also vector with which the matrix will be multiplied for the MILP
+    """
+    matrix = matrix.tocsr()
+    print(matrix.get_shape())
+    nonzero_row_indice, _ = matrix.nonzero()
+    unique_nonzero_indice = np.unique(nonzero_row_indice)
+    matrix = matrix[unique_nonzero_indice]
+    # this return might not be necessary as the matrix should be call by reference
+    return matrix
+
+
 def new_generate_constraints(rounds, chosen_cipher, bit_oriented, chosen_type):
     """
     This function generates the constraint matrix for a number of rounds of a given cipher.
@@ -62,9 +91,10 @@ def new_generate_constraints(rounds, chosen_cipher, bit_oriented, chosen_type):
     print("Created constraints")
 
     if cipher_instance.orientation == 1:
-        cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=int)
+        cipher_instance.M = vstack([cipher_instance.M] + cipher_instance.sbox_inequality_matrices, dtype=float)
     print("Combined normal constraints and extra S-box constraints.")
 
-    # cipher_instance.M = removezerocols(cipher_instance.M, cipher_instance.V)
-    cipher_instance.M = cipher_instance.M.tocsr()
+    print(cipher_instance.M.get_shape())
+    cipher_instance.M = removezerorows(cipher_instance.M)
+    # cipher_instance.M = cipher_instance.M.tocsr()
     return cipher_instance

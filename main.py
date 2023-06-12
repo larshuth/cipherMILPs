@@ -4,11 +4,12 @@ from cipher.differential.lblock import LBlock as LBlockDifferential
 from cipher.differential.gift import Gift64 as Gift64Differential
 from cipher.linear.aes import Aes as AesLinear
 from cipher.linear.lblock import LBlock as LBlockLinear
+from cipher.linear.gift import Gift64 as Gift64Linear
 
-DEBUG = True
+DEBUG = False
 
 AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
-BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
+BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear, Gift64Linear]
 
 
 def main(rounds, cipher, viz, bit_oriented, chosen_type):
@@ -84,7 +85,7 @@ def safe_call():
 
         chosen_cipher = AVAILABLE[ciphelp]
         if chosen_cipher in BIT_ORIENTED:
-            print("Would you like to model the cipher bit-oriented (0) or word/byte-oriented (1)?")
+            print("Would you like to model the cipher word/byte-oriented (0) or bit-oriented (1)?")
             while True:
                 try:
                     bit_oriented = int(input())
@@ -103,15 +104,27 @@ def safe_call():
         while True:
             chosen_type = input()
             if chosen_type not in {"SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
-                                   "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020"}:
+                                   "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020 Algo 2"}:
                 print('try again')
             else:
                 break
-
-        main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     except Exception as e:
-        print('\n\n!!! Error in input, restart script !!!\n\n')
         print(e)
+        raise Exception('!!! Error in input, restart script!!!')
+
+    main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
+    return
+
+
+def generate_all_visualizations():
+    viz = 1
+    for cipher in [LBlockDifferential, Gift64Differential, LBlockLinear, Gift64Linear, AesLinear, AesDifferential]:
+        for type in ["SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
+                     "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020 Algo 2"]:
+            try:
+                main(3, cipher, viz, True, type)
+            except:
+                print(3, cipher, viz, True, type, "Failed")
     return
 
 
@@ -121,3 +134,4 @@ if __name__ == "__main__":
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
         safe_call()
+        # generate_all_visualizations()
