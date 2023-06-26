@@ -113,11 +113,10 @@ class Gift64(Cipher):
 
         #   determine sbox output vars, dummy vars, and constraints
         # instantiating all SBoxes
-        sbox_aes_subs = {index: value for index, value in
+        sbox_gift_subs = {index: value for index, value in
                          enumerate(
                              [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
-        # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
-        self.sbox = SBox(sbox_aes_subs, 4, 4, extract_sun_inequalities=self.extract_sun_inequalities)
+        self.sbox = SBox(sbox_gift_subs, 4, 4, self, extract_sun_inequalities=self.extract_sun_inequalities)
 
         self.sboxes = [self.sbox] * 16
 

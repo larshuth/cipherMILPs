@@ -149,7 +149,7 @@ class Aes(Cipher):
                                   137, 13, 191, 230, 66, 104, 65, 153, 45, 15, 176, 84, 187, 22])}
             # with the list taken from https://github.com/pcaro90/Python-AES/blob/master/AES_base.py and not verified :)
             print('Now running AES SBox')
-            self.sbox = SBox(sbox_aes_subs, 8, 8, extract_sun_inequalities=self.extract_sun_inequalities)
+            self.sbox = SBox(sbox_aes_subs, 8, 8, self, extract_sun_inequalities=self.extract_sun_inequalities)
 
             self.sboxes = [self.sbox] * 16
 

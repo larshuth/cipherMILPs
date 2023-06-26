@@ -10,7 +10,7 @@ class SBoxTest(unittest.TestCase):
         # https://crypto.stackexchange.com/questions/61075/number-of-active-s-boxes
         present_substitutions = {index: value for index, value in
                                  enumerate([12, 5, 6, 11, 9, 0, 10, 13, 3, 14, 15, 8, 4, 7, 1, 2])}
-        testbox = SBox(present_substitutions, 4, 4)
+        testbox = SBox(present_substitutions, 4, 4, None)
         self.assertEqual(3, testbox.branch_number)
         return
 
@@ -23,7 +23,7 @@ class SBoxTest(unittest.TestCase):
                         [0, 2, 0, 2, 2, 0, 2, 0], [0, 0, 0, 0, 0, 4, 0, 4], [0, 0, 4, 0, 0, 4, 0, 0],
                         [0, 2, 0, 2, 2, 0, 2, 0], [0, 2, 0, 2, 2, 0, 2, 0]]
 
-        testbox = SBox(test_substitutions, 3, 3)
+        testbox = SBox(test_substitutions, 3, 3, None)
         testbox.build_ddt()
 
         self.assertEqual(expected_ddt, testbox.ddt)
@@ -32,7 +32,7 @@ class SBoxTest(unittest.TestCase):
     def test_find_impossible_transitions_for_each_sun_2013_inequality(self):
         present_substitutions = {index: value for index, value in
                                  enumerate([12, 5, 6, 11, 9, 0, 10, 13, 3, 14, 15, 8, 4, 7, 1, 2])}
-        testbox = SBox(present_substitutions, 4, 4)
+        testbox = SBox(present_substitutions, 4, 4, None)
 
         # we overwrite the inequalities as to have less work
         testbox.feasible_transition_inequalities_sun_2013 = ["-8*x2 + x1 >= 13"]
@@ -87,7 +87,7 @@ class SBoxTest(unittest.TestCase):
     def test_convex_hull_baksi_appendix_a(self):
         substitutions = {index: value for index, value in
                          enumerate([4, 0, 1, 3, 2, 5, 6, 7, 14, 8, 10, 9, 12, 13, 11, 15])}
-        testbox = SBox(substitutions, 4, 4, extract_sun_inequalities=True)
+        testbox = SBox(substitutions, 4, 4, None, extract_sun_inequalities=True)
         testbox.build_non_zero_ddt_entries_vectors()
 
         non_zero_transitions_baksi = {(12, 10), (3, 7), (5, 4), (4, 6), (5, 1), (14, 13), (9, 8), (2, 2), (11, 14),
@@ -145,7 +145,7 @@ class SBoxTest(unittest.TestCase):
         # expected values are read from table 2
         substitutions = {index: value for index, value in
                          enumerate([4, 0, 1, 3, 2, 5, 6, 7, 14, 8, 10, 9, 12, 13, 11, 15])}
-        testbox = SBox(substitutions, 4, 4, extract_sun_inequalities=True)
+        testbox = SBox(substitutions, 4, 4, None, extract_sun_inequalities=True)
         testbox.build_ddt()
         testbox.build_list_of_transition_values_and_frequencies(testbox.ddt)
 
@@ -172,7 +172,7 @@ class SBoxTest(unittest.TestCase):
         # using the present sbox since that one was used in Sun et al. 2013
         present_substitutions = {index: value for index, value in
                                  enumerate([12, 5, 6, 11, 9, 0, 10, 13, 3, 14, 15, 8, 4, 7, 1, 2])}
-        testbox = SBox(present_substitutions, 4, 4)
+        testbox = SBox(present_substitutions, 4, 4, None)
         testcipher = Gift64(model_as_bit_oriented=True)
         testaction = SBoxAction(sbox=testbox, input_vars=['x0', 'x1', 'x2', 'x3'], cipher_instance=testcipher,
                                 first_a_position_to_overwrite=0)
@@ -189,6 +189,21 @@ class SBoxTest(unittest.TestCase):
         actual_logical_condition_modeling_sortable.sort()
 
         self.assertEqual(expected_logical_condition_modeling_sortable, actual_logical_condition_modeling_sortable)
+        return
+
+    def test_lat(self):
+        # testing using the S-box from the example in Sofia's bachelor thesis
+        test_substitutions = {index: value for index, value in
+                              enumerate([2, 5, 3, 1, 7, 0, 4, 6])}
+
+        expected_lat = [[4, 0, 0, 0, 0, 0, 0, 0],     [0, 0, -2, +2, 0, 0, -2, -2], [0, 0, 0, 0, 0, +4, 0, 0],
+                        [0, 0, -2, -2, 0, 0, +2, -2], [0, -2, 0, -2, +2, 0, -2, 0], [0, +2, -2, 0, +2, 0, 0, +2],
+                        [0, +2, 0, -2, -2, 0, -2, 0], [0, +2, +2, 0, +2, 0, 0, -2]]
+
+        testbox = SBox(test_substitutions, 3, 3, None)
+        testbox.build_lat()
+
+        self.assertEqual(expected_lat, testbox.lat)
         return
 
 

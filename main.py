@@ -124,15 +124,21 @@ def generate_all_visualizations():
         for type in ["Baksi 2020", "Boura 2020 Algo 2", "SunEtAl 2013", "SunEtAl 2013 Greedy",
                      "SunEtAl 2013 with Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy"]:
             try:
-                main(3, cipher, viz, True, type)
+                main(2, cipher, viz, True, type)
             except:
-                print(3, cipher, viz, True, type, "Failed")
+                print(2, cipher, viz, True, type, "Failed")
+    return
+
+
+def generate_rijndael_convex_hull():
+    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, AesDifferential, 1, True, "SunEtAl 2013"
+    main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     return
 
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, Gift64Differential, 1, True, "Boura 2020 Algo 2"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 2, Gift64Linear, 1, True, "SunEtAl 2013"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
         generate_all_visualizations()

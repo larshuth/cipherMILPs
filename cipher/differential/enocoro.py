@@ -277,7 +277,7 @@ class Enocoro(Cipher):
                  68,
                  129, 235])}
             # taken from the appendix of https://www.ipa.go.jp/en/security/jcmvp/g6ovkg00000065j3-att/23_00espec.pdf
-            self.sbox = SBox(sbox_subs, 8, 8)
+            self.sbox = SBox(sbox_subs, 8, 8, self)
 
             self.sboxes = [self.sbox, self.sbox, self.sbox, self.sbox]
 

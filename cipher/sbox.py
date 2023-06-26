@@ -68,7 +68,9 @@ class SBox:
         else:
             return
 
-    def __init__(self, substitutions, in_bits, out_bits, extract_sun_inequalities=False):
+    def __init__(self, substitutions, in_bits, out_bits, cipher_instance, extract_sun_inequalities=False):
+        self.cipher_instance = cipher_instance
+
         self.substitutions, self.in_bits, self.out_bits = substitutions, in_bits, out_bits
 
         self.check_subs_match_bits()
@@ -93,6 +95,7 @@ class SBox:
         self.differential_properties = set()
 
         self.non_zero_ddt_entries_vectors_built = False
+        self.non_zero_linear_mask_vectors_built = False
         self.vectors = set()
         self.impossible_transitions = set()
 
@@ -107,7 +110,7 @@ class SBox:
         if extract_sun_inequalities:
             self.feasible_transition_inequalities_sun_2013 = self.retrieve_inequalities()
             self.feasible_transition_inequalities_sun_2013_extracted = self.find_impossible_transitions_for_each_sun_2013_inequality(
-                    extract_sun_inequalities=extract_sun_inequalities)
+                extract_sun_inequalities=extract_sun_inequalities)
         else:
             self.feasible_transition_inequalities_sun_2013 = list()
             self.feasible_transition_inequalities_sun_2013_extracted = list()
@@ -116,11 +119,10 @@ class SBox:
         self.set_of_transition_values = set()
         self.value_frequencies = dict()
         self.dict_value_to_list_of_transition = dict()
-
         return
 
     def retrieve_inequalities(self):
-        filename = ''.join([hex(value)[2:] for key, value in self.substitutions.items()])
+        filename = ''.join([hex(value)[2:] for key, value in self.substitutions.items()]) + self.cipher_instance.cryptanalysis_type
         try:
             file = open(f'{filename}.pkl', 'rb')
             inequalities = pickle.load(file)
@@ -241,7 +243,8 @@ class SBox:
 
         self.lat = [[0].copy() * (2 ** self.out_bits) for i in range(2 ** self.in_bits)]
 
-        hamming_weight = lambda x: sum([1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.in_bits, self.out_bits))])
+        hamming_weight = lambda x: sum(
+            [1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.in_bits, self.out_bits))])
 
         for input_mask in range(2 ** self.in_bits):
             for output_mask in range(2 ** self.out_bits):
@@ -251,11 +254,41 @@ class SBox:
                     output_sum = hamming_weight(output_mask & out_val) % 2
                     sum_for_mask_combination += int(input_sum == output_sum)
                 try:
-                    self.lat[input_mask][output_mask] = abs(((2 ** self.in_bits) / 2) - sum_for_mask_combination)
+                    self.lat[input_mask][output_mask] = - int(((2 ** self.in_bits) / 2) - sum_for_mask_combination)
                 except:
                     print(input_mask, output_mask, self.in_bits, self.out_bits)
                     raise Exception('This one prior did not work')
         self.lat_built = True
+        return
+
+    def build_non_zero_linear_mask_transition_vectors(self):
+        if self.non_zero_linear_mask_vectors_built:
+            return
+
+        int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
+        vector_of_int = lambda value, length: [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)]
+
+        self.vectors = set()
+        for x, y in self.substitutions.items():
+            vector_in = vector_of_int(x, self.in_bits)
+            vector_out = vector_of_int(y, self.out_bits)
+
+            self.vectors |= {tuple(vector_in.copy() + vector_out.copy())}
+
+        all_transitions = set(tuple(vector_of_int(i, self.in_bits + self.out_bits)) for i in
+                              range(2 ** (self.in_bits + self.out_bits)))
+
+        self.impossible_transitions = all_transitions - self.vectors
+        return
+
+    def build_non_zero_transition_vectors(self):
+        if self.cipher_instance.cryptanalysis_type == "linear":
+            self.build_non_zero_ddt_entries_vectors()
+        elif self.cipher_instance.cryptanalysis_type == "differential":
+            self.build_non_zero_linear_mask_transition_vectors()
+        else:
+            raise Exception(
+                f'Type of cryptanalysis  of {self.cipher_instance} has not been set to one of the proper types "linear" of "differential"')
         return
 
     def calculate_multipliers(self, greater, lesser, split_into_variables, find_variable_multiplier, find_variable_name,
@@ -364,17 +397,30 @@ class SBox:
 
         return inequalities_readable
 
-    def build_list_of_transition_values_and_frequencies(self, ddt_or_lat):
+    def build_list_of_transition_values_and_frequencies(self):
         if self.transition_values_and_frequencies_built:
             return
 
-        list_of_transition_values = list(chain.from_iterable(ddt_or_lat))
-        self.set_of_transition_values = set(list_of_transition_values) - {0}
-        self.value_frequencies = {value: list_of_transition_values.count(value) for value in self.set_of_transition_values}
+        if self.cipher_instance.cryptanalysis_type == "linear":
+            self.build_lat()
+            reference_table = self.lat
+            reference_value_for_no_occurence = -8
+        elif self.cipher_instance.cryptanalysis_type == "differential":
+            self.build_ddt()
+            reference_table = self.ddt
+            reference_value_for_no_occurence = 0
+        else:
+            raise Exception(
+                f'Type of cryptanalysis  of {self.cipher_instance} has not been set to one of the proper types "linear" of "differential"')
+
+        list_of_transition_values = list(chain.from_iterable(reference_table))
+        self.set_of_transition_values = set(list_of_transition_values) - {reference_value_for_no_occurence}
+        self.value_frequencies = {value: list_of_transition_values.count(value) for value in
+                                  self.set_of_transition_values}
         self.dict_value_to_list_of_transition = {val: list() for val in self.set_of_transition_values}
-        for input_diff, sub_ddt_or_lat in enumerate(ddt_or_lat):
-            for output_diff, value in enumerate(sub_ddt_or_lat):
-                if value != 0:
+        for input_diff, sub_reference_table in enumerate(reference_table):
+            for output_diff, value in enumerate(sub_reference_table):
+                if value != reference_value_for_no_occurence:
                     self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
         self.transition_values_and_frequencies_built = True
         return

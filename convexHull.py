@@ -3,14 +3,14 @@ import sage.geometry.polyhedron.base
 
 
 def ch_hrep_and_equations_from_sbox(sbox_instance):
-    sbox_instance.build_non_zero_ddt_entries_vectors()
+    sbox_instance.build_non_zero_transition_vectors()
     con_hul_hrep_split_into_lines = ch_hrep_from_vectors(sbox_instance.vectors)
     con_hul_equations_list = ch_equations_list_from_vectors(sbox_instance.vectors)
     return con_hul_hrep_split_into_lines, con_hul_equations_list
 
 
 def ch_hrep_from_sbox(sbox_instance):
-    sbox_instance.build_non_zero_ddt_entries_vectors()
+    sbox_instance.build_non_zero_transition_vectors()
     con_hul_hrep_split_into_lines = ch_hrep_from_vectors(sbox_instance.vectors)
     return con_hul_hrep_split_into_lines
 
@@ -23,7 +23,7 @@ def ch_hrep_from_vectors(vectors):
 
 
 def ch_equations_list_from_sbox(sbox_instance):
-    sbox_instance.build_non_zero_ddt_entries_vectors()
+    sbox_instance.build_non_zero_transition_vectors()
     con_hul_equations_list = ch_equations_list_from_vectors(sbox_instance.vectors)
     return con_hul_equations_list
 

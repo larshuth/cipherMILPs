@@ -452,7 +452,7 @@ class SBoxAction(CipherAction):
         return transitions
 
     def create_sun_logical_condition_modeling_for_all_impossible_transitions(self):
-        self.sbox.build_non_zero_ddt_entries_vectors()
+        self.sbox.build_non_zero_transition_vectors()
 
         constant_pos = self.cipher_instance.V["constant"]
 
@@ -527,12 +527,11 @@ class SBoxAction(CipherAction):
         return
 
     def create_boura_coggia_inequalities(self, algorithm=2):
-        self.sbox.build_non_zero_ddt_entries_vectors()
+        self.sbox.build_non_zero_transition_vectors()
         constant_pos = self.cipher_instance.V["constant"]
 
         if algorithm == 2:
             all_vectors_for_boura = self.affineprec()
-            print(all_vectors_for_boura)
             sbox_inequality_matrix = lil_matrix((len(all_vectors_for_boura), self.cipher_instance.number_variables),
                                                 dtype=int)
             sbox_inequality_matrix_line = 0
@@ -555,7 +554,8 @@ class SBoxAction(CipherAction):
 
         hamming_weight = lambda x: sum([1 if ((2 ** i & x) > 0) else 0 for i in range(m)])
         int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
-        vector_of_int = lambda value, length: tuple([1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
+        vector_of_int = lambda value, length: tuple(
+            [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
 
         for a in p:
             for i in range(m + 1):
@@ -581,7 +581,8 @@ class SBoxAction(CipherAction):
                     all_v_with_hamming_weight_k_minus_one = set(
                         v if hamming_weight(v) == (k - 1) else None for v in all_v) - {None}
                     set_of_truth = set(
-                        self.a_xor_prec_u(a, vector_of_int(v, len(a))) in s_i[k - 1] for v in all_v_with_hamming_weight_k_minus_one)
+                        self.a_xor_prec_u(a, vector_of_int(v, len(a))) in s_i[k - 1] for v in
+                        all_v_with_hamming_weight_k_minus_one)
                     if False not in set_of_truth:
                         s_i[k] |= {((a, u), set(self.a_xor_prec_u(a, u)))}
                         for v in all_v_with_hamming_weight_k_minus_one:
@@ -589,7 +590,8 @@ class SBoxAction(CipherAction):
                             for interest in s_interesting:
                                 if interest[1] == v_calculated:
                                     s_interesting -= {interest}
-                            s_interesting = s_interesting - {((a, u), set(self.a_xor_prec_u(a, vector_of_int(v, len(a)))))}
+                            s_interesting = s_interesting - {
+                                ((a, u), set(self.a_xor_prec_u(a, vector_of_int(v, len(a)))))}
                 s_interesting |= s_i[k]
             s_out |= s_interesting
         return s_out
@@ -630,9 +632,14 @@ class SBoxAction(CipherAction):
                     for x in self.ball_d_c(1, a) - r_a:
                         sbox_inequality_matrix = lil_matrix((3, self.cipher_instance.number_variables), dtype=int)
                         sbox_inequality_matrix_line = 0
-                        sbox_inequality_matrix_line = self.proposition_3(1, a, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
-                        sbox_inequality_matrix_line = self.proposition_3(1, b, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
-                        self.proposition_3(1, c, None, constant_pos, sbox_inequality_matrix, sbox_inequality_matrix_line)
+                        sbox_inequality_matrix_line = self.proposition_3(1, a, None, constant_pos,
+                                                                         sbox_inequality_matrix,
+                                                                         sbox_inequality_matrix_line)
+                        sbox_inequality_matrix_line = self.proposition_3(1, b, None, constant_pos,
+                                                                         sbox_inequality_matrix,
+                                                                         sbox_inequality_matrix_line)
+                        self.proposition_3(1, c, None, constant_pos, sbox_inequality_matrix,
+                                           sbox_inequality_matrix_line)
         return output_set
 
     def supp(self, u: tuple[int]) -> set[int]:
@@ -648,7 +655,8 @@ class SBoxAction(CipherAction):
 
     def a_xor_prec_u(self, a: tuple[int], u: tuple[int]):
         int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
-        vector_of_int = lambda value, length: tuple([1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
+        vector_of_int = lambda value, length: tuple(
+            [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
 
         prec = self.prec(u)
         prec = set(vector_of_int(from_prec, len(u)) for from_prec in prec)
