@@ -242,18 +242,14 @@ class Cipher:
         return sbox_dummy_variables_per_round
 
     def prepare_for_type_of_modeling(self):
-        if self.type_of_modeling == 'Baksi 2020':
-            if self.cryptanalysis_type == 'differential':
-                for sbox in self.sboxes:
-                    sbox.build_ddt()
-                    sbox.build_list_of_transition_values_and_frequencies(sbox.ddt)
-            elif self.cryptanalysis_type == 'linear':
-                for sbox in self.sboxes:
-                    sbox.build_lat()
-                    sbox.build_list_of_transition_values_and_frequencies(sbox.lat)
-            else:
-                pass
+        if self.cryptanalysis_type == 'differential':
+            for sbox in self.sboxes:
+                sbox.build_ddt()
+                sbox.build_list_of_transition_values_and_frequencies(sbox.ddt)
+        elif self.cryptanalysis_type == 'linear':
+            for sbox in self.sboxes:
+                sbox.build_lat()
+                sbox.build_list_of_transition_values_and_frequencies(sbox.lat)
         else:
-            # TODO: Add remaining modelings
             pass
         return

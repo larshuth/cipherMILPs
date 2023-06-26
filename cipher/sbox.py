@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from itertools import chain
 import convexHull
@@ -77,6 +79,9 @@ class SBox:
 
         self.ddt_built = False
         self.ddt = list()
+
+        self.lat_built = False
+        self.lat = list()
 
         self.non_zero_ddt_entries_built = False
         self.non_zero_ddt_entries = set()
@@ -231,6 +236,26 @@ class SBox:
         return
 
     def build_lat(self):
+        if self.lat_built:
+            return
+
+        self.lat = [[0].copy() * (2 ** self.out_bits) for i in range(2 ** self.in_bits)]
+
+        hamming_weight = lambda x: sum([1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.in_bits, self.out_bits))])
+
+        for input_mask in range(2 ** self.in_bits):
+            for output_mask in range(2 ** self.out_bits):
+                sum_for_mask_combination = 0
+                for in_val, out_val in self.substitutions.items():
+                    input_sum = hamming_weight(input_mask & in_val) % 2
+                    output_sum = hamming_weight(output_mask & out_val) % 2
+                    sum_for_mask_combination += int(input_sum == output_sum)
+                try:
+                    self.lat[input_mask][output_mask] = abs(((2 ** self.in_bits) / 2) - sum_for_mask_combination)
+                except:
+                    print(input_mask, output_mask, self.in_bits, self.out_bits)
+                    raise Exception('This one prior did not work')
+        self.lat_built = True
         return
 
     def calculate_multipliers(self, greater, lesser, split_into_variables, find_variable_multiplier, find_variable_name,

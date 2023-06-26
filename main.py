@@ -77,7 +77,8 @@ def safe_call():
             try:
                 ciphelp = int(input())
                 if ciphelp not in set(range(len(AVAILABLE))):
-                    print("I like the spirit but that is not a number corresponding with one of the ciphers. Try again, fool.")
+                    print(
+                        "I like the spirit but that is not a number corresponding with one of the ciphers. Try again, fool.")
                 else:
                     break
             except ValueError:
@@ -100,7 +101,8 @@ def safe_call():
         else:
             bit_oriented = False
 
-        print('choose a type of modelling: "SunEtAl 2013",  "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy", and "Baksi 2020"')
+        print(
+            'choose a type of modelling: "SunEtAl 2013",  "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", and "Boura 2020 Algo 2"')
         while True:
             chosen_type = input()
             if chosen_type not in {"SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
@@ -119,8 +121,8 @@ def safe_call():
 def generate_all_visualizations():
     viz = 1
     for cipher in [LBlockDifferential, Gift64Differential, LBlockLinear, Gift64Linear, AesLinear, AesDifferential]:
-        for type in ["SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
-                     "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020 Algo 2"]:
+        for type in ["Baksi 2020", "Boura 2020 Algo 2", "SunEtAl 2013", "SunEtAl 2013 Greedy",
+                     "SunEtAl 2013 with Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy"]:
             try:
                 main(3, cipher, viz, True, type)
             except:
@@ -130,8 +132,7 @@ def generate_all_visualizations():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, Gift64Differential, 2, True, "SunEtAl 2013 Greedy"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, Gift64Differential, 1, True, "Boura 2020 Algo 2"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
-        safe_call()
-        # generate_all_visualizations()
+        generate_all_visualizations()
