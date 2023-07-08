@@ -1,15 +1,15 @@
 import numpy as np
-import scipy.sparse as sps
 import generateConstraints as gc
 import cipher as cip
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import colors
+from itertools import chain
 
 
 # https://stackoverflow.com/questions/28334719/swap-rows-csr-matrix-scipy
 
-def permutate_rows(H, idenRows):
+def permutate_rows(x, idenRows):
     """
     This function permutates the rows in the order that is given.
 
@@ -26,15 +26,14 @@ def permutate_rows(H, idenRows):
     H       :   csr_matrix
                 Matrix with permutated rows
     """
-    x = H.tocoo()
+    x = x.tocoo()
     idenRows = np.argsort(idenRows)
     idenRows = np.asarray(idenRows, dtype=x.row.dtype)
     x.row = idenRows[x.row]
-    H = x.tocsr()
-    return H
+    return x
 
 
-def permutate_columns(H, idenCols):
+def permutate_columns(x, idenCols):
     """
     This function permutates the columns in the order that is given.
 
@@ -51,15 +50,14 @@ def permutate_columns(H, idenCols):
     H       :   csr_matrix
                 Matrix with permutated columns
     """
-    x = H.tocoo()
+    x = x.tocoo()
     idenCols = np.argsort(idenCols)
     idenCols = np.asarray(idenCols, dtype=x.col.dtype)
     x.col = idenCols[x.col]
-    H = x.tocsr()
-    return H
+    return x
 
 
-def long_constraints_to_top(M):
+def long_constraints_to_top(cipher_instance):
     """
     This function permutates the rows(constraints) in a way such that the constraints with 
     a lot nonzero entries are at the top. This way one could form a block at the top.
@@ -76,12 +74,12 @@ def long_constraints_to_top(M):
         Permutated matrix
         """
     dic = {}
-    for i in range(M.get_shape()[0]):
-        dic[i] = M.getrow(i).count_nonzero()
+    for i in range(cipher_instance.M.get_shape()[0]):
+        dic[i] = cipher_instance.M.getrow(i).count_nonzero()
     dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=True))
     sortedrows = list(dic2.keys())
-    M = permutate_rows(M, sortedrows)
-    return M
+    cipher_instance.M = permutate_rows(cipher_instance.M, sortedrows)
+    return
 
 
 def full_columns_begin(M):
@@ -108,7 +106,7 @@ def full_columns_begin(M):
     return M
 
 
-def d_var_to_beginning(M, V):
+def d_var_to_beginning(cipher_instance):
     """
     This function permutates the columns such that all the dummy variables are at the beginning, and then the
     x variables follow. And the variable for the added constraint goes to the beginnign
@@ -129,22 +127,26 @@ def d_var_to_beginning(M, V):
     newV:   list
             List of all variable names. Also vector with which the matrix will be multiplied for the MILP
     """
-    sortedindices = []
-    orderofxvar = []
-    for i in V:
-        if i[0] == "d":
-            sortedindices.append(V.index(i))
-        elif i[0] == "x":
-            orderofxvar.append(V.index(i))
-        else:
-            first = [V.index(i)]
-    sortedindices = first + sortedindices + orderofxvar
-    newV = [V[i] for i in sortedindices]
-    M = permutate_columns(M, sortedindices)
-    return M, newV
+    pos_first_d_var = cipher_instance.number_x_vars
+    number_d_vars = cipher_instance.number_dx_vars + cipher_instance.number_dt_vars + cipher_instance.number_dl_vars
+    sorted_indices = list(range(pos_first_d_var, pos_first_d_var + number_d_vars)) + list(
+        range(pos_first_d_var)) + list(
+        range(pos_first_d_var + number_d_vars, cipher_instance.M.get_shape()[1]))
+
+    for key, value in cipher_instance.V.items():
+        try:
+            if key[0] in {'dx', 'dt', 'dl'}:
+                cipher_instance.V[key] -= pos_first_d_var
+            elif key[0] == 'x':
+                cipher_instance.V[key] += (pos_first_d_var - cipher_instance.number_d_vars)
+        except TypeError:
+            pass
+
+    cipher_instance.M = permutate_columns(cipher_instance.M, sorted_indices)
+    return
 
 
-def creating_diagonal_in4block(M, V):
+def creating_diagonal_in4block(cipher_instance):
     """
     This function permutates the rows of the matrix, but not the ones in the block at the top.
     They are permutated in a way such that a diagonal will appear alongisde an vertical block on the left.
@@ -167,22 +169,18 @@ def creating_diagonal_in4block(M, V):
     """
     dic = {}
     # count how many dummy variables there are. This is so that we only permutate the rows in the diagonal
-    count = 1  # begins at 1 because of the constraint that ensures that there is one active sbox
-    for e in V:
-        if e[0] == "d":
-            count += 1
-    for i in range(M.get_shape()[0]):
-        if i >= count:
-            dic[i] = M.getrow(i).nonzero()[1][1]
+    for i in range(cipher_instance.M.get_shape()[0]):
+        if i >= cipher_instance.number_d_vars:
+            dic[i] = cipher_instance.M.getrow(i).nonzero()[1][1]
     dic2 = dict(sorted(dic.items(), key=lambda x: x[1], reverse=False))
     sortedrows = list(dic2.keys())
-    beginofrows = [i for i in range(count)]
+    beginofrows = [i for i in range(cipher_instance.number_d_vars)]
     sortedrows = beginofrows + sortedrows
-    M = permutate_rows(M, sortedrows)
-    return M
+    cipher_instance.M = permutate_rows(cipher_instance.M, sortedrows)
+    return
 
 
-def create_fourblock(M, V):
+def create_fourblock(cipher_instance):
     """
     Creates a four-block structure in the given matrix.
 
@@ -199,10 +197,10 @@ def create_fourblock(M, V):
     M:  csr_matrix
         Permutated matrix
     """
-    M, V = d_var_to_beginning(M, V)
-    B = long_constraints_to_top(M)
-    C = creating_diagonal_in4block(B, V)
-    return C, V
+    d_var_to_beginning(cipher_instance)
+    long_constraints_to_top(cipher_instance)
+    creating_diagonal_in4block(cipher_instance)
+    return
 
 
 def changedvar(M, V):
@@ -235,13 +233,13 @@ def changedvar(M, V):
 
     # vertikale striche
     leng = (M.get_shape()[1]) - 17 - count
-    teil = leng / 16
+    leng / 16
     # for e in range(int(teil)+2):
     # plt.plot([count+16*e-0.5 for i in range(M.get_shape()[0])],[i for i in range(M.get_shape()[0])],linewidth = 0.5)
 
     # horizontale linien
     leng2 = (M.get_shape()[0]) - 1 - count
-    teil2 = leng2 / 32
+    leng2 / 32
     # for e in range(int(teil2)+1):
     # plt.plot([i for i in range(M.get_shape()[1])],[count+16+32*e-0.5 for i in range(M.get_shape()[1])],linewidth = 0.5)
     # plt.show()
@@ -265,7 +263,7 @@ def block_structure(M, V):
             break
     ind = [i for i in range(count)]
     out1 = M.tocsc()[:, ind]
-    blockC = out1.tocsr()[ind, :]
+    out1.tocsr()[ind, :]
     # Block C (tc) has to be AT LEAST this big
 
     # jetzt: wie höhe von Block A und B bestimmen? eig nur rundenanzahl aber wie findet man die raus?
@@ -280,7 +278,7 @@ def block_structure(M, V):
     a = np.array(numofvarinrow)
     num = (np.where(a == 2)[0][0])  # row of first constraint that contains 2 elements
     sc = num - 0.5
-    test = M.toarray()
+    M.toarray()
     plt.rcParams["figure.figsize"] = [7.00, 3.50]
     plt.rcParams["figure.autolayout"] = True
     data2D = M.toarray()
@@ -551,24 +549,21 @@ def enonewshape(M, V):
     plt.show()
 
 
-aes = cip.Enocoro
-A, V = gc.new_generate_constraints(7, aes)
-# showmat(A)
-M, v = d_var_to_beginning(A, V)
-B = long_constraints_to_top(M)
-C, W = create_fourblock(A, V)
-# block_structure(C,W)
-# C =twodiag(C,W)
-# C,W =changediag(C,W)
-# C=creating_diagonal_in4block(C,W)
-# C,W = changediag(C,W)
-# C =changedvar(C,W)
-# C,W =deletecolszero(C,W)
-showmat(B, v)
-# showfirststruc(C,W)
-# showsecstruc(C,W)
-# print(W)
-# enostruc(C,W)
-# enonewshape(C,W)
+def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2):
+    # indices before: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,... 63
+    # indices before: 0,1,2,3,32,33,34,35,4,5,6,7,8,
+    # input 1 - 4, (input 1 - 4) + 32
+    new_order = list(range(matrix.get_shape()[1]))
+    indices = [[i for i in range(96*round_number + 64, 96*round_number + 64 + 64)] for round_number in range(k)]
+    for round_indices in indices:
+        for sbox_number in range(8):
+            inputs = [round_indices[i] for i in range(4*sbox_number, 4*sbox_number + 4)]
+            outputs = [32 + number for number in inputs]
+            in_and_out = inputs + outputs
+            for index_in_inputs_outputs, index_in_order in enumerate(round_indices[8*sbox_number: 8*sbox_number + 8]):
+                new_order[index_in_order] = in_and_out[index_in_inputs_outputs]
 
-# was es alles gibt:
+    matrix = permutate_columns(matrix, new_order)
+
+    return matrix, variables
+

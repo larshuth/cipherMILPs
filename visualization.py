@@ -1,20 +1,22 @@
-from turtle import color
-import matplotlib
-from scipy.sparse import csr_matrix
-import scipy.sparse as sparse
+import scipy.sparse
+
 import generateConstraints as gc
 import sortingFunctions as sf
 import cipher as cip
 import numpy as np
 from pylatex import Document, Section, Figure, NoEscape, NewPage, Matrix, Math, Alignat, Command, Subsection
 # matplotlib.use('Agg')  # Not to use X server. For TravisCI.
+import matplotlib as mpl
 import matplotlib.pyplot as plt  # noqa
-import matplotlib.pylab as plt
+import matplotlib.pylab as pylab
+import pickle
+from pandas import DataFrame
+import os.path
 
 plt.rcParams.update({'font.size': 5})
 
 
-def matplotlibvis(rounds, cipher):
+def rearrange(rounds, cipher, bit_oriented, chosen_type):
     """
     Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
     Generates 4 visualizations of the same sparse matrix.
@@ -23,10 +25,153 @@ def matplotlibvis(rounds, cipher):
     -----------
     rounds  :   int
                 number of rounds
-    
+
     cipher  :   class
                 class of the wanted cipher
     """
+    title = [str(cipher)[15:-2], str(rounds)]
+    filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+
+    if os.path.isfile(f'{filename}_matrix.pkl') and os.path.isfile(f'{filename}_variables.pkl'):
+        file = open(f'{filename}_matrix.pkl', 'rb')
+        matrix = pickle.load(file)
+        file.close()
+
+        file = open(f'{filename}_variables.pkl', 'rb')
+        variables = pickle.load(file)
+        file.close()
+    else:
+        cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+        matrix = cipher_instance.M
+        variables = cipher_instance.V
+
+        file = open(f'{filename}_matrix.pkl', 'wb')
+        pickle.dump(cipher_instance.M.copy(), file)
+        file.close()
+
+        file = open(f'{filename}_variables.pkl', 'wb')
+        pickle.dump(cipher_instance.V.copy(), file)
+        file.close()
+
+    print('start removing empty rows and columns')
+    matrix, variables = remove_zeros(matrix, variables)
+
+    print('start inverting rows and columns')
+    matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
+
+    matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables)
+    print('picture')
+    columns = matrix.get_shape()[1]
+    rows = matrix.get_shape()[0]
+    fig = pylab.figure(figsize=(columns * 0.01, rows * 0.01))
+    df = DataFrame(matrix.toarray())
+
+    df = df.astype("bool")
+    df = df.astype("float")
+    # print(df)
+
+    pylab.figimage(df, cmap='binary', origin='lower')
+    fig.savefig(f"{filename}.png")
+
+    plt.show()
+    print("plot should have been shown")
+    return
+
+
+def remove_zeros(matrix, variables: dict):
+    colsnonzero = []
+    rowsnonzero = []
+
+    print('remove columns')
+    # remove zero columns
+    matrix.tocsc()
+    for i in range(matrix.get_shape()[1]):
+        if matrix.getcol(i).count_nonzero() != 0:
+            colsnonzero.append(i)
+    matrix = matrix[:, np.array(colsnonzero)]
+
+    print('remove rows')
+    matrix.tocsr()
+    for i in range(matrix.get_shape()[0]):
+        if matrix.getrow(i).count_nonzero() != 0:
+            rowsnonzero.append(i)
+    matrix = matrix[np.array(rowsnonzero), :]
+
+    # remove zero row numbers from variables and mend remaining numbers
+    variables_as_list = [(key, val) for key, val in variables.items()]
+    variables_pos_to_var = list(filter(lambda pair: type(pair[0]) == int, variables_as_list))
+    variables_var_to_pos = list(filter(lambda pair: type(pair[1]) == int, variables_as_list))
+
+    variables_pos_to_var.sort(key=lambda pair: pair[0])
+    variables_var_to_pos.sort(key=lambda pair: pair[1])
+
+    print("rewrite variables")
+    remove_counter = 0
+    new_variables = dict()
+    print(list(zip(variables_pos_to_var, variables_var_to_pos)))
+    for pos_to_var, var_to_pos in zip(variables_pos_to_var, variables_var_to_pos):
+        if pos_to_var[0] != var_to_pos[1]:
+            raise Exception(f'Something is wrong, {pos_to_var} and {var_to_pos} should be the same.')
+        if pos_to_var[0] in colsnonzero:
+            remove_counter += 1
+        else:
+            new_variables[pos_to_var[0] - remove_counter] = pos_to_var[1]
+            new_variables[var_to_pos[0]] = var_to_pos[1] - remove_counter
+    return matrix, new_variables
+
+
+def invert_matrix(matrix, variables, horizontal=True, vertical=True):
+    print("flip column order")
+    # flip column order
+    if horizontal:
+        reversed_column_indices = list(range(matrix.get_shape()[1], -1, -1))
+        matrix = sf.permutate_columns(matrix, reversed_column_indices)
+
+        variables_as_list = [(key, val) for key, val in variables.items()]
+        variables_pos_to_var = list(filter(lambda pair: type(pair[0]) == int, variables_as_list))
+        variables_var_to_pos = list(filter(lambda pair: type(pair[1]) == int, variables_as_list))
+
+        variables_pos_to_var.sort(key=lambda pair: pair[0])
+        variables_var_to_pos.sort(key=lambda pair: pair[1])
+
+        number_of_vars = len(variables_var_to_pos)
+        reverse = lambda x: (number_of_vars - 1) - x
+
+        reveresed_variables = dict()
+        print(list(zip(variables_pos_to_var, variables_var_to_pos)))
+        for pos_to_var, var_to_pos in zip(variables_pos_to_var, variables_var_to_pos):
+            if pos_to_var[0] != var_to_pos[1]:
+                raise Exception(f'Something is wrong, {pos_to_var} and {var_to_pos} should be the same.')
+            else:
+                reveresed_variables[reverse(pos_to_var[0])] = pos_to_var[1]
+                reveresed_variables[var_to_pos[0]] = reverse(var_to_pos[1])
+
+        variables = reveresed_variables
+
+    print("flip row order")
+    # flip row order
+    if vertical:
+        reversed_row_indices = list(range(matrix.get_shape()[0], -1, -1))
+        matrix = sf.permutate_rows(matrix, reversed_row_indices)
+    return matrix, variables
+
+
+def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
+    """
+    Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
+    Generates 4 visualizations of the same sparse matrix.
+
+    Parameters:
+    -----------
+    rounds  :   int
+                number of rounds
+
+    cipher  :   class
+                class of the wanted cipher
+    """
+    title = [str(cipher)[15:-2], str(rounds)]
+    filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+
     fig, axs = plt.subplots(1, 4)
     fig.canvas.manager.set_window_title(
         'Mit schönen Farben vom Meer damit es für Leo wie Heimat ist (weil Nordsee und so)')
@@ -35,10 +180,36 @@ def matplotlibvis(rounds, cipher):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    A, V = gc.new_generate_constraints(rounds, cipher)
-    M, v = sf.d_var_to_beginning(A, V)
-    B = sf.long_constraints_to_top(M)
-    C, W = sf.create_fourblock(A, V)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+
+    columns = cipher_instance.M.get_shape()[1]
+    rows = cipher_instance.M.get_shape()[0]
+    fig = pylab.figure(figsize=(columns * 0.01, rows * 0.01))
+    df = DataFrame(cipher_instance.M.toarray())
+    # s = df.select_dtypes(include='object').columns
+    # print(s)
+    df = df.astype("bool")
+    df = df.astype("float")
+    # print(df)
+
+    pylab.figimage(df, cmap='binary', origin='lower')
+    fig.savefig(f"{filename}.png")
+
+    file = open(f'{filename}_matrix.pkl', 'wb')
+    pickle.dump(cipher_instance.M.copy(), file)
+    file.close()
+
+    file = open(f'{filename}_variables.pkl', 'wb')
+    pickle.dump(cipher_instance.V.copy(), file)
+    file.close()
+
+    A = cipher_instance.M.copy()
+    sf.d_var_to_beginning(cipher_instance)
+    M = cipher_instance.M.copy()
+    sf.long_constraints_to_top(cipher_instance)
+    B = cipher_instance.M.copy()
+    # sf.create_fourblock(cipher_instance)
+    C = cipher_instance.M
 
     axs[0].set_title('native')
     axs[1].set_title('d_variables to the beginning')
@@ -51,6 +222,8 @@ def matplotlibvis(rounds, cipher):
     ax4.spy(C, markersize=1, color="skyblue")
 
     plt.show()
+    print("plot should have been shown")
+    return
 
 
 def matplot_scatterplot():
@@ -155,7 +328,7 @@ def constraints(A, V):
     for i in range(A.get_shape()[0]):
         if i == A.get_shape()[0]:
             linebreak = 1
-        # getting the indizes of the nonzero elements
+        # getting the indices of the nonzero elements
         positions = A.getrow(i).nonzero()[1]
         con = ""
         for e in positions:
@@ -205,16 +378,17 @@ def mainly(fname, A, V, title, *args, **kwargs):
         doc.append(NoEscape("\[\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0\]"))
     """
     doc.append(NewPage())
-    with doc.create(Section("Constraints")):
-        B = constraints(A, V)
-        with doc.create(Alignat(numbering=False, escape=False)) as agn:
-            for i in B:
-                agn.append(i + "\\\\")
+    if False:
+        with doc.create(Section("Constraints")):
+            B = constraints(A, V)
+            with doc.create(Alignat(numbering=False, escape=False)) as agn:
+                for i in B:
+                    agn.append(i + "\\\\")
 
     doc.generate_pdf(clean_tex=False)
 
 
-def gen_pdf(rounds, cipher):
+def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -232,10 +406,17 @@ def gen_pdf(rounds, cipher):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    A, V = gc.new_generate_constraints(rounds, cipher)
-    M, v = sf.d_var_to_beginning(A, V)
-    B = sf.long_constraints_to_top(M)
-    C, W = sf.create_fourblock(A, V)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+    A = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    # sf.d_var_to_beginning(cipher_instance)
+    M = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    # sf.long_constraints_to_top(cipher_instance)
+    B = cipher_instance.M.copy()
+    print(cipher_instance.M.get_shape())
+    # sf.create_fourblock(cipher_instance)
+    C = cipher_instance.M
 
     ax1.set_title('native')
     ax2.set_title('d_variables to the left')
@@ -250,4 +431,21 @@ def gen_pdf(rounds, cipher):
     title = [str(cipher)[15:-2], str(rounds)]
     print(type(A))
     print("lala")  # r'1\textwidth',
-    mainly(title[0] + title[1] + 'rounds', A=A, V=V, title=title, dpi=300)
+    mainly(f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}', A=A, V=cipher_instance.V, title=title,
+           dpi=300)
+
+
+def no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type):
+    """
+    Generates the plots in matplotlib and calls the function to generate the pdf.
+
+    Parameters:
+    -----------
+    rounds  :   int
+                Number of rounds
+
+    cipher  :   class
+                Class of the wanted cipher
+    """
+    gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+    return True
