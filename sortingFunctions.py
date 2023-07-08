@@ -4,11 +4,12 @@ import cipher as cip
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import colors
+from itertools import chain
 
 
 # https://stackoverflow.com/questions/28334719/swap-rows-csr-matrix-scipy
 
-def permutate_rows(H, idenRows):
+def permutate_rows(x, idenRows):
     """
     This function permutates the rows in the order that is given.
 
@@ -25,15 +26,14 @@ def permutate_rows(H, idenRows):
     H       :   csr_matrix
                 Matrix with permutated rows
     """
-    x = H.tocoo()
+    x = x.tocoo()
     idenRows = np.argsort(idenRows)
     idenRows = np.asarray(idenRows, dtype=x.row.dtype)
     x.row = idenRows[x.row]
-    H = x.tocsr()
-    return H
+    return x
 
 
-def permutate_columns(H, idenCols):
+def permutate_columns(x, idenCols):
     """
     This function permutates the columns in the order that is given.
 
@@ -50,12 +50,11 @@ def permutate_columns(H, idenCols):
     H       :   csr_matrix
                 Matrix with permutated columns
     """
-    x = H.tocoo()
+    x = x.tocoo()
     idenCols = np.argsort(idenCols)
     idenCols = np.asarray(idenCols, dtype=x.col.dtype)
     x.col = idenCols[x.col]
-    H = x.tocsr()
-    return H
+    return x
 
 
 def long_constraints_to_top(cipher_instance):
@@ -550,25 +549,21 @@ def enonewshape(M, V):
     plt.show()
 
 
-if False:
-    aes = cip.Enocoro
-    A, V = gc.new_generate_constraints(7, aes)
-    # showmat(A)
-    M, v = d_var_to_beginning(A, V)
-    B = long_constraints_to_top(M)
-    C, W = create_fourblock(A, V)
-    # block_structure(C,W)
-    # C =twodiag(C,W)
-    # C,W =changediag(C,W)
-    # C=creating_diagonal_in4block(C,W)
-    # C,W = changediag(C,W)
-    # C =changedvar(C,W)
-    # C,W =deletecolszero(C,W)
-    showmat(B, v)
-    # showfirststruc(C,W)
-    # showsecstruc(C,W)
-    # print(W)
-    # enostruc(C,W)
-    # enonewshape(C,W)
+def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2):
+    # indices before: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,... 63
+    # indices before: 0,1,2,3,32,33,34,35,4,5,6,7,8,
+    # input 1 - 4, (input 1 - 4) + 32
+    new_order = list(range(matrix.get_shape()[1]))
+    indices = [[i for i in range(96*round_number + 64, 96*round_number + 64 + 64)] for round_number in range(k)]
+    for round_indices in indices:
+        for sbox_number in range(8):
+            inputs = [round_indices[i] for i in range(4*sbox_number, 4*sbox_number + 4)]
+            outputs = [32 + number for number in inputs]
+            in_and_out = inputs + outputs
+            for index_in_inputs_outputs, index_in_order in enumerate(round_indices[8*sbox_number: 8*sbox_number + 8]):
+                new_order[index_in_order] = in_and_out[index_in_inputs_outputs]
 
-    # was es alles gibt:
+    matrix = permutate_columns(matrix, new_order)
+
+    return matrix, variables
+

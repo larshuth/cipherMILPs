@@ -136,9 +136,15 @@ def generate_rijndael_convex_hull():
     return
 
 
+def rearrange_matrix():
+    rounds, chosen_cipher, bit_oriented, chosen_type = 2, LBlockDifferential, True, "SunEtAl 2013"
+    vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
+    return
+
+
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 2, Gift64Linear, 1, True, "SunEtAl 2013"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 2, LBlockDifferential, 1, True, "SunEtAl 2013 with Baksi extension 2020"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
-        generate_all_visualizations()
+        rearrange_matrix()

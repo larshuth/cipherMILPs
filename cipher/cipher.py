@@ -139,8 +139,6 @@ class Cipher:
             qijlp_variables_per_round = 0
             baksi_variables_per_round = 0
 
-        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
-
         number_constraints = ((xor_constraints_per_round +
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
@@ -148,6 +146,7 @@ class Cipher:
         number_constraints = int(number_constraints)
         print("# Constraints:", number_constraints)
 
+        # self.M is lil_matrix((#constraints, #variables), dtype=int) with lil_matrix coming from the SciPy package
         self.number_variables = (plaintext_vars +
                                  key_vars +
                                  (
@@ -213,8 +212,8 @@ class Cipher:
                    for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
 
         qijp_vars = list(chain.from_iterable([chain.from_iterable(
-            [[(index + (round_number * len(self.sboxes)), p, round_number, sbox) for p in sbox.set_of_transition_values]
-             for index, sbox in enumerate(self.sboxes)]) for round_number in range(self.rounds)]))
+            [[(index + (round_number * qijp_variables_per_round), p, round_number, self.sboxes[index]) for p in self.sboxes[index].set_of_transition_values]
+             for index in range(qijp_variables_per_round)]) for round_number in range(self.rounds)]))
         qijlp_vars = list(chain.from_iterable([
             [(qijp_var[0], qijp_var[1], qijp_var[2], l) for l in range(qijp_var[3].value_frequencies[qijp_var[1]])] for
             qijp_var in qijp_vars]))
