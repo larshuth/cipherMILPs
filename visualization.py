@@ -53,13 +53,16 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
         pickle.dump(cipher_instance.V.copy(), file)
         file.close()
 
-    print('start removing empty rows and columns')
-    matrix, variables = remove_zeros(matrix, variables)
-
     print('start inverting rows and columns')
     matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
 
-    matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables)
+    print(len(variables)/2, matrix.get_shape()[1])
+
+    matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+
+    # print('start removing empty rows and columns')
+    # matrix, variables = remove_zeros(matrix, variables)
+
     print('picture')
     columns = matrix.get_shape()[1]
     rows = matrix.get_shape()[0]
@@ -112,7 +115,7 @@ def remove_zeros(matrix, variables: dict):
     for pos_to_var, var_to_pos in zip(variables_pos_to_var, variables_var_to_pos):
         if pos_to_var[0] != var_to_pos[1]:
             raise Exception(f'Something is wrong, {pos_to_var} and {var_to_pos} should be the same.')
-        if pos_to_var[0] in colsnonzero:
+        if pos_to_var[0] not in colsnonzero:
             remove_counter += 1
         else:
             new_variables[pos_to_var[0] - remove_counter] = pos_to_var[1]
@@ -123,11 +126,13 @@ def remove_zeros(matrix, variables: dict):
 def invert_matrix(matrix, variables, horizontal=True, vertical=True):
     print("flip column order")
     # flip column order
+
     if horizontal:
         reversed_column_indices = list(range(matrix.get_shape()[1], -1, -1))
         matrix = sf.permutate_columns(matrix, reversed_column_indices)
 
         variables_as_list = [(key, val) for key, val in variables.items()]
+
         variables_pos_to_var = list(filter(lambda pair: type(pair[0]) == int, variables_as_list))
         variables_var_to_pos = list(filter(lambda pair: type(pair[1]) == int, variables_as_list))
 

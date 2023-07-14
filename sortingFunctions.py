@@ -553,17 +553,78 @@ def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2):
     # indices before: 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,... 63
     # indices before: 0,1,2,3,32,33,34,35,4,5,6,7,8,
     # input 1 - 4, (input 1 - 4) + 32
-    new_order = list(range(matrix.get_shape()[1]))
-    indices = [[i for i in range(96*round_number + 64, 96*round_number + 64 + 64)] for round_number in range(k)]
-    for round_indices in indices:
-        for sbox_number in range(8):
-            inputs = [round_indices[i] for i in range(4*sbox_number, 4*sbox_number + 4)]
-            outputs = [32 + number for number in inputs]
-            in_and_out = inputs + outputs
-            for index_in_inputs_outputs, index_in_order in enumerate(round_indices[8*sbox_number: 8*sbox_number + 8]):
-                new_order[index_in_order] = in_and_out[index_in_inputs_outputs]
+    new_order_columns = list(range(matrix.get_shape()[1]))
+    if False:
+        indices = [[i for i in range(96 * round_number + 64, 96 * round_number + 64 + 64)] for round_number in range(k)]
+        for round_indices in indices:
+            for sbox_number in range(8):
+                inputs = [round_indices[i] for i in range(4 * sbox_number, 4 * sbox_number + 4)]
+                outputs = [32 + number for number in inputs]
+                in_and_out = inputs + outputs
+                for index_in_inputs_outputs, index_in_order in enumerate(
+                        round_indices[8 * sbox_number: 8 * sbox_number + 8]):
+                    new_order_columns[index_in_order] = in_and_out[index_in_inputs_outputs]
 
-    matrix = permutate_columns(matrix, new_order)
+    number_of_rows = matrix.get_shape()[0] + 1
+    new_order_rows = list(range(number_of_rows))
+    # collect all indices of xor left
+    indices_xor_left = list(chain.from_iterable(
+        [[(number_of_rows - 1) - i for i in
+          range(((64 * 4) + (8 * 7)) * round_number, (((64 * 4) + (8 * 7)) * round_number) + (32 * 4))]
+         for round_number in range(k)]))
 
+    # collect all indices of xor right
+    indices_xor_right = list(chain.from_iterable([
+        [(number_of_rows - 1) - i for i in
+         range((((64 * 4) + (8 * 7)) * round_number) + (32 * 4) + (8 * 7), (((64 * 4) + (8 * 7)) * (round_number + 1)))]
+        for
+        round_number in range(k)]))
+
+    # collect all indices of s-boxes
+    indices_sboxes = list(chain.from_iterable([
+        [(number_of_rows - 1) - i for i in range((((64 * 4) + (8 * 7)) * round_number) + (32 * 4),
+                                                 (((64 * 4) + (8 * 7)) * round_number) + (32 * 4) + (8 * 7))]
+        for round_number in range(k)]))
+
+    mouha_indices = list(reversed(sorted(indices_xor_left + indices_xor_right))) + indices_sboxes
+
+    for old_index, new_index in enumerate(mouha_indices):
+        new_order_rows[(number_of_rows - 1) - old_index] = new_index
+
+    print(new_order_rows)
+
+    # Blocks for a S-box contain variables x input, x output, a dummy, k xor prior, x xor
+    start_x_value = lambda n: (int(bool(n)) * 32) + (n * 96)
+    start_new_x_values = lambda n: 64 + (n * 96)
+
+    blocks = [[[f'k{(round_k * 32) + box * 4 + i}' for i in range(4)] +  # xor input, key
+               [f'x{start_new_x_values(round_k) + box * 4 + i}' for i in range(4)] +    # xor output
+               [f'dx{4 * box + (64 * round_k) + i}' for i in range(4)] +
+               [f'a{box + (8 * round_k)}'] +  # sbox input
+               [f'x{start_new_x_values(round_k) + 32 + box * 4 + i}' for i in range(4)] +  # sbox out, 2. xor 2. input
+               [f'x{start_new_x_values(round_k) + 64 + box * 4 + i}' for i in range(4)] +  # zweiter xor output
+               [f'dx{4 * box + (64 * round_k) + 32 + i}' for i in range(4)]
+               for box in range(8)] for round_k in range(k)]
+
+    # erste runde bekommt noch vom ersten und zweiten xor den jeweils ersten input (x_0 - x_63)
+    for index, box_list in enumerate(blocks[0].copy()):
+        blocks[0][index] = box_list + [f'x{(index * 4) + i}' for i in range(4)] + [f'x{32 + 4 * index + i}' for i in range(4)]
+
+    print(variables)
+
+    blocks = list(chain.from_iterable(list(chain.from_iterable(blocks))))
+    print(len(blocks), len(set(blocks)), len(new_order_columns), blocks)
+    print(set(variables) - set(blocks))
+    print(set(blocks) - set(variables))
+    print(set(range(897)) - (set(variables) - set(blocks)))
+    duplicates = [var for var in blocks if blocks.count(var) > 1]
+    unique_duplicates = list(set(duplicates))
+    print(sorted(unique_duplicates))
+
+    for index, var_name in enumerate(blocks):
+        new_order_columns[index] = variables[var_name]
+    print(new_order_columns)
+
+    matrix = permutate_columns(matrix, new_order_columns)
+    matrix = permutate_rows(matrix, new_order_rows)
     return matrix, variables
-

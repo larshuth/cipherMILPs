@@ -141,13 +141,14 @@ class SBoxTest(unittest.TestCase):
         return
 
     def test_build_list_of_transition_values_and_frequencies(self):
+        dummy_cipher = Gift64(model_as_bit_oriented=True)
         # sbox from Baksi 2020 section 4.1
         # expected values are read from table 2
         substitutions = {index: value for index, value in
                          enumerate([4, 0, 1, 3, 2, 5, 6, 7, 14, 8, 10, 9, 12, 13, 11, 15])}
-        testbox = SBox(substitutions, 4, 4, None, extract_sun_inequalities=True)
+        testbox = SBox(substitutions, 4, 4, dummy_cipher, extract_sun_inequalities=True)
         testbox.build_ddt()
-        testbox.build_list_of_transition_values_and_frequencies(testbox.ddt)
+        testbox.build_list_of_transition_values_and_frequencies()
 
         expected_set_of_transition_values = {2, 4, 6, 16}
         self.assertEqual(expected_set_of_transition_values, testbox.set_of_transition_values)

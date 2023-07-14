@@ -71,7 +71,7 @@ class Cipher:
         return
 
     def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
-                                       overwrites=0, new_keys_every_round=False):
+                                       overwrites=0, new_keys_every_round=False, extra_key_round=False):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -87,7 +87,7 @@ class Cipher:
 
         #   determine plaintext vars
         plaintext_vars = self.plaintext_vars
-        key_vars = self.key_vars * (self.rounds + 1)  # upper bound in accordance with AES
+        key_vars = int(new_keys_every_round) * self.key_vars * (self.rounds + int(extra_key_round))  # upper bound in accordance with AES
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -207,16 +207,20 @@ class Cipher:
                    for index, var_name in enumerate(list_of_ds_vars)}
 
         self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
-                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
+                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + int(extra_key_round)))}
         self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
-                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + 1))}
+                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + int(extra_key_round)))}
 
-        qijp_vars = list(chain.from_iterable([chain.from_iterable(
-            [[(index + (round_number * qijp_variables_per_round), p, round_number, self.sboxes[index]) for p in self.sboxes[index].set_of_transition_values]
-             for index in range(qijp_variables_per_round)]) for round_number in range(self.rounds)]))
-        qijlp_vars = list(chain.from_iterable([
-            [(qijp_var[0], qijp_var[1], qijp_var[2], l) for l in range(qijp_var[3].value_frequencies[qijp_var[1]])] for
-            qijp_var in qijp_vars]))
+        if self.type_of_modeling == 'Baksi 2020':
+            qijp_vars = list(chain.from_iterable(list(chain.from_iterable(
+                [[(index + (round_number * qijp_variables_per_round), p, round_number + 1, sbox) for p in sbox.set_of_transition_values]
+                 for index, sbox in enumerate(self.sboxes)]) for round_number in range(self.rounds))))
+            qijlp_vars = list(chain.from_iterable([
+                [(qijp_var[0], qijp_var[1], qijp_var[2], l) for l in range(qijp_var[3].value_frequencies[qijp_var[1]])] for
+                qijp_var in qijp_vars]))
+        else:
+            qijp_vars = list()
+            qijlp_vars = list()
 
         self.V |= {
             f'a{qijp_var[0]}p{qijp_var[1]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + self.keysize * (

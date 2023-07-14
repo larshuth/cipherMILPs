@@ -122,16 +122,20 @@ class SBox:
         return
 
     def retrieve_inequalities(self):
-        filename = ''.join([hex(value)[2:] for key, value in self.substitutions.items()]) + self.cipher_instance.cryptanalysis_type
-        try:
-            file = open(f'{filename}.pkl', 'rb')
-            inequalities = pickle.load(file)
-            file.close()
-        except:
+        if self.cipher_instance.cryptanalysis_type:
+            filename = ''.join([hex(value)[2:] for key, value in self.substitutions.items()]) + self.cipher_instance.cryptanalysis_type
+            try:
+                file = open(f'{filename}.pkl', 'rb')
+                inequalities = pickle.load(file)
+                file.close()
+            except:
+                inequalities = convexHull.ch_hrep_from_sbox(self)
+                file = open(f'{filename}.pkl', 'wb')
+                pickle.dump(inequalities, file)
+                file.close()
+        else:
             inequalities = convexHull.ch_hrep_from_sbox(self)
-            file = open(f'{filename}.pkl', 'wb')
-            pickle.dump(inequalities, file)
-            file.close()
+
         return inequalities
 
     def build_ddt(self):

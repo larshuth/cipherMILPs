@@ -286,7 +286,7 @@ class SBoxAction(CipherAction):
 
         for qijp_var in qijp_vars:
             p = extract_p(qijp_var)
-            qijlp_vars = {qijp_var + f'l{l}': transition for l, transition in
+            qijlp_vars = {qijp_var + f'l{l+1}': transition for l, transition in
                           enumerate(self.sbox.dict_value_to_list_of_transition[p])}
             list_of_qijlp_vars = list(qijlp_vars)
 
