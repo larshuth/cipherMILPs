@@ -159,7 +159,7 @@ class Aes(Cipher):
         self.prepare_for_type_of_modeling()
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                             lt_per_round, extra_xors, overwrites,
-                                            new_keys_every_round=True)
+                                            new_keys_every_round=True, extra_key_round=True)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:

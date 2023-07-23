@@ -43,7 +43,24 @@ def calculate_Aes_MixCoumns_branch_number():
         branch_number_after_last_rounds = branch_number
     return branch_number
 
-branch_number_after_last_rounds = 2**(4*8)
-bn = calculate_Aes_MixCoumns_branch_number()
-print('Branch Number of bit-oriented Aes =', bn)
-print(branch_number)
+
+def bloxks_to_matrices(inequalities):
+    for multipliers, _, _ in inequalities:
+        string = ''
+        for index, m in enumerate(multipliers):
+            if m == 0:
+                string += ' & '
+            else:
+                string += f'\\Block[fill=darkteal]{{1-1}}{{\\color{{white}} {m} }} &'
+            if index == 3:
+                string += '&'
+            elif index == 7:
+                string = string[:-1] + '\\\\'
+        print(string)
+    return None
+
+
+# branch_number_after_last_rounds = 2**(4*8)
+# bn = calculate_Aes_MixCoumns_branch_number()
+# print('Branch Number of bit-oriented Aes =', bn)
+

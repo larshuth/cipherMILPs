@@ -68,7 +68,7 @@ class SBox:
         else:
             return
 
-    def __init__(self, substitutions, in_bits, out_bits, cipher_instance, extract_sun_inequalities=False):
+    def __init__(self, substitutions, in_bits, out_bits, cipher_instance=None, extract_sun_inequalities=False):
         self.cipher_instance = cipher_instance
 
         self.substitutions, self.in_bits, self.out_bits = substitutions, in_bits, out_bits
@@ -205,21 +205,21 @@ class SBox:
 
     def build_differential_patterns_output_to_input(self):
         differential_properties_o2i = set()
-        max_value_for_input = 2 ** self.in_bits - 1
+        max_value_for_output = 2 ** self.out_bits - 1
 
         # collecting/recording differential properties from output to input like the example
         # (iii) ***1→0001 and ***1→0100: If the output difference of the S-box is 0x1 = 0001 or 0x4 = 0100, then
         # the least significant bit of the input difference must be 1
         # from the Sun et al. 2013 paper
-        for output_xorwise_diff in range(max_value_for_input):
+        for output_xorwise_diff in range(max_value_for_output + 1):
             # set reoccurrences to the equivalent of 1^n (e.g. 1111 for a 4x5 SBox)
-            reoccurring_1s = max_value_for_input
-            reoccurring_0s = max_value_for_input
+            reoccurring_1s = max_value_for_output
+            reoccurring_0s = max_value_for_output
             for input_xorwise_diff, distribution in enumerate(self.ddt):
                 occurrences = distribution[output_xorwise_diff]
                 if occurrences > 0:
                     reoccurring_1s &= input_xorwise_diff
-                    reoccurring_0s &= (max_value_for_input - input_xorwise_diff)
+                    reoccurring_0s &= (max_value_for_output - input_xorwise_diff)
             if reoccurring_0s or reoccurring_1s:
                 self.differential_properties |= {('o2i', output_xorwise_diff, reoccurring_0s, reoccurring_1s)}
 
@@ -236,7 +236,7 @@ class SBox:
         differential_properties_i2o = self.build_differential_patterns_input_to_output()
         self.differential_properties |= differential_properties_i2o
 
-        differential_properties_o2i = self.build_differential_patterns_input_to_output()
+        differential_properties_o2i = self.build_differential_patterns_output_to_input()
         self.differential_properties |= differential_properties_o2i
 
         return
@@ -422,9 +422,11 @@ class SBox:
         self.value_frequencies = {value: list_of_transition_values.count(value) for value in
                                   self.set_of_transition_values}
         self.dict_value_to_list_of_transition = {val: list() for val in self.set_of_transition_values}
+        set_of_included = set()
         for input_diff, sub_reference_table in enumerate(reference_table):
             for output_diff, value in enumerate(sub_reference_table):
-                if value != reference_value_for_no_occurence:
+                if value != reference_value_for_no_occurence and (input_diff, output_diff) not in set_of_included:
                     self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
+                    set_of_included.add((input_diff, output_diff))
         self.transition_values_and_frequencies_built = True
         return

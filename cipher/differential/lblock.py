@@ -108,7 +108,7 @@ class LBlock(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential", type_of_modeling='SunEtAl. 2013'):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential", type_of_modeling='SunEtAl 2013'):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -200,7 +200,7 @@ class LBlock(Cipher):
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
-            sbox_dummy_variables = ["a" + str(i) for i in range(sbox_dummy_variables_per_round)]
+            sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
         else:
             sbox_dummy_variables = list()
             for round in range(1, self.rounds + 1):

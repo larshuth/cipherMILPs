@@ -554,47 +554,8 @@ def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2):
     # indices before: 0,1,2,3,32,33,34,35,4,5,6,7,8,
     # input 1 - 4, (input 1 - 4) + 32
     new_order_columns = list(range(matrix.get_shape()[1]))
-    if False:
-        indices = [[i for i in range(96 * round_number + 64, 96 * round_number + 64 + 64)] for round_number in range(k)]
-        for round_indices in indices:
-            for sbox_number in range(8):
-                inputs = [round_indices[i] for i in range(4 * sbox_number, 4 * sbox_number + 4)]
-                outputs = [32 + number for number in inputs]
-                in_and_out = inputs + outputs
-                for index_in_inputs_outputs, index_in_order in enumerate(
-                        round_indices[8 * sbox_number: 8 * sbox_number + 8]):
-                    new_order_columns[index_in_order] = in_and_out[index_in_inputs_outputs]
-
-    number_of_rows = matrix.get_shape()[0] + 1
-    new_order_rows = list(range(number_of_rows))
-    # collect all indices of xor left
-    indices_xor_left = list(chain.from_iterable(
-        [[(number_of_rows - 1) - i for i in
-          range(((64 * 4) + (8 * 7)) * round_number, (((64 * 4) + (8 * 7)) * round_number) + (32 * 4))]
-         for round_number in range(k)]))
-
-    # collect all indices of xor right
-    indices_xor_right = list(chain.from_iterable([
-        [(number_of_rows - 1) - i for i in
-         range((((64 * 4) + (8 * 7)) * round_number) + (32 * 4) + (8 * 7), (((64 * 4) + (8 * 7)) * (round_number + 1)))]
-        for
-        round_number in range(k)]))
-
-    # collect all indices of s-boxes
-    indices_sboxes = list(chain.from_iterable([
-        [(number_of_rows - 1) - i for i in range((((64 * 4) + (8 * 7)) * round_number) + (32 * 4),
-                                                 (((64 * 4) + (8 * 7)) * round_number) + (32 * 4) + (8 * 7))]
-        for round_number in range(k)]))
-
-    mouha_indices = list(reversed(sorted(indices_xor_left + indices_xor_right))) + indices_sboxes
-
-    for old_index, new_index in enumerate(mouha_indices):
-        new_order_rows[(number_of_rows - 1) - old_index] = new_index
-
-    print(new_order_rows)
-
+    
     # Blocks for a S-box contain variables x input, x output, a dummy, k xor prior, x xor
-    start_x_value = lambda n: (int(bool(n)) * 32) + (n * 96)
     start_new_x_values = lambda n: 64 + (n * 96)
 
     blocks = [[[f'k{(round_k * 32) + box * 4 + i}' for i in range(4)] +  # xor input, key
@@ -610,21 +571,44 @@ def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2):
     for index, box_list in enumerate(blocks[0].copy()):
         blocks[0][index] = box_list + [f'x{(index * 4) + i}' for i in range(4)] + [f'x{32 + 4 * index + i}' for i in range(4)]
 
-    print(variables)
-
     blocks = list(chain.from_iterable(list(chain.from_iterable(blocks))))
-    print(len(blocks), len(set(blocks)), len(new_order_columns), blocks)
-    print(set(variables) - set(blocks))
-    print(set(blocks) - set(variables))
-    print(set(range(897)) - (set(variables) - set(blocks)))
-    duplicates = [var for var in blocks if blocks.count(var) > 1]
-    unique_duplicates = list(set(duplicates))
-    print(sorted(unique_duplicates))
 
     for index, var_name in enumerate(blocks):
         new_order_columns[index] = variables[var_name]
-    print(new_order_columns)
 
     matrix = permutate_columns(matrix, new_order_columns)
-    matrix = permutate_rows(matrix, new_order_rows)
+
+    print("flip row order")
+    # flip row order
+    reversed_row_indices = list(range(matrix.get_shape()[0]))
+
+    # linking constraints zusammengruppieren
+    linking_constraints = reversed_row_indices[: k * ((2*16 + 7) * 8)].copy()
+    for round_k in range(k):
+        start_standard_box_constraints = (round_k * (2 * 16 * 8)) + (16 * 8)
+        end_standard_box_constraints = start_standard_box_constraints + (7*8)
+        linking_constraints = linking_constraints[:start_standard_box_constraints].copy() + linking_constraints[end_standard_box_constraints:].copy()
+
+    rows_of_standard_sbox_constraints = [[reversed_row_indices[round_k*(16*8 + 7*8 + 16*8) + 16*8 + i] for i in range(7*8)] for round_k in range(k)]
+
+    the_ultimate_linking_constraint = [(k * ((2*16 + 7) * 8)) + 1]
+    amount_extra_sbox_constraints = len(reversed_row_indices) - ((k * ((2*16 + 7) * 8)) + 1)
+    amount_extra_sbox_constraints_per_round = int(amount_extra_sbox_constraints / k)
+    rows_of_extra_sbox_constraints = [[reversed_row_indices[the_ultimate_linking_constraint[0] + (round_k * amount_extra_sbox_constraints_per_round) + i] for i in range(amount_extra_sbox_constraints_per_round)] for round_k in range(k)]
+
+    print(len(rows_of_standard_sbox_constraints), rows_of_standard_sbox_constraints)
+    print(len(rows_of_extra_sbox_constraints), rows_of_extra_sbox_constraints)
+    new_rows = the_ultimate_linking_constraint + linking_constraints
+    for round_k in range(k):
+        new_rows += rows_of_standard_sbox_constraints[round_k] + rows_of_extra_sbox_constraints[round_k]
+    new_rows_reversed = [new_rows[i] for i in range(len(new_rows) - 1, -1, -1)]
+    print(len(new_rows_reversed), new_rows_reversed)
+
+    test_direction_of_where_should_be_what = [0 for _ in range(len(new_rows))]
+    for i, p in enumerate(new_rows_reversed):
+        test_direction_of_where_should_be_what[p] = i
+
+    matrix = permutate_rows(matrix, new_rows_reversed)
+
     return matrix, variables
+

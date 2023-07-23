@@ -85,6 +85,8 @@ def safe_call():
                 print("I like the spirit but that is not a number. Try again, fool.")
 
         chosen_cipher = AVAILABLE[ciphelp]
+        available_modelings = {"Baksi 2020", "Boura 2020 Algo 2", "SunEtAl 2013", "SunEtAl 2013 Greedy",
+                     "Logical condition modeling", "Exclusion of impossible transitions"}
         if chosen_cipher in BIT_ORIENTED:
             print("Would you like to model the cipher word/byte-oriented (0) or bit-oriented (1)?")
             while True:
@@ -101,12 +103,10 @@ def safe_call():
         else:
             bit_oriented = False
 
-        print(
-            'choose a type of modelling: "SunEtAl 2013",  "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", and "Boura 2020 Algo 2"')
+        print(f'choose a type of modelling: {available_modelings}')
         while True:
             chosen_type = input()
-            if chosen_type not in {"SunEtAl 2013", "SunEtAl 2013 Greedy", "SunEtAl with 2013 Baksi extension 2020",
-                                   "SunEtAl 2013 with Baksi extension 2020 Greedy", "Baksi 2020", "Boura 2020 Algo 2"}:
+            if chosen_type not in available_modelings:
                 print('try again')
             else:
                 break
@@ -120,9 +120,9 @@ def safe_call():
 
 def generate_all_visualizations():
     viz = 1
-    for cipher in [LBlockDifferential, Gift64Differential, LBlockLinear, Gift64Linear, AesLinear, AesDifferential]:
+    for cipher in [LBlockDifferential, Gift64Differential, LBlockLinear, Gift64Linear]:
         for type in ["Baksi 2020", "Boura 2020 Algo 2", "SunEtAl 2013", "SunEtAl 2013 Greedy",
-                     "SunEtAl 2013 with Baksi extension 2020", "SunEtAl 2013 with Baksi extension 2020 Greedy"]:
+                     "Logical condition modeling", "Exclusion of impossible transitions"]:
             try:
                 main(2, cipher, viz, True, type)
             except:
@@ -131,20 +131,20 @@ def generate_all_visualizations():
 
 
 def generate_rijndael_convex_hull():
-    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, AesDifferential, 1, True, "SunEtAl 2013"
+    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, AesDifferential, 1, True, "SunEtAl 2013 Greedy"
     main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     return
 
 
 def rearrange_matrix():
-    rounds, chosen_cipher, bit_oriented, chosen_type = 4, LBlockDifferential, True, "SunEtAl 2013"
+    rounds, chosen_cipher, bit_oriented, chosen_type = 4, LBlockDifferential, True, "SunEtAl 2013 with Baksi extension 2020"
     vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
     return
 
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 2, LBlockDifferential, 1, True, "SunEtAl 2013 with Baksi extension 2020"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 4, Gift64Differential, 1, True, "SunEtAl 2013 Greedy"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
-        rearrange_matrix()
+        generate_all_visualizations()

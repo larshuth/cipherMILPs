@@ -1,7 +1,5 @@
 from scipy.sparse import lil_matrix
-import re
 from itertools import chain
-import convexHull
 from cipher.action import CipherAction
 
 
@@ -152,11 +150,11 @@ class SBoxAction(CipherAction):
         for index, val in enumerate(multipliers):
             if (index < self.sbox.in_bits) and (val != 0):
                 # here we check strictly smaller since the variable numbers start at 0
-                variable_name_for_key = self.input_vars[index - 1]
+                variable_name_for_key = self.input_vars[index]
                 var_pos_in_matrix = self.cipher_instance.V[variable_name_for_key]
                 convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, var_pos_in_matrix] = val
             elif val != 0:
-                variable_name_for_key = self.output_vars[index - self.sbox.in_bits - 1]
+                variable_name_for_key = self.output_vars[index - self.sbox.in_bits]
                 var_pos_in_matrix = self.cipher_instance.V[variable_name_for_key]
                 convex_hull_inequality_matrix[convex_hull_inequality_matrix_line, var_pos_in_matrix] = val
         convex_hull_inequality_matrix[
@@ -164,7 +162,7 @@ class SBoxAction(CipherAction):
         convex_hull_inequality_matrix_line += 1
         return convex_hull_inequality_matrix_line
 
-    def create_convex_hull_matrices(self, choice_of_inequalities='all', baksi_extension=True) -> None:
+    def create_convex_hull_matrices(self, choice_of_inequalities='all') -> None:
         """
         Sun et al. 2013 introduces the concept of applying a convex hull over a set of vectors representing the feasible
         transitions of an S-box in order to generate constraints which should only be fulfilled iff the (variables
@@ -223,12 +221,6 @@ class SBoxAction(CipherAction):
                     if len(inequality[2]) > 0:
                         still_impossible_transitions_left = True
 
-        if baksi_extension:
-            # Baksi suggests that adding equality constraints provided by the sage API and not only inequality
-            # constraints "will likely not appear"
-
-            pass
-
         self.cipher_instance.sbox_inequality_matrices.append(convex_hull_inequality_matrix)
         return
 
@@ -286,12 +278,13 @@ class SBoxAction(CipherAction):
 
         for qijp_var in qijp_vars:
             p = extract_p(qijp_var)
-            qijlp_vars = {qijp_var + f'l{l+1}': transition for l, transition in
+            qijlp_vars = {qijp_var + f'l{l}': transition for l, transition in
                           enumerate(self.sbox.dict_value_to_list_of_transition[p])}
             list_of_qijlp_vars = list(qijlp_vars)
 
             self.set_all_to_value(list_of_variables=list_of_qijlp_vars, value=1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
+
             sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = -1
             sbox_inequality_matrix_line += 1
 
@@ -456,10 +449,7 @@ class SBoxAction(CipherAction):
 
         constant_pos = self.cipher_instance.V["constant"]
 
-        inequalities_readable = self.sbox.feasible_transition_inequalities_sun_2013_extracted.copy()
-        # adding a new sparse scipy matrix convex_hull_inequality_matrix for the constraints as we cannot count
-        # them prior to this even and self.M would otherwise overflow
-        sbox_inequality_matrix = lil_matrix((len(inequalities_readable), self.cipher_instance.number_variables),
+        sbox_inequality_matrix = lil_matrix((len(self.sbox.impossible_transitions), self.cipher_instance.number_variables),
                                             dtype=int)
         sbox_inequality_matrix_line = 0
 
@@ -474,70 +464,21 @@ class SBoxAction(CipherAction):
         self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
         return
 
-    def run_action(self) -> None:
-        """
-        Substitutes variables in the cipher instance such that the input variables are replaced and not mistakenly used
-        further on in the cryptanalysis process.
-
-        Generate constraints to cipher_instance.M in accordance with Sun et al. 2013 which are
-        (1.) input \\leq dummy for all inputs
-        (2.) sum over all inputs \\geq dummy
-        (3.) if S-box bijective: sum_{i \\in all_inputs}
-        (4.) if the S-box invertible with branch number 2:
-        (4.1) sum over inputs + sum over outputs \\geq branch * new dummy
-        (4.2) input \\leq new dummy for all inputs
-        (4.3) output \\leq dummy for all outputs
-        """
-
-        # print(self.type_of_action, self.input_vars)
-
-        # starting with (1.)
-        self.input_leq_dummy()
-
-        # then (2.)
-        self.sum_over_all_inputs_geq_dummy()
-
-        # then (3.)
-        if self.sbox.is_bijective:
-            self.non_zero_input_implies_non_zero_output()
-            self.non_zero_output_implies_non_zero_input()
-        else:
-            self.non_zero_output_implies_non_zero_input()
-
-        # and finally (4.) sbox invertible with branch number 2
-        if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
-            self.branch_number_inequality()
-
-        if "SunEtAl 2013" in self.cipher_instance.type_of_modeling:
-            self.create_convex_hull_matrices(choice_of_inequalities=self.cipher_instance.choice_of_inequalities,
-                                             baksi_extension=self.cipher_instance.baksi_extension)
-            self.sun_logical_condition_modeling()
-            if "Baksi extension" in self.cipher_instance.type_of_modeling:
-                self.create_sun_logical_condition_modeling_for_all_impossible_transitions()
-        elif self.cipher_instance.type_of_modeling == "Baksi 2020":
-            self.create_baksi_inequalities()
-        elif self.cipher_instance.type_of_modeling == "Boura 2020 Algo 2":
-            self.create_boura_coggia_inequalities(algorithm=2)
-        else:
-            raise ValueError(
-                "Variable type_of_modeling declared incorrectly. Value should be one of those listed in the docstring.")
-        if type(self.overwrite_position) == int:
-            for i in range(self.sbox.in_bits):
-                self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]
-        return
-
     def create_boura_coggia_inequalities(self, algorithm=2):
         self.sbox.build_non_zero_transition_vectors()
         constant_pos = self.cipher_instance.V["constant"]
 
         if algorithm == 2:
             all_vectors_for_boura = self.affineprec()
+            print('number of boura pairs', len(all_vectors_for_boura))
+            print(all_vectors_for_boura)
             sbox_inequality_matrix = lil_matrix((len(all_vectors_for_boura), self.cipher_instance.number_variables),
                                                 dtype=int)
             sbox_inequality_matrix_line = 0
             for (a, u), _ in all_vectors_for_boura:
-                self.generate_inequality_for_a_u(a, u, sbox_inequality_matrix, sbox_inequality_matrix_line,
-                                                 constant_pos)
+                sbox_inequality_matrix_line = self.generate_inequality_for_a_u(a, u, sbox_inequality_matrix,
+                                                                               sbox_inequality_matrix_line,
+                                                                               constant_pos)
         elif algorithm == 3:
             self.addthreeballs(self.sbox.impossible_transitions)
 
@@ -591,7 +532,7 @@ class SBoxAction(CipherAction):
                                 if interest[1] == v_calculated:
                                     s_interesting -= {interest}
                             s_interesting = s_interesting - {
-                                ((a, u), set(self.a_xor_prec_u(a, vector_of_int(v, len(a)))))}
+                                ((a, v), set(self.a_xor_prec_u(a, vector_of_int(v, len(a)))))}
                 s_interesting |= s_i[k]
             s_out |= s_interesting
         return s_out
@@ -684,26 +625,31 @@ class SBoxAction(CipherAction):
         return sphere
 
     def generate_inequality_for_a_u(self, a, u, sbox_inequality_matrix, sbox_inequality_matrix_line, constant_pos):
-        indices = set(range(len(a) + len(u))) - (self.supp(a) | self.supp(u))
+        supp_a = self.supp(a)
+        indices = set(range(len(a) + len(u))) - (supp_a | self.supp(u))
+
+        int_of_vector = lambda x: sum([(2 ** (len(x) - index - 1)) * bit for index, bit in enumerate(x)])
+        hamming_weight = lambda x: sum(
+            [1 if ((2 ** i & int_of_vector(x)) > 0) else 0 for i in range(len(x))])
 
         plus_vars = list()
         minus_vars = list()
         for in_bit in range(self.sbox.in_bits):
             if in_bit in indices:
                 plus_vars.append(self.input_vars[in_bit])
-            else:
+            elif in_bit in supp_a:
                 minus_vars.append(self.input_vars[in_bit])
         for out_bit in range(self.sbox.out_bits):
             if out_bit in indices:
                 plus_vars.append(self.output_vars[out_bit])
-            else:
+            elif out_bit in supp_a:
                 minus_vars.append(self.output_vars[out_bit])
 
         self.set_all_to_value(list_of_variables=minus_vars, value=-1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
-        sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = len(minus_vars) - 1
+        sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = hamming_weight(a) - 1
         sbox_inequality_matrix_line += 1
         return sbox_inequality_matrix_line
 
@@ -751,3 +697,56 @@ class SBoxAction(CipherAction):
         sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = constant - (d + 1)
         sbox_inequality_matrix_line += 1
         return sbox_inequality_matrix_line
+
+    def run_action(self) -> None:
+        """
+        Substitutes variables in the cipher instance such that the input variables are replaced and not mistakenly used
+        further on in the cryptanalysis process.
+
+        Generate constraints to cipher_instance.M in accordance with Sun et al. 2013 which are
+        (1.) input \\leq dummy for all inputs
+        (2.) sum over all inputs \\geq dummy
+        (3.) if S-box bijective: sum_{i \\in all_inputs}
+        (4.) if the S-box invertible with branch number 2:
+        (4.1) sum over inputs + sum over outputs \\geq branch * new dummy
+        (4.2) input \\leq new dummy for all inputs
+        (4.3) output \\leq dummy for all outputs
+        """
+
+        # print(self.type_of_action, self.input_vars)
+
+        # starting with (1.)
+        self.input_leq_dummy()
+
+        # then (2.)
+        self.sum_over_all_inputs_geq_dummy()
+
+        # then (3.)
+        if self.sbox.is_bijective:
+            self.non_zero_input_implies_non_zero_output()
+            self.non_zero_output_implies_non_zero_input()
+        else:
+            self.non_zero_output_implies_non_zero_input()
+
+        # and finally (4.) sbox invertible with branch number 2
+        if (not self.sbox.is_invertible) or (not (self.sbox.branch_number <= 2)):
+            self.branch_number_inequality()
+
+        if self.cipher_instance.type_of_modeling == "Logical condition modeling":
+            self.sun_logical_condition_modeling()
+        elif self.cipher_instance.type_of_modeling == "Exclusion of impossible transitions":
+            self.create_sun_logical_condition_modeling_for_all_impossible_transitions()
+        elif "SunEtAl 2013" in self.cipher_instance.type_of_modeling:
+            self.create_convex_hull_matrices(choice_of_inequalities=self.cipher_instance.choice_of_inequalities)
+            self.sun_logical_condition_modeling()
+        elif self.cipher_instance.type_of_modeling == "Baksi 2020":
+            self.create_baksi_inequalities()
+        elif self.cipher_instance.type_of_modeling == "Boura 2020 Algo 2":
+            self.create_boura_coggia_inequalities(algorithm=2)
+        else:
+            raise ValueError(
+                "Variable type_of_modeling declared incorrectly. Value should be one of those listed in the docstring.")
+        if type(self.overwrite_position) == int:
+            for i in range(self.sbox.in_bits):
+                self.cipher_instance.A[self.overwrite_position + i] = self.output_vars[i]
+        return

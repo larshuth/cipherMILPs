@@ -53,10 +53,10 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
         pickle.dump(cipher_instance.V.copy(), file)
         file.close()
 
-    print('start inverting rows and columns')
-    matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
+    print(matrix.get_shape()[0], matrix.get_shape()[1])
 
-    print(len(variables)/2, matrix.get_shape()[1])
+    print('start inverting rows and columns')
+    # matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
 
     matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
 
@@ -156,7 +156,7 @@ def invert_matrix(matrix, variables, horizontal=True, vertical=True):
     print("flip row order")
     # flip row order
     if vertical:
-        reversed_row_indices = list(range(matrix.get_shape()[0], -1, -1))
+        reversed_row_indices = list(range(matrix.get_shape()[0] - 1, -1, -1))
         matrix = sf.permutate_rows(matrix, reversed_row_indices)
     return matrix, variables
 
