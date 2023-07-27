@@ -127,3 +127,4 @@ __pycache__/**
 *.fls
 *.fdb_latexmk
 .ssh*
+*.pkl

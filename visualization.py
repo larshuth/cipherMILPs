@@ -58,7 +58,9 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
     print('start inverting rows and columns')
     # matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
 
-    matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+    # matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+
+    matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds)
 
     # print('start removing empty rows and columns')
     # matrix, variables = remove_zeros(matrix, variables)
@@ -74,7 +76,7 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
     # print(df)
 
     pylab.figimage(df, cmap='binary', origin='lower')
-    fig.savefig(f"{filename}.png")
+    fig.savefig(f"{filename}_sorted.png")
 
     plt.show()
     print("plot should have been shown")
@@ -208,23 +210,24 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     pickle.dump(cipher_instance.V.copy(), file)
     file.close()
 
-    A = cipher_instance.M.copy()
-    sf.d_var_to_beginning(cipher_instance)
-    M = cipher_instance.M.copy()
-    sf.long_constraints_to_top(cipher_instance)
-    B = cipher_instance.M.copy()
-    # sf.create_fourblock(cipher_instance)
-    C = cipher_instance.M
+    if False:
+        A = cipher_instance.M.copy()
+        sf.d_var_to_beginning(cipher_instance)
+        M = cipher_instance.M.copy()
+        sf.long_constraints_to_top(cipher_instance)
+        B = cipher_instance.M.copy()
+        # sf.create_fourblock(cipher_instance)
+        C = cipher_instance.M
 
-    axs[0].set_title('native')
-    axs[1].set_title('d_variables to the beginning')
-    axs[2].set_title('long constraints to the top')
-    axs[3].set_title('creating 4-block')
+        axs[0].set_title('native')
+        axs[1].set_title('d_variables to the beginning')
+        axs[2].set_title('long constraints to the top')
+        axs[3].set_title('creating 4-block')
 
-    ax1.spy(A, markersize=1, color="teal")
-    ax2.spy(M, markersize=1, color="steelblue")
-    ax3.spy(B, markersize=1, color="mediumturquoise")
-    ax4.spy(C, markersize=1, color="skyblue")
+        ax1.spy(A, markersize=1, color="teal")
+        ax2.spy(M, markersize=1, color="steelblue")
+        ax3.spy(B, markersize=1, color="mediumturquoise")
+        ax4.spy(C, markersize=1, color="skyblue")
 
     plt.show()
     print("plot should have been shown")

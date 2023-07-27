@@ -4,7 +4,7 @@ from cipher.differential.aes import Aes
 
 class AESTest(unittest.TestCase):
     def test_round_progression_bit_oriented(self):
-        cipher_instance = Aes(rounds=4, model_as_bit_oriented=True)
+        cipher_instance = Aes(rounds=4, model_as_bit_oriented=True, type_of_modeling='Logical condition modeling')
 
         bits_before_round_1 = ['x0', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13',
                                'x14', 'x15', 'x16', 'x17', 'x18', 'x19', 'x20', 'x21', 'x22', 'x23', 'x24', 'x25',
@@ -105,7 +105,7 @@ class AESTest(unittest.TestCase):
         return
 
     def test_correct_actions_performed_round_1_bit_oriented(self):
-        cipher_instance = Aes(rounds=4, model_as_bit_oriented=True)
+        cipher_instance = Aes(rounds=4, model_as_bit_oriented=True, type_of_modeling='Logical condition modeling')
 
         expected_key_xor_actions_pre_round_1 = [['xor', 'x0', 'k0', 'x128', 'dx0'], ['xor', 'x1', 'k1', 'x129', 'dx1'],
                                                 ['xor', 'x2', 'k2', 'x130', 'dx2'], ['xor', 'x3', 'k3', 'x131', 'dx3'],
@@ -468,7 +468,7 @@ class AESTest(unittest.TestCase):
         return
 
     def test_round_progression_word_oriented(self):
-        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False)
+        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False, type_of_modeling='Logical condition modeling')
 
         bits_before_round_1 = ['x0', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13',
                                'x14', 'x15']
@@ -490,7 +490,7 @@ class AESTest(unittest.TestCase):
         return
 
     def test_correct_actions_performed_round_1_word_oriented(self):
-        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False)
+        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False, type_of_modeling='Logical condition modeling')
 
         expected_key_xor_actions_pre_round_1 = [['xor', 'x0', 'k0', 'x16', 'dx0'], ['xor', 'x1', 'k1', 'x17', 'dx1'],
                                                 ['xor', 'x2', 'k2', 'x18', 'dx2'], ['xor', 'x3', 'k3', 'x19', 'dx3'],
@@ -532,7 +532,7 @@ class AESTest(unittest.TestCase):
         return
 
     def test_correct_actions_performed_round_2_word_oriented(self):
-        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False)
+        cipher_instance = Aes(rounds=4, model_as_bit_oriented=False, type_of_modeling='Logical condition modeling')
 
         cipher_instance.run_round()
 

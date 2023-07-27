@@ -22,7 +22,7 @@ class Gift64(Gift64):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=True, type_of_modeling='SunEtAl. 2013'):
+    def __init__(self, rounds=1, model_as_bit_oriented=True, type_of_modeling='SunEtAl 2013'):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 

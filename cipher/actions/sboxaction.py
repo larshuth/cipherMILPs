@@ -59,10 +59,6 @@ class SBoxAction(CipherAction):
 
         self.dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
 
-        # variables for the approach to S-box modelling described in Baksi 2020.
-        self.qijp_vars = list()
-        self.qijlp_vars = list()
-
         self.overwrite_position = first_a_position_to_overwrite
         return
 
@@ -241,13 +237,14 @@ class SBoxAction(CipherAction):
         #
         # for each p transition do
         # (3.)
+        self.sbox.build_list_of_transition_values_and_frequencies()
 
         constant_pos = self.cipher_instance.V["constant"]
         big_m = 2 * self.sbox.in_bits
         qijp_vars = [self.dummy_var + f'p{p}' for p in self.sbox.set_of_transition_values]
 
         number_of_inequalities = 1 + 2 + (2 * len(qijp_vars)) + sum(
-            [len(value) for table_column, value in self.sbox.dict_value_to_list_of_transition.items()])
+            [len(value) for key, value in self.sbox.dict_value_to_list_of_transition.items()])
 
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
@@ -262,13 +259,13 @@ class SBoxAction(CipherAction):
         sbox_inequality_matrix_line += 1
 
         # (2.1)
-        self.set_all_to_value(list_of_variables=self.qijp_vars, value=-1, line_var=sbox_inequality_matrix_line,
+        self.set_all_to_value(list_of_variables=qijp_vars, value=-1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = 1
         sbox_inequality_matrix_line += 1
 
         # (2.2)
-        self.set_all_to_value(list_of_variables=self.qijp_vars, value=1, line_var=sbox_inequality_matrix_line,
+        self.set_all_to_value(list_of_variables=qijp_vars, value=1, line_var=sbox_inequality_matrix_line,
                               matrix_to_be_set=sbox_inequality_matrix)
         sbox_inequality_matrix[sbox_inequality_matrix_line, self.dummy_var_pos_in_matrix] = -1
         sbox_inequality_matrix_line += 1
@@ -292,6 +289,7 @@ class SBoxAction(CipherAction):
                                   matrix_to_be_set=sbox_inequality_matrix)
             sbox_inequality_matrix[sbox_inequality_matrix_line, self.cipher_instance.V[qijp_var]] = 1
             sbox_inequality_matrix_line += 1
+
             for qijlp_var, transition in qijlp_vars.items():
                 # extract bit representation from transition
                 bitwise_input_diff = [1 if (((2 ** i) & transition[0]) > 0) else 0 for i in
@@ -332,86 +330,20 @@ class SBoxAction(CipherAction):
         return
 
     def sun_logical_condition_modeling(self):
-        if not self.sbox.non_zero_ddt_entries_built:
-            self.sbox.build_ddt()
+        hamming_weight = lambda x: sum([1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.sbox.in_bits, self.sbox.out_bits))])
+        vector_of_int = lambda value, length: tuple(
+            [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
 
-        transitions = list()
-        for i in range(3 ** self.sbox.in_bits):
-            in_vector = list()
-            list_of_input_diffs_for_vector = [list()]
-            for bit in range(self.sbox.in_bits - 1, -1, -1):
-                if (2 * (3 ** bit)) <= i:
-                    in_vector.append('*')
-                    list_of_input_diffs_for_vector = list(chain.from_iterable(
-                        [[input_diff + [0], input_diff + [1]] for input_diff in list_of_input_diffs_for_vector]))
-                    i -= (2 * (3 ** bit))
-                elif (3 ** bit) <= i:
-                    in_vector.append(1)
-                    i -= (3 ** bit)
-                    list_of_input_diffs_for_vector = [input_diff + [1] for input_diff in list_of_input_diffs_for_vector]
-                else:
-                    in_vector.append(0)
-                    list_of_input_diffs_for_vector = [input_diff + [0] for input_diff in list_of_input_diffs_for_vector]
-
-            # we now have a vector for the transitions we want to look at, i.e. [0, *, *, *] are all input differences
-            # which start with a zero so all input pairs which have the same most significant bit
-            int_from_vector = lambda list_of_bits: sum(
-                [bit * (2 ** (self.sbox.in_bits - 1 - index)) for index, bit in enumerate(list_of_bits)])
-
-            list_of_output_diffs_for_vector_as_int = list(chain.from_iterable(
-                [self.sbox.dict_of_transitions_i2o[int_from_vector(input_diff)] for input_diff in
-                 list_of_input_diffs_for_vector]))
-            list_of_output_diffs_for_vector = [
-                [1 if (((2 ** i) & output_diff_as_int) > 0) else 0 for i in range(self.sbox.out_bits - 1, -1, -1)] for
-                output_diff_as_int in list_of_output_diffs_for_vector_as_int]
-
-            out_vector = list()
-            for pos in range(self.sbox.out_bits):
-                all_bit_values_at_position = set([output_diff[pos] for output_diff in list_of_output_diffs_for_vector])
-                if all_bit_values_at_position == {0, 1}:
-                    out_vector.append('*')
-                elif all_bit_values_at_position == {1}:
-                    out_vector.append(1)
-                elif all_bit_values_at_position == {0}:
-                    out_vector.append(0)
-                else:
-                    print(all_bit_values_at_position)
-                    raise Exception(
-                        'Something went wrong. This is to be expected since this code runs as well as my grandpa and that man died 4 years ago (after sitting in a wheelchair for almost 10 years prior). Rip king, he would have loved this dark humor of being included in a Python exception.')
-            if out_vector.count('*') == (self.sbox.out_bits - 1):
-                transitions.append((in_vector, out_vector))
-
-            list_of_input_diffs_for_vector_as_int = list(chain.from_iterable(
-                [self.sbox.dict_of_transitions_o2i[int_from_vector(output_diff)] for output_diff in
-                 list_of_input_diffs_for_vector]))
-            list_of_input_diffs_for_vector = [
-                [1 if (((2 ** i) & output_diff_as_int) > 0) else 0 for i in range(self.sbox.out_bits - 1, -1, -1)] for
-                output_diff_as_int in list_of_input_diffs_for_vector_as_int]
-
-            out_vector = list()
-            for pos in range(self.sbox.out_bits):
-                all_bit_values_at_position = set([output_diff[pos] for output_diff in list_of_input_diffs_for_vector])
-                if all_bit_values_at_position == {0, 1}:
-                    out_vector.append('*')
-                elif all_bit_values_at_position == {1}:
-                    out_vector.append(1)
-                elif all_bit_values_at_position == {0}:
-                    out_vector.append(0)
-                else:
-                    print(all_bit_values_at_position)
-                    raise Exception(
-                        'Something went wrong. This is to be expected since this code runs as well as my grandpa and that man died 4 years ago (after sitting in a wheelchair for almost 10 years prior). Rip king, he would have loved this dark humor of being included in a Python exception.')
-            if out_vector.count('*') == (self.sbox.out_bits - 1):
-                transitions.append((out_vector, in_vector))
+        self.sbox.build_differential_patterns()
+        transitions = self.sbox.differential_properties
 
         constant_pos = self.cipher_instance.V["constant"]
 
-        number_of_inequalities = len(transitions)
+        number_of_inequalities = sum([hamming_weight(transition[2]) + hamming_weight(transition[3]) for transition in transitions])
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
         sbox_inequality_matrix_line = 0
 
-        # now, we have a list of our respective input and output differences
         def sun_section_3_1(implicator, implicator_vars, implication, implication_vars, sbox_inequality_matrix_line):
             plus_vars = list()
             minus_vars = list()
@@ -429,17 +361,33 @@ class SBoxAction(CipherAction):
                                   matrix_to_be_set=sbox_inequality_matrix)
             self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
-            sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = len(minus_vars) - 1
+            sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = sum([i if type(i) == int else 0 for i in implicator_vars])
             sbox_inequality_matrix_line += 1
             return sbox_inequality_matrix_line
 
-        for in_vector, out_vector in transitions:
-            if in_vector.count('*') < (self.sbox.in_bits - 1):
-                # we have 2 or more vars -> 1 var
-                sun_section_3_1(in_vector, self.input_vars, out_vector, self.output_vars, sbox_inequality_matrix_line)
-            if out_vector.count('*') < (self.sbox.out_bits - 1):
-                # we have 1 var -> 2 or more vars
-                sun_section_3_1(out_vector, self.output_vars, in_vector, self.input_vars, sbox_inequality_matrix_line)
+        for implication_direction, xorwise_diff, reoccuring_0s, reoccuring_1s in transitions:
+            if implication_direction == 'i2o':
+                implicator_vars = self.input_vars
+                implication_vars = self.output_vars
+            elif implication_direction == 'o2i':
+                implicator_vars = self.output_vars
+                implication_vars = self.input_vars
+            else:
+                raise ValueError('implication_direction not of type i2o or o2i')
+            for pos, val in enumerate(vector_of_int(reoccuring_0s, len(implication_vars))):
+                if int(val):
+                    implication = [None for _ in range(len(implication_vars))]
+                    implication[pos] = 0
+                    sbox_inequality_matrix_line = sun_section_3_1(vector_of_int(xorwise_diff, len(implicator_vars)),
+                                                                  implicator_vars, implication, implication_vars,
+                                                                  sbox_inequality_matrix_line)
+            for pos, val in enumerate(vector_of_int(reoccuring_1s, len(implication_vars))):
+                if int(val):
+                    implication = [None for _ in range(len(implication_vars))]
+                    implication[pos] = 1
+                    sbox_inequality_matrix_line = sun_section_3_1(vector_of_int(xorwise_diff, len(implicator_vars)),
+                                                                  implicator_vars, implication, implication_vars,
+                                                                  sbox_inequality_matrix_line)
 
         self.cipher_instance.sbox_inequality_matrices.append(sbox_inequality_matrix)
         return transitions
@@ -449,8 +397,9 @@ class SBoxAction(CipherAction):
 
         constant_pos = self.cipher_instance.V["constant"]
 
-        sbox_inequality_matrix = lil_matrix((len(self.sbox.impossible_transitions), self.cipher_instance.number_variables),
-                                            dtype=int)
+        sbox_inequality_matrix = lil_matrix(
+            (len(self.sbox.impossible_transitions), self.cipher_instance.number_variables),
+            dtype=int)
         sbox_inequality_matrix_line = 0
 
         for vector in self.sbox.impossible_transitions:

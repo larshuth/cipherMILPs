@@ -176,7 +176,7 @@ class SBox:
             vector_out = [1 if (((2 ** i) & y) > 0) else 0 for i in range(self.out_bits - 1, -1, -1)]
 
             self.vectors |= {tuple(vector_in.copy() + vector_out.copy())}
-
+        print(self.vectors)
         all_transitions = set(tuple([1 if (((2 ** i) & counter) > 0) else 0 for i in
                                      range((self.in_bits + self.out_bits) - 1, -1, -1)]) for counter in
                               range(2 ** (self.in_bits + self.out_bits)))
@@ -199,7 +199,7 @@ class SBox:
                 if occurrences > 0:
                     reoccurring_1s &= output_xorwise_diff
                     reoccurring_0s &= (max_value_for_output - output_xorwise_diff)
-            if reoccurring_0s or reoccurring_1s:
+            if (reoccurring_0s or reoccurring_1s) and (input_xorwise_diff != 0):
                 differential_properties_i2o |= {('i2o', input_xorwise_diff, reoccurring_0s, reoccurring_1s)}
         return differential_properties_i2o
 
@@ -220,7 +220,7 @@ class SBox:
                 if occurrences > 0:
                     reoccurring_1s &= input_xorwise_diff
                     reoccurring_0s &= (max_value_for_output - input_xorwise_diff)
-            if reoccurring_0s or reoccurring_1s:
+            if (reoccurring_0s or reoccurring_1s) and (output_xorwise_diff != 0):
                 self.differential_properties |= {('o2i', output_xorwise_diff, reoccurring_0s, reoccurring_1s)}
 
         return differential_properties_o2i
@@ -425,7 +425,7 @@ class SBox:
         set_of_included = set()
         for input_diff, sub_reference_table in enumerate(reference_table):
             for output_diff, value in enumerate(sub_reference_table):
-                if value != reference_value_for_no_occurence and (input_diff, output_diff) not in set_of_included:
+                if (value != reference_value_for_no_occurence) and ((input_diff, output_diff) not in set_of_included):
                     self.dict_value_to_list_of_transition[value].append((input_diff, output_diff))
                     set_of_included.add((input_diff, output_diff))
         self.transition_values_and_frequencies_built = True

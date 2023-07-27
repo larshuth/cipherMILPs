@@ -131,20 +131,20 @@ def generate_all_visualizations():
 
 
 def generate_rijndael_convex_hull():
-    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 3, AesDifferential, 1, True, "SunEtAl 2013 Greedy"
+    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, AesDifferential, 1, True, "SunEtAl 2013 Greedy"
     main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     return
 
 
 def rearrange_matrix():
-    rounds, chosen_cipher, bit_oriented, chosen_type = 4, LBlockDifferential, True, "SunEtAl 2013 with Baksi extension 2020"
+    rounds, chosen_cipher, bit_oriented, chosen_type = 1, LBlockDifferential, True, "Baksi 2020"
     vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
     return
 
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 4, Gift64Differential, 1, True, "SunEtAl 2013 Greedy"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, LBlockDifferential, 1, True, "Baksi 2020"
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
-        generate_all_visualizations()
+        safe_call()
