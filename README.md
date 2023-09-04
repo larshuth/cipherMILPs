@@ -1,5 +1,6 @@
 # cipherMILPs
-We are building a small framework for us to use in the analysis of the block structures of MILPs used in linear and differential cryptanalysis
+We are building a small framework to use in the analysis of the block structures of MILPs used in linear and differential cryptanalysis.
+Lars Huth's master's thesis which can be used as an introduction to the topic is found [here](cipherMILPs.pdf).
 
 ### What has been done and what we plan on doing:
 - [x] Modular implementation of ciphers
