@@ -28,7 +28,7 @@ Lars Huth's master's thesis which can be used as an introduction to the topic is
 - [ ] Different approaches to the modeling
   - [x] Model S-boxes using Convex Hull
     - [x] Original modeling (Sun et al. 2013)
-    - [x] Extension to fix mistakenly included transitions (Baksi 2020)
+    - [x] Extension to exclude all impossible transitions (Baksi 2020)
   - [x] Logical condition modeling (Sun et al. 2013) 
   - [x] New MILP S-box modeling (Baksi 2020)
   - [ ] New MILP S-box modeling (Boura and Coggia 2020)
