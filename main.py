@@ -6,7 +6,7 @@ from cipher.linear.aes import Aes as AesLinear
 from cipher.linear.lblock import LBlock as LBlockLinear
 from cipher.linear.gift import Gift64 as Gift64Linear
 
-DEBUG = False
+DEBUG = True
 
 AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear]
 BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear, Gift64Linear]
@@ -131,7 +131,7 @@ def generate_all_visualizations():
 
 
 def generate_rijndael_convex_hull():
-    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, AesDifferential, 1, True, "SunEtAl 2013 Greedy"
+    rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, AesDifferential, 1, True, "Baksi 2020"
     main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     return
 
@@ -144,7 +144,7 @@ def rearrange_matrix():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = 1, LBlockDifferential, 1, True, "Baksi 2020"
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, Gift64Linear, 1, True, "Baksi 2020")
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
     else:
         safe_call()
