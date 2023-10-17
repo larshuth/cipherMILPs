@@ -137,14 +137,15 @@ def generate_rijndael_convex_hull():
 
 
 def rearrange_matrix():
-    rounds, chosen_cipher, bit_oriented, chosen_type = 1, LBlockDifferential, True, "Baksi 2020"
+    rounds, chosen_cipher, bit_oriented, chosen_type = (4, AesLinear, False, "Boura 2020 Algo 2")
     vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
     return
 
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, Gift64Linear, 1, True, "Baksi 2020")
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, AesDifferential, 1, False, "Logical condition modeling")
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
+        # rearrange_matrix()
     else:
         safe_call()

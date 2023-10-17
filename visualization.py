@@ -60,7 +60,10 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
 
     # matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
 
-    matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+    # matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+
+    matrix, variables = sf.tetrisfold_linear_aes_k_round(matrix, variables, k=rounds)
+    # matrix, variables = sf.tetrisfold_differential_aes_k_round(matrix, variables, k=rounds)
 
     # print('start removing empty rows and columns')
     # matrix, variables = remove_zeros(matrix, variables)

@@ -87,8 +87,8 @@ class Cipher:
 
         #   determine plaintext vars
         plaintext_vars = self.plaintext_vars
-        key_vars = int(new_keys_every_round) * self.key_vars * (
-                self.rounds + int(extra_key_round))  # upper bound in accordance with AES
+        key_vars = (int(new_keys_every_round) * self.key_vars * self.rounds) + (
+                    self.key_vars * int(extra_key_round))  # upper bound in accordance with AES
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -217,7 +217,7 @@ class Cipher:
         self.V |= {'k' + str(i): i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars
                    for i in range(key_vars)}
         self.V |= {i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars: 'k' + str(i)
-                   for i in range(self.keysize * ((new_keys_every_round * self.rounds) + int(extra_key_round)))}
+                   for i in range(key_vars)}
 
         if self.type_of_modeling == 'Baksi 2020':
             qijp_vars = list(chain.from_iterable(list(chain.from_iterable(
@@ -243,7 +243,8 @@ class Cipher:
             enumerate(qijp_vars)}
 
         self.V |= {
-            f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars + len(qijp_vars) for i, qijlp_var in
+            f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars + len(
+                qijp_vars) for i, qijlp_var in
             enumerate(qijlp_vars)}
         self.V |= {
             i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars + len(

@@ -67,7 +67,7 @@ class Aes(Cipher):
         if self.round_number == 1:
             for keyaction in self.generate_key_xor_actions_for_round():
                 keyaction.run_action()
-            self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
+            self.K = ['k' + str((self.round_number * self.key_vars) + i) for i in range(self.key_vars)]
 
         for sboxaction in self.generate_sbox_actions_for_round():
             sboxaction.run_action()
