@@ -71,7 +71,7 @@ class Cipher:
         return
 
     def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
-                                       overwrites=0, new_keys_every_round=False, extra_key_round=False):
+                                       overwrites=0, equality_overwrites=0, new_keys_every_round=False, extra_key_round=False):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -104,7 +104,8 @@ class Cipher:
         lt_new_x_vars_per_round = sum(lt_per_round)
 
         #   determine output vars from overwriting operations such as ColumnMix in AES
-        overwrite_new_x_vars_per_round = overwrites
+        overwrite_new_x_vars_per_round = overwrites + equality_overwrites
+        overwrite_constraints_per_round = 2*equality_overwrites
 
         extra_xor_dummy_variables_per_round = xors_not_in_rounds
         extra_xor_constraints = 4 * xors_not_in_rounds
@@ -144,7 +145,8 @@ class Cipher:
         number_constraints = ((xor_constraints_per_round +
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
-                               lt_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
+                               lt_constraints_per_round +
+                               overwrite_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
         number_constraints = int(number_constraints)
         print("# Constraints:", number_constraints)
 

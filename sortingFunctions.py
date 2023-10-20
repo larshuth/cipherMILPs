@@ -781,3 +781,37 @@ def tetrisfold_linear_aes_k_round(matrix, variables, k=2):
 
     return matrix, variables
 
+
+def tetrisfold_differential_gift64_k_round(matrix, variables, k=2):
+    matrixshape = matrix.get_shape()
+    new_order_columns = list(range(matrixshape[1]))
+    print('matrix', matrix.get_shape())
+    print('variables', len(variables))
+
+    blocks = [[f'x{i}' for i in range(64)]]
+
+    for i in range(k):
+        blocks += [  # sbox action
+            [f'ds{byte + (4 * i)}' for byte in range(4)] +  # mix columns as linear transformation dummy variable
+            [f'x{byte + (16 * (i + 1))}' for byte in range(16)]  # mix columns output variables
+        ]
+        blocks += [  # mix column action
+            [f'dl{byte + (4 * i)}' for byte in range(4)] +  # mix columns as linear transformation dummy variable
+            [f'x{byte + (16 * (i + 1))}' for byte in range(16)]  # mix columns output variables
+        ]
+
+    blocks = list(chain.from_iterable(blocks))
+
+    print(blocks)
+
+    for index, var_name in enumerate(blocks):
+        new_order_columns[index] = variables[var_name]    # variables[var_name]
+
+    matrix = permutate_columns(matrix, new_order_columns)
+
+    new_rows_reversed = list(range(matrixshape[0] - 1, -1, -1))
+
+    matrix = permutate_rows(matrix, new_rows_reversed)
+
+    return matrix, variables
+

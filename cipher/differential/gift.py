@@ -4,6 +4,7 @@ from cipher.actions.permutationaction import PermutationAction
 from cipher.actions.lineartransformationaction import LinTransformationAction
 from cipher.actions.xoraction import XorAction
 from cipher.actions.sboxaction import SBoxAction
+from cipher.actions.overwriteaction import OverwriteAction
 
 
 class Gift64(Cipher):
@@ -47,6 +48,14 @@ class Gift64(Cipher):
             list_of_single_bit_xor_actions.append(LinTransformationAction([self.A[pos]], self, 1, [pos]))
         return list_of_single_bit_xor_actions
 
+    def generate_equality_overwrite_actions(self):
+        list_of_equality_overwrite_actions = list()
+        set_of_xor_positions = {4 * i for i in range(16)} | {(4 * i) + 1 for i in range(16)}
+        set_of_single_bit_xor_positions = {3, 7, 11, 15, 19, 23, self.plaintextsize - 1}
+        list_of_equality_overwrite_positions = set(range(self.plaintextsize)) - (set_of_xor_positions | set_of_single_bit_xor_positions)
+        list_of_equality_overwrite_actions = [OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
+        return list_of_equality_overwrite_actions
+
     def run_round(self):
         print(f"Round {self.round_number} start")
 
@@ -61,6 +70,9 @@ class Gift64(Cipher):
 
         for single_bit_xor_action in self.generate_single_bit_xor_actions():
             single_bit_xor_action.run_action()
+
+        for equality_overwrite_action in self.generate_equality_overwrite_actions():
+            equality_overwrite_action.run_action()
 
         self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
         print(f"Round {self.round_number} end")
@@ -120,12 +132,12 @@ class Gift64(Cipher):
 
         self.sboxes = [self.sbox] * 16
 
-        overwrites = 0  # for the ColumnMix operations in AES where (as off Zhou) the
-        # variables are just overwritten because otherwise it is too complex
+        non_equality_overwrites = 0
+        equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
 
         self.prepare_for_type_of_modeling()
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, overwrites,
+                                                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
                                                                              new_keys_every_round=True)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)

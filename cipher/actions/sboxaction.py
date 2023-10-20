@@ -330,7 +330,8 @@ class SBoxAction(CipherAction):
         return
 
     def sun_logical_condition_modeling(self):
-        hamming_weight = lambda x: sum([1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.sbox.in_bits, self.sbox.out_bits))])
+        hamming_weight = lambda x: sum(
+            [1 if ((2 ** i & x) > 0) else 0 for i in range(max(self.sbox.in_bits, self.sbox.out_bits))])
         vector_of_int = lambda value, length: tuple(
             [1 if ((2 ** i & value) > 0) else 0 for i in range(length - 1, -1, -1)])
 
@@ -339,7 +340,8 @@ class SBoxAction(CipherAction):
 
         constant_pos = self.cipher_instance.V["constant"]
 
-        number_of_inequalities = sum([hamming_weight(transition[2]) + hamming_weight(transition[3]) for transition in transitions])
+        number_of_inequalities = sum(
+            [hamming_weight(transition[2]) + hamming_weight(transition[3]) for transition in transitions])
         sbox_inequality_matrix = lil_matrix((number_of_inequalities, self.cipher_instance.number_variables),
                                             dtype=int)
         sbox_inequality_matrix_line = 0
@@ -361,7 +363,8 @@ class SBoxAction(CipherAction):
                                   matrix_to_be_set=sbox_inequality_matrix)
             self.set_all_to_value(list_of_variables=plus_vars, value=+1, line_var=sbox_inequality_matrix_line,
                                   matrix_to_be_set=sbox_inequality_matrix)
-            sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = sum([i if type(i) == int else 0 for i in implicator_vars])
+            sbox_inequality_matrix[sbox_inequality_matrix_line, constant_pos] = sum(
+                [i if type(i) == int else 0 for i in implicator_vars])
             sbox_inequality_matrix_line += 1
             return sbox_inequality_matrix_line
 

@@ -144,7 +144,7 @@ def rearrange_matrix():
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, AesDifferential, 1, False, "Logical condition modeling")
+        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, Gift64Differential, 1, True, "Logical condition modeling")
         main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
         # rearrange_matrix()
     else:
