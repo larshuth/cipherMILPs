@@ -792,12 +792,14 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2):
 
     for i in range(k):
         blocks += [  # sbox action
-            [f'ds{byte + (4 * i)}' for byte in range(4)] +  # mix columns as linear transformation dummy variable
-            [f'x{byte + (16 * (i + 1))}' for byte in range(16)]  # mix columns output variables
+            [f'a{box + (16 * i)}' for box in range(16)] +  # sbox input
+            [f'x{bit + 64 + 128*i}' for bit in range(64)]
         ]
-        blocks += [  # mix column action
-            [f'dl{byte + (4 * i)}' for byte in range(4)] +  # mix columns as linear transformation dummy variable
-            [f'x{byte + (16 * (i + 1))}' for byte in range(16)]  # mix columns output variables
+        blocks += [  # xor actions
+            [f'k{bit + (32 * i)}' for bit in range(32)] +
+            [f'dx{bit + (32 * i)}' for bit in range(32)] +  # mix columns as linear transformation dummy variable
+            [f'dl{bit + (7 * i)}' for bit in range(7)] +  # mix columns as linear transformation dummy variable
+            [f'x{bit + 64 * (2*i + 2)}' for bit in range(64)]  # mix columns output variables
         ]
 
     blocks = list(chain.from_iterable(blocks))
@@ -810,6 +812,39 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2):
     matrix = permutate_columns(matrix, new_order_columns)
 
     new_rows_reversed = list(range(matrixshape[0] - 1, -1, -1))
+
+    matrix = permutate_rows(matrix, new_rows_reversed)
+
+    # linking constraints zusammengruppieren
+    linking_constraints = reversed_row_indices[: k * ((2 * 16 + 7) * 8)].copy()
+    for round_k in range(k):
+        start_standard_box_constraints = (round_k * (2 * 16 * 8)) + (16 * 8)
+        end_standard_box_constraints = start_standard_box_constraints + (7 * 8)
+        linking_constraints = linking_constraints[:start_standard_box_constraints].copy() + linking_constraints[
+                                                                                            end_standard_box_constraints:].copy()
+
+    rows_of_standard_sbox_constraints = [
+        [reversed_row_indices[round_k * (16 * 8 + 7 * 8 + 16 * 8) + 16 * 8 + i] for i in range(7 * 8)] for round_k in
+        range(k)]
+
+    the_ultimate_linking_constraint = [(k * ((2 * 16 + 7) * 8)) + 1]
+    amount_extra_sbox_constraints = len(reversed_row_indices) - ((k * ((2 * 16 + 7) * 8)) + 1)
+    amount_extra_sbox_constraints_per_round = int(amount_extra_sbox_constraints / k)
+    rows_of_extra_sbox_constraints = [[reversed_row_indices[the_ultimate_linking_constraint[0] + (
+            round_k * amount_extra_sbox_constraints_per_round) + i] for i in
+                                       range(amount_extra_sbox_constraints_per_round)] for round_k in range(k)]
+
+    print(len(rows_of_standard_sbox_constraints), rows_of_standard_sbox_constraints)
+    print(len(rows_of_extra_sbox_constraints), rows_of_extra_sbox_constraints)
+    new_rows = the_ultimate_linking_constraint + linking_constraints
+    for round_k in range(k):
+        new_rows += rows_of_standard_sbox_constraints[round_k] + rows_of_extra_sbox_constraints[round_k]
+    new_rows_reversed = [new_rows[i] for i in range(len(new_rows) - 1, -1, -1)]
+    print(len(new_rows_reversed), new_rows_reversed)
+
+    test_direction_of_where_should_be_what = [0 for _ in range(len(new_rows))]
+    for i, p in enumerate(new_rows_reversed):
+        test_direction_of_where_should_be_what[p] = i
 
     matrix = permutate_rows(matrix, new_rows_reversed)
 
