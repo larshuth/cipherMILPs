@@ -52,8 +52,10 @@ class Gift64(Cipher):
         list_of_equality_overwrite_actions = list()
         set_of_xor_positions = {4 * i for i in range(16)} | {(4 * i) + 1 for i in range(16)}
         set_of_single_bit_xor_positions = {3, 7, 11, 15, 19, 23, self.plaintextsize - 1}
-        list_of_equality_overwrite_positions = set(range(self.plaintextsize)) - (set_of_xor_positions | set_of_single_bit_xor_positions)
-        list_of_equality_overwrite_actions = [OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
+        list_of_equality_overwrite_positions = set(range(self.plaintextsize)) - (
+                    set_of_xor_positions | set_of_single_bit_xor_positions)
+        list_of_equality_overwrite_actions = [
+            OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
         return list_of_equality_overwrite_actions
 
     def run_round(self):
@@ -79,7 +81,8 @@ class Gift64(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential', type_of_modeling='SunEtAl 2013'):
+    def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential',
+                 type_of_modeling='SunEtAl 2013', ):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -99,7 +102,8 @@ class Gift64(Cipher):
             raise Exception(
                 "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
 
-        super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
+        super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling,
+                         cryptanalysis_type=cryptanalysis_type)
 
         # Summary of what's happening in GIFT:
 
@@ -126,19 +130,33 @@ class Gift64(Cipher):
         #   determine sbox output vars, dummy vars, and constraints
         # instantiating all SBoxes
         sbox_gift_subs = {index: value for index, value in
-                         enumerate(
-                             [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
+                          enumerate(
+                              [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
         self.sbox = SBox(sbox_gift_subs, 4, 4, self, extract_sun_inequalities=self.extract_sun_inequalities)
 
         self.sboxes = [self.sbox] * 16
 
         non_equality_overwrites = 0
-        equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
+
+        if self.cryptanalysis_type == 'differential':
+            equality_overwrites = self.plaintext_vars - 39
+        elif self.cryptanalysis_type == 'linear':
+            equality_overwrites = 0
+        else:
+            equality_overwrites = 0
 
         self.prepare_for_type_of_modeling()
+
+        if self.cryptanalysis_type == 'differential':
+            key_variable_usage = True
+        elif self.cryptanalysis_type == 'linear':
+            key_variable_usage = False
+        else:
+            key_variable_usage = True
+
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
-                                                                             new_keys_every_round=True)
+                                            lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
+                                            new_keys_every_round=True, keys_are_used=key_variable_usage)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
