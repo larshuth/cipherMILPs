@@ -137,7 +137,7 @@ def generate_rijndael_convex_hull():
 
 
 def rearrange_matrix():
-    rounds, chosen_cipher, bit_oriented, chosen_type = (4, Gift64Differential, True, "Logical condition modeling")
+    rounds, chosen_cipher, bit_oriented, chosen_type = (4, LBlockDifferential, True, "SunEtAl 2013 Greedy")
     vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
     return
 
