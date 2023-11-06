@@ -4,6 +4,7 @@ from cipher.actions.permutationaction import PermutationAction
 from cipher.actions.lineartransformationaction import LinTransformationAction
 from cipher.actions.xoraction import XorAction
 from cipher.actions.sboxaction import SBoxAction
+from itertools import chain
 
 
 class Aes(Cipher):
@@ -178,7 +179,15 @@ class Aes(Cipher):
             sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
         else:
             # this one is a bit tricky as the user has to determine which x variables pass through S-boxes
-            sbox_dummy_variables = ["x" + str(i) for i in range(16, 16 * self.rounds)]
+            if self.cryptanalysis_type == 'differential':
+                sbox_dummy_variables = [["x" + str(i) for i in range(16 + 32 * r, 32 + 32 * r)] for r in
+                                        range(0, self.rounds)]
+            elif self.cryptanalysis_type == 'linear':
+                sbox_dummy_variables = [["x" + str(i) for i in range(16 * r, 16 + 16 * r)] for r in
+                                        range(0, self.rounds)]
+            else:
+                raise Exception('Unknown cryptanalysis type. How did you even get here?')
+            sbox_dummy_variables = list(chain.from_iterable(sbox_dummy_variables))
 
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
