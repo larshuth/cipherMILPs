@@ -661,8 +661,17 @@ def two_stage_differential_LBlock_k_rounds(matrix, variables, k=2):
         variables: dictionary mapping variable names to matrix columns and vice versa
 
     """
-    # first we rearrange the columns by
+    # the (extended) 2-stage we are looking to get for the structure is analogous to the n-fold of different modelings
+    # in that the C_{extd. 2-stage} and A_{extd. 2-stage} constraints are almost the same as the A_{n-fold} and
+    # B_{n-fold} constraints except for the fact that the additional S-box constraints are missing.
+    # In their stead we introduce a lot of variables and constraints from the Baksi modeling for the B_{ 2-stage} blocks
+
+    # Therefore, this code works as following
     # 1. collecting the variable names in our desired order
+    #       which is: for every round and every word - left xor inputs in the form of key vars, xor outputs,
+    #       s-box dummies, s-box outputs, right xor outputs, right xor dummies
+    #    which is then followed by a large part for the many dummies/indicators introduced by the Baksi modeling,
+    #    again sorted by round and S-box.
     # 2. mapping the names to column indices
     # 3. permuting according to said list of indices
     new_order_columns = list(range(matrix.get_shape()[1]))
@@ -679,32 +688,38 @@ def two_stage_differential_LBlock_k_rounds(matrix, variables, k=2):
                [f'dx{4 * box + (64 * round_k) + 32 + i}' for i in range(4)]
                for box in range(8)] for round_k in range(k)]
 
-    # erste runde bekommt noch vom ersten und zweiten xor den jeweils ersten input (x_0 - x_63)
+    # first round additionally includes the first input (x_l, x_r) prior to the respective xors where they are used
     for index, box_list in enumerate(blocks[0].copy()):
         blocks[0][index] = box_list + [f'x{(index * 4) + i}' for i in range(4)] + [f'x{32 + 4 * index + i}' for i in
                                                                                    range(4)]
 
+    # we transform the list of lists into one long list by concatenating all sub-lists
     blocks = list(chain.from_iterable(blocks))
 
+    # collecting variables names of those variables specific to the Baksi modeling
     list_of_qijlp_vars = list(filter(lambda x: 'l' in str(x), list(variables)))
     count_of_qijlp_vars = len(list_of_qijlp_vars)
     list_of_qijp_vars = list(filter(lambda x: ('p' in str(x)) and ('l' not in str(x)), list(variables)))
     count_of_qijp_vars = len(list_of_qijp_vars)
 
+    # creating lists for the variables corresponding to the activity of the single S-boxes
     for i in range(8 * k):
         dummy_var = 'a' + str(i)
         blocks += [list(filter(lambda x: dummy_var + 'p' == x[:len(dummy_var) + 1], list_of_qijp_vars))]
         blocks += [list(filter(lambda x: dummy_var + 'p' == x[:len(dummy_var) + 1], list_of_qijlp_vars))]
 
+    # once again transform from list of lists into list
     blocks = list(chain.from_iterable(blocks))
 
+    # and use the mapping from variable names to list indices to get a list of indices
     for index, var_name in enumerate(blocks):
         new_order_columns[index] = variables[var_name]
 
     matrix = permutate_columns(matrix, new_order_columns)
 
-    print("flip row order")
-    # flip row order
+    # starting with the arrangement of rows
+
+    # first flip row order
     reversed_row_indices = list(range(matrix.get_shape()[0]))
 
     # linking constraints zusammengruppieren
