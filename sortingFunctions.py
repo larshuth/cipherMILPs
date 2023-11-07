@@ -796,11 +796,13 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2):
     new_order_columns = list(range(matrix.get_shape()[1]))
 
     # starting off with the input to the first F-function as that not already included
-    blocks = [f'x{i}' for i in range(32)]
+    blocks = [f'x{i}' for i in range(64)]
 
     for r in range(k):
         xors_so_far = 64 * r
         # Add F-stuff
+        # add xor with key input
+        blocks += [f'k{i + int(xors_so_far/2)}' for i in range(32)]
         # add xor with key dummies
         blocks += [f'dx{i + xors_so_far}' for i in range(32)]
         # add xor with key output
@@ -809,6 +811,7 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2):
         blocks += [f'a{i + 8 * r}' for i in range(8)]
         # add sbox output
         blocks += [f'x{i + 96 * r + 64 + 32}' for i in range(32)]
+
         xors_so_far = 64 * r + 32
 
         # Add righthand xor stuff
@@ -831,7 +834,7 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2):
 
     # a)
     number_constraints_xor_in_f_function = 4 * 32
-    number_constraints_sbox_in_f_function = 16 * 8  # could be done nicer, but we are brute counting at this point
+    number_constraints_sbox_in_f_function = 7 * 8  # could be done nicer, but we are brute counting at this point
     number_constraints_per_f_function_block = (number_constraints_xor_in_f_function +
                                                number_constraints_sbox_in_f_function)
     number_constraints_per_right_hand_xor_block = 4 * 32
@@ -894,14 +897,9 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2):
     # TODO: take a look at whether interweaving the s-box constraints looks better
 
     # d)
-    reversed_row_indices = list(range(matrix.get_shape()[0] - 1, -1, -1))
-    print(reversed_row_indices)
+    list_of_indices.reverse()
 
     # e)
-    # new_order_rows = list(range(matrix.get_shape()[0]))
-    # for index, value in enumerate(list_of_indices):
-    #     new_order_rows[index] = reversed_row_indices[value]
-
     matrix = permutate_rows(matrix, list_of_indices)
     return matrix, variables
 
