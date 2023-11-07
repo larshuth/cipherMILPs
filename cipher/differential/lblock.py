@@ -20,7 +20,7 @@ class LBlock(Cipher):
     def generate_key_xor_actions_for_round(self):
         list_of_key_xor_actions = list()
         start_first_half = 0
-        end_first_half = int((self.plaintextsize/2)/self.orientation)
+        end_first_half = int((self.plaintextsize / 2) / self.orientation)
 
         for i in range(start_first_half, end_first_half):
             list_of_key_xor_actions.append(XorAction(inputs=(self.A[i], self.K[i]),
@@ -31,10 +31,10 @@ class LBlock(Cipher):
         list_of_sbox_actions = list()
         if self.orientation == 1:
             for i in range(8):
-                sbox_input_vars = [self.A[4*i + var] for var in range(self.sboxes[i].in_bits)]
+                sbox_input_vars = [self.A[4 * i + var] for var in range(self.sboxes[i].in_bits)]
                 list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[i], input_vars=sbox_input_vars,
                                                        cipher_instance=self,
-                                                       first_a_position_to_overwrite=4*i))
+                                                       first_a_position_to_overwrite=4 * i))
         else:
             pass
         return list_of_sbox_actions
@@ -54,7 +54,7 @@ class LBlock(Cipher):
     def generate_bitshift_actions_for_round(self):
         list_of_bitshift_actions = list()
         start_first_half = 0
-        end_first_half = int((self.plaintextsize/2)/self.orientation)
+        end_first_half = int((self.plaintextsize / 2) / self.orientation)
         permutation = list()
         permutation += list(range(start_first_half, end_first_half))
         # permutation needs to span the whole A list, even if not all of them are changed
@@ -76,7 +76,7 @@ class LBlock(Cipher):
         return f_output_right_plaintext_xor_actions_list
 
     def run_round(self):
-        x1_size = int((self.plaintextsize/2)/self.orientation)
+        x1_size = int((self.plaintextsize / 2) / self.orientation)
         x1_backup = self.A[:x1_size].copy()
 
         for key_xor_action in self.generate_key_xor_actions_for_round():
@@ -108,7 +108,8 @@ class LBlock(Cipher):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential", type_of_modeling='SunEtAl 2013'):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential",
+                 type_of_modeling='SunEtAl 2013'):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -125,9 +126,11 @@ class LBlock(Cipher):
         keysize = 32
 
         if model_as_bit_oriented:
-            super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
+            super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling,
+                             cryptanalysis_type=cryptanalysis_type)
         else:
-            super().__init__(rounds, plaintextsize, keysize, orientation=4, type_of_modeling=type_of_modeling, cryptanalysis_type=cryptanalysis_type)
+            super().__init__(rounds, plaintextsize, keysize, orientation=4, type_of_modeling=type_of_modeling,
+                             cryptanalysis_type=cryptanalysis_type)
 
         # Summary of what's happening in LBlock:
         #   1. Teile Input in vordere Hälfte X_1, hintere Hälfte X_0
@@ -195,16 +198,31 @@ class LBlock(Cipher):
         overwrites = 0
 
         self.prepare_for_type_of_modeling()
+
+        if self.cryptanalysis_type == 'differential':
+            key_variable_usage = True
+        elif self.cryptanalysis_type == 'linear':
+            key_variable_usage = False
+        else:
+            key_variable_usage = True
+
         sbox_dummy_variables_per_round = self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
-                                                                             lt_per_round, extra_xors, overwrites, new_keys_every_round=True)
+                                                                             lt_per_round, extra_xors, overwrites,
+                                                                             new_keys_every_round=True,
+                                                                             keys_are_used=key_variable_usage)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         if model_as_bit_oriented:
             sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
         else:
             sbox_dummy_variables = list()
-            for round in range(1, self.rounds + 1):
-                sbox_dummy_variables += ["x" + str(i) for i in range(16 * round, 16 * (round + 1))]
+            if self.cryptanalysis_type == 'differential':
+                for round in range(1, self.rounds + 1):
+                    sbox_dummy_variables += ["x" + str(i) for i in range(16 * round, 16 * round + 8)]
+            elif self.cryptanalysis_type == 'linear':
+                sbox_dummy_variables = ["x" + str(i) for i in range(8, 8 * self.rounds)]
+            else:
+                pass
 
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1

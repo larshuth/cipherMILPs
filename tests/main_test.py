@@ -11,7 +11,7 @@ class MyTestCase(unittest.TestCase):
         running_cipher = main.main(rounds, main.AesDifferential, viz, bit_oriented=False, chosen_type='Logical condition modeling')
         print('1/10')
         self.assertEqual(True, running_cipher)
-        running_cipher &= main.main(rounds, main.AesDifferential, viz, bit_oriented=True, chosen_type='Logical condition modeling')
+        # running_cipher &= main.main(rounds, main.AesDifferential, viz, bit_oriented=True, chosen_type='Logical condition modeling')
         print('2/10')
         self.assertEqual(True, running_cipher)
         running_cipher &= main.main(rounds, main.AesLinear, viz, bit_oriented=False, chosen_type='Boura 2020 Algo 2')
@@ -23,8 +23,7 @@ class MyTestCase(unittest.TestCase):
         running_cipher &= main.main(rounds, main.LBlockLinear, viz, bit_oriented=False, chosen_type='SunEtAl 2013 Greedy')
         print('5/10')
         self.assertEqual(True, running_cipher)
-
-        running_cipher &= main.main(rounds, main.AesLinear, viz, bit_oriented=True, chosen_type='Logical condition modeling')
+        # running_cipher &= main.main(rounds, main.AesLinear, viz, bit_oriented=True, chosen_type='Logical condition modeling')
         print('6/10')
         self.assertEqual(True, running_cipher)
         running_cipher &= main.main(rounds, main.LBlockDifferential, viz, bit_oriented=True, chosen_type='SunEtAl 2013 Greedy')

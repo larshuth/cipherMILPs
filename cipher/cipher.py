@@ -71,7 +71,8 @@ class Cipher:
         return
 
     def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
-                                       overwrites=0, equality_overwrites=0, new_keys_every_round=False, extra_key_round=False):
+                                       overwrites=0, equality_overwrites=0, new_keys_every_round=False,
+                                       extra_key_round=False, keys_are_used=True):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -87,8 +88,11 @@ class Cipher:
 
         #   determine plaintext vars
         plaintext_vars = self.plaintext_vars
-        key_vars = (int(new_keys_every_round) * self.key_vars * self.rounds) + (
+        if keys_are_used:
+            key_vars = (int(new_keys_every_round) * self.key_vars * self.rounds) + (
                     self.key_vars * int(extra_key_round))  # upper bound in accordance with AES
+        else:
+            key_vars = 0
 
         xor_dummy_variables_per_round = xors_per_round
         xor_constraints_per_round = 4 * xors_per_round
@@ -96,7 +100,7 @@ class Cipher:
 
         twf_dummy_variables_per_round = twf_per_round
         twf_constraints_per_round = 4 * twf_per_round
-        twf_new_x_vars_per_round = 2 * twf_per_round
+        twf_new_x_vars_per_round = twf_per_round
 
         #   determine self.linear transformation output vars, dummy vars, and constraints
         lt_dummy_variables_per_round = len(lt_per_round)
@@ -105,7 +109,7 @@ class Cipher:
 
         #   determine output vars from overwriting operations such as ColumnMix in AES
         overwrite_new_x_vars_per_round = overwrites + equality_overwrites
-        overwrite_constraints_per_round = 2*equality_overwrites
+        overwrite_constraints_per_round = 2 * equality_overwrites
 
         extra_xor_dummy_variables_per_round = xors_not_in_rounds
         extra_xor_constraints = 4 * xors_not_in_rounds
@@ -129,8 +133,8 @@ class Cipher:
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
         sbox_constraints_per_round_following_sun = sboxes_per_round + sum(sbox.in_bits for sbox in self.sboxes) + (
                 bijective_sboxes_per_round * 2) + extra_constraint_sboxes_per_round * (
-                                                           1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(
-                                                       sbox.in_bits for sbox in self.sboxes))
+                                                               1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(
+                                                           sbox.in_bits for sbox in self.sboxes))
 
         if self.type_of_modeling == 'Baksi 2020':
             qijp_variables_per_round = sum([len(sbox.set_of_transition_values) for sbox in self.sboxes])

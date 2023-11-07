@@ -84,6 +84,7 @@ class Gift64(Cipher):
 
     def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential',
                  type_of_modeling='SunEtAl 2013', overwrite_equals=False):
+
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -138,15 +139,24 @@ class Gift64(Cipher):
         self.sboxes = [self.sbox] * 16
 
         non_equality_overwrites = 0
-        if overwrite_equals:
+
+        if overwrite_equals and self.cryptanalysis_type == 'differential':
             equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
         else:
             equality_overwrites = 0
 
         self.prepare_for_type_of_modeling()
+
+        if self.cryptanalysis_type == 'differential':
+            key_variable_usage = True
+        elif self.cryptanalysis_type == 'linear':
+            key_variable_usage = False
+        else:
+            key_variable_usage = True
+
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
-                                            new_keys_every_round=True)
+                                            new_keys_every_round=True, keys_are_used=key_variable_usage)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
