@@ -6,6 +6,7 @@ class Aes(Aes):
     So far, for Aes the MILP modelling of the linear cryptanalysis is made up of the same inequalities as the MILP
     modelling of its differential cryptanalysis
     """
+
     def run_round(self):
         print(f"Round {self.round_number} start")
 
@@ -23,6 +24,7 @@ class Aes(Aes):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=1, model_as_bit_oriented=False, type_of_modeling='SunEtAl. 2013'):
-        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type='linear', type_of_modeling=type_of_modeling)
+    def __init__(self, rounds=1, model_as_bit_oriented=False, type_of_modeling='SunEtAl. 2013', **kwargs):
+        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type='linear', type_of_modeling=type_of_modeling,
+                         lin_args=kwargs)
         return

@@ -83,8 +83,7 @@ class Gift64(Cipher):
         return True
 
     def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential',
-                 type_of_modeling='SunEtAl 2013', overwrite_equals=False):
-
+                 type_of_modeling='SunEtAl 2013', **kwargs):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -102,12 +101,12 @@ class Gift64(Cipher):
 
         if not model_as_bit_oriented:
             raise Exception(
-                "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
+                "Gift64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
 
         super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling,
                          cryptanalysis_type=cryptanalysis_type)
 
-        self.overwrite_equals = overwrite_equals
+        self.overwrite_equals = kwargs['overwrite_equals']
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -140,7 +139,7 @@ class Gift64(Cipher):
 
         non_equality_overwrites = 0
 
-        if overwrite_equals and self.cryptanalysis_type == 'differential':
+        if self.overwrite_equals:
             equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
         else:
             equality_overwrites = 0
