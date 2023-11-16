@@ -110,7 +110,7 @@ class LBlock(LBlock):
                                     of as a 4-bit word-oriented cipher.
         """
         super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type="linear", type_of_modeling=type_of_modeling,
-                         lin_args=kwargs)
+                         **kwargs)
 
         self.linear_helper = [None for _ in range(int(self.plaintext_vars / 2))]
         return

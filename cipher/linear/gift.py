@@ -36,5 +36,5 @@ class Gift64(Gift64):
         Creates Instance, no return value
         """
         super().__init__(rounds, model_as_bit_oriented=model_as_bit_oriented, cryptanalysis_type='linear',
-                         type_of_modeling=type_of_modeling, lin_args=kwargs)
+                         type_of_modeling=type_of_modeling, **kwargs)
         return
