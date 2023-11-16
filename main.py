@@ -12,7 +12,8 @@ AVAILABLE = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear,
 BIT_ORIENTED = [AesDifferential, LBlockDifferential, Gift64Differential, AesLinear, LBlockLinear, Gift64Linear]
 
 
-def main(rounds, cipher, viz, bit_oriented, chosen_type):
+def main(rounds, cipher, viz, bit_oriented, chosen_type, **kwargs):
+    print(kwargs)
     """
     Examines the structures of constraint matrices for given ciphers by generating constraints, the corresponding matrices and trying different sorting techniques.
 
@@ -33,11 +34,11 @@ def main(rounds, cipher, viz, bit_oriented, chosen_type):
     """
 
     if viz == 0:
-        return vis.no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type)
+        return vis.no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type, **kwargs)
     elif viz == 1:
-        vis.matplotlibvis(rounds, cipher, bit_oriented, chosen_type)
+        vis.matplotlibvis(rounds, cipher, bit_oriented, chosen_type, **kwargs)
     elif viz == 2:
-        vis.gen_pdf(rounds, cipher, bit_oriented, chosen_type)
+        vis.gen_pdf(rounds, cipher, bit_oriented, chosen_type, **kwargs)
     return
 
 
@@ -137,15 +138,16 @@ def generate_rijndael_convex_hull():
 
 
 def rearrange_matrix():
-    rounds, chosen_cipher, bit_oriented, chosen_type = (4, LBlockDifferential, True, "SunEtAl 2013 Greedy")
-    vis.rearrange(rounds, chosen_cipher, bit_oriented, chosen_type)
+    arguments = (4, Gift64Differential, True, "SunEtAl 2013 Greedy")  # rounds, chosen_cipher, bit_oriented, chosen_type
+    vis.rearrange(*arguments)
     return
 
 
 if __name__ == "__main__":
     if DEBUG:
-        rounds, chosen_cipher, viz, bit_oriented, chosen_type = (4, LBlockLinear, 1, True, "Logical condition modeling")
-        main(rounds, chosen_cipher, viz, bit_oriented, chosen_type)
+        arguments = (4, Gift64Differential, 1, True, "Logical condition modeling")  # rounds, chosen_cipher, bit_oriented, chosen_type
+        keyworded_arguments = {"overwrite_equals": False}
+        main(*arguments, **keyworded_arguments)
         # rearrange_matrix()
     else:
         safe_call()

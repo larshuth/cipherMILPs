@@ -63,7 +63,7 @@ def removezerorows(matrix):
     return matrix
 
 
-def new_generate_constraints(rounds, chosen_cipher, bit_oriented, chosen_type):
+def new_generate_constraints(rounds, chosen_cipher, bit_oriented, chosen_type, **kwargs):
     """
     This function generates the constraint matrix for a number of rounds of a given cipher.
 
@@ -84,7 +84,7 @@ def new_generate_constraints(rounds, chosen_cipher, bit_oriented, chosen_type):
                 List that constrains the variables. When multiplying the matrix with this
                 list one gets the constraints.
     """
-    cipher_instance = chosen_cipher(rounds, model_as_bit_oriented=bit_oriented, type_of_modeling=chosen_type)
+    cipher_instance = chosen_cipher(rounds, model_as_bit_oriented=bit_oriented, type_of_modeling=chosen_type, **kwargs)
     cipher_instance.round_number = 1
     for r in range(cipher_instance.rounds):
         cipher_instance.run_round()
