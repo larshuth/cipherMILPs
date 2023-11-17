@@ -145,9 +145,15 @@ def rearrange_matrix():
 
 if __name__ == "__main__":
     if DEBUG:
-        arguments = (4, Gift64Differential, 1, True, "Logical condition modeling")  # rounds, chosen_cipher, bit_oriented, chosen_type
-        keyworded_arguments = {"overwrite_equals": False}
-        main(*arguments, **keyworded_arguments)
+        arguments = {'rounds': 4,
+                     'cipher': Gift64Differential,
+                     'viz': 1,
+                     'bit_oriented': True,
+                     'chosen_type': "Logical condition modeling"}
+
+        keyworded_arguments_for_ciphers = {"overwrite_equals": True,
+                                           "permutation_as_constraints": False}
+        main(**arguments, **keyworded_arguments_for_ciphers)
         # rearrange_matrix()
     else:
         safe_call()

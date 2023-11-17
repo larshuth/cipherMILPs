@@ -1,8 +1,6 @@
-import math
-
 import numpy as np
 from itertools import chain
-import convexHull
+import cipher.convexHull as convexHull
 import re
 import pickle
 

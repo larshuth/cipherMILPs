@@ -185,6 +185,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
     title = [str(cipher)[15:-2], str(rounds)]
     filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+    filename += ''.join([f'{key}_{val}' for key, val in kwargs.items()])
 
     fig, axs = plt.subplots(1, 4)
     fig.canvas.manager.set_window_title(
@@ -206,7 +207,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     df = df.astype("float")
     # print(df)
 
-    pylab.figimage(df, cmap='binary', origin='lower')
+    pylab.figimage(df, cmap='binary', origin='upper')
     fig.savefig(f"{filename}.png")
 
     file = open(f'{filename}_matrix.pkl', 'wb')
