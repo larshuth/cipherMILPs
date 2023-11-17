@@ -73,8 +73,9 @@ class Gift64(Cipher):
         for single_bit_xor_action in self.generate_single_bit_xor_actions():
             single_bit_xor_action.run_action()
 
-        for equality_overwrite_action in self.generate_equality_overwrite_actions():
-            equality_overwrite_action.run_action()
+        if self.overwrite_equals:
+            for equality_overwrite_action in self.generate_equality_overwrite_actions():
+                equality_overwrite_action.run_action()
 
         self.K = ['k' + str(self.round_number * self.key_vars + i) for i in range(self.key_vars)]
         print(f"Round {self.round_number} end")
@@ -82,7 +83,8 @@ class Gift64(Cipher):
         return True
 
     def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential',
-                 type_of_modeling='SunEtAl 2013', ):
+                 type_of_modeling='SunEtAl 2013', overwrite_equals=False):
+
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -105,7 +107,7 @@ class Gift64(Cipher):
         super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling,
                          cryptanalysis_type=cryptanalysis_type)
 
-        # Summary of what's happening in GIFT:
+        self.overwrite_equals = overwrite_equals
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -138,10 +140,8 @@ class Gift64(Cipher):
 
         non_equality_overwrites = 0
 
-        if self.cryptanalysis_type == 'differential':
-            equality_overwrites = self.plaintext_vars - 39
-        elif self.cryptanalysis_type == 'linear':
-            equality_overwrites = 0
+        if overwrite_equals and self.cryptanalysis_type == 'differential':
+            equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
         else:
             equality_overwrites = 0
 
