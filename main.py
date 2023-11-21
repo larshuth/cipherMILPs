@@ -138,22 +138,30 @@ def generate_rijndael_convex_hull():
 
 
 def rearrange_matrix():
-    arguments = (4, Gift64Differential, True, "SunEtAl 2013 Greedy")  # rounds, chosen_cipher, bit_oriented, chosen_type
-    vis.rearrange(*arguments)
+    arguments = {'rounds': 4,
+                 'cipher': Gift64Differential,
+                 'viz': 1,
+                 'bit_oriented': True,
+                 'chosen_type': "Logical condition modeling"}
+
+    keyworded_arguments_for_ciphers = {"overwrite_equals": True,
+                                       "permutation_as_constraints": True}
+    vis.rearrange(**arguments, **keyworded_arguments_for_ciphers)
     return
 
 
 if __name__ == "__main__":
-    if DEBUG:
-        arguments = {'rounds': 4,
-                     'cipher': Gift64Differential,
-                     'viz': 1,
-                     'bit_oriented': True,
-                     'chosen_type': "Logical condition modeling"}
+    rearrange_matrix()
 
-        keyworded_arguments_for_ciphers = {"overwrite_equals": True,
-                                           "permutation_as_constraints": False}
-        main(**arguments, **keyworded_arguments_for_ciphers)
-        # rearrange_matrix()
-    else:
-        safe_call()
+    # if DEBUG:
+    #     arguments = {'rounds': 4,
+    #                  'cipher': Gift64Differential,
+    #                  'viz': 1,
+    #                  'bit_oriented': True,
+    #                  'chosen_type': "Logical condition modeling"}
+    #
+    #     keyworded_arguments_for_ciphers = {"overwrite_equals": True,
+    #                                        "permutation_as_constraints": False}
+    #     main(**arguments, **keyworded_arguments_for_ciphers)
+    # else:
+    #     safe_call()

@@ -147,7 +147,10 @@ class Gift64(Cipher):
         else:
             equality_overwrites = 0
 
-        permutations = 64
+        if self.permutation_as_constraints:
+            permutations = 64
+        else:
+            permutations = 0
 
         self.prepare_for_type_of_modeling()
 
