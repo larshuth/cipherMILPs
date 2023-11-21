@@ -25,8 +25,10 @@ class Gift64(Cipher):
             return 4 * (x // 16) + 16 * ((3 * (x % 16 // 4) + x % 4) % 4) + x % 4
 
         permutation = [0 for _ in range(64)]
+
         for i in range(64):
             permutation[new_position_of_x(i)] = i
+
         list_of_permutation_actions = [PermutationAction(permutation, self)]
         return list_of_permutation_actions
 
@@ -53,7 +55,7 @@ class Gift64(Cipher):
         set_of_xor_positions = {4 * i for i in range(16)} | {(4 * i) + 1 for i in range(16)}
         set_of_single_bit_xor_positions = {3, 7, 11, 15, 19, 23, self.plaintextsize - 1}
         list_of_equality_overwrite_positions = set(range(self.plaintextsize)) - (
-                    set_of_xor_positions | set_of_single_bit_xor_positions)
+                set_of_xor_positions | set_of_single_bit_xor_positions)
         list_of_equality_overwrite_actions = [
             OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
         return list_of_equality_overwrite_actions
@@ -83,8 +85,7 @@ class Gift64(Cipher):
         return True
 
     def __init__(self, rounds=1, model_as_bit_oriented=True, cryptanalysis_type='differential',
-                 type_of_modeling='SunEtAl 2013', overwrite_equals=False):
-
+                 type_of_modeling='SunEtAl 2013', **kwargs):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 
@@ -102,12 +103,13 @@ class Gift64(Cipher):
 
         if not model_as_bit_oriented:
             raise Exception(
-                "GIft64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
+                "Gift64 can only be called as bit-oriented, there is no word-orientation of word size > 1 available.")
 
         super().__init__(rounds, plaintextsize, keysize, orientation=1, type_of_modeling=type_of_modeling,
                          cryptanalysis_type=cryptanalysis_type)
 
-        self.overwrite_equals = overwrite_equals
+        self.overwrite_equals = kwargs['overwrite_equals']
+        self.permutation_as_constraints = kwargs['permutation_as_constraints']
 
         #   determine xor output vars, dummy vars, and constraints
         if self.cryptanalysis_type == 'differential':
@@ -140,10 +142,15 @@ class Gift64(Cipher):
 
         non_equality_overwrites = 0
 
-        if overwrite_equals and self.cryptanalysis_type == 'differential':
+        if self.overwrite_equals:
             equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
         else:
             equality_overwrites = 0
+
+        if self.permutation_as_constraints:
+            permutations = 64
+        else:
+            permutations = 0
 
         self.prepare_for_type_of_modeling()
 
@@ -156,7 +163,8 @@ class Gift64(Cipher):
 
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
-                                            new_keys_every_round=True, keys_are_used=key_variable_usage)
+                                            permutations=permutations, new_keys_every_round=True,
+                                            keys_are_used=key_variable_usage)
 
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]

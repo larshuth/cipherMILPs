@@ -12,11 +12,18 @@ import matplotlib.pylab as pylab
 import pickle
 from pandas import DataFrame
 import os.path
+from cipher.differential.aes import Aes as AesDifferential
+from cipher.differential.lblock import LBlock as LBlockDifferential
+from cipher.differential.gift import Gift64 as Gift64Differential
+from cipher.linear.aes import Aes as AesLinear
+from cipher.linear.lblock import LBlock as LBlockLinear
+from cipher.linear.gift import Gift64 as Gift64Linear
+
 
 plt.rcParams.update({'font.size': 5})
 
 
-def rearrange(rounds, cipher, bit_oriented, chosen_type):
+def rearrange(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
     Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
     Generates 4 visualizations of the same sparse matrix.
@@ -31,6 +38,7 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
     """
     title = [str(cipher)[15:-2], str(rounds)]
     filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+    filename += ''.join([f'{key}_{val}' for key, val in kwargs.items()])
 
     if os.path.isfile(f'{filename}_matrix.pkl') and os.path.isfile(f'{filename}_variables.pkl'):
         file = open(f'{filename}_matrix.pkl', 'rb')
@@ -41,7 +49,7 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
         variables = pickle.load(file)
         file.close()
     else:
-        cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+        cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type, **kwargs)
         matrix = cipher_instance.M
         variables = cipher_instance.V
 
@@ -55,22 +63,21 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
 
     print(matrix.get_shape()[0], matrix.get_shape()[1])
 
-    print('start inverting rows and columns')
-    # matrix, variables = invert_matrix(matrix, variables, horizontal=False, vertical=True)
+    if cipher == AesDifferential:
+        matrix, variables = sf.tetrisfold_linear_aes_k_round(matrix, variables, k=rounds, **kwargs)
+    elif cipher == AesLinear:
+        matrix, variables = sf.tetrisfold_differential_aes_k_round(matrix, variables, k=rounds, **kwargs)
+    elif cipher == LBlockDifferential:
+        matrix, variables = sf.tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
 
-    matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+        # if chosen_type == 'Baksi 2020':
+        #     matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
+        # else:
+        #     matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
 
-    # matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds)
+    elif cipher == Gift64Differential:
+        matrix, variables = sf.tetrisfold_differential_gift64_k_round(matrix, variables, k=rounds, **kwargs)
 
-    # matrix, variables = sf.tetrisfold_linear_aes_k_round(matrix, variables, k=rounds)
-    # matrix, variables = sf.tetrisfold_differential_aes_k_round(matrix, variables, k=rounds)
-
-    # matrix, variables = sf.tetrisfold_differential_gift64_k_round(matrix, variables, k=rounds)
-
-    # print('start removing empty rows and columns')
-    # matrix, variables = remove_zeros(matrix, variables)
-
-    print('picture')
     columns = matrix.get_shape()[1]
     rows = matrix.get_shape()[0]
     fig = pylab.figure(figsize=(columns * 0.01, rows * 0.01))
@@ -80,7 +87,7 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type):
     df = df.astype("float")
     # print(df)
 
-    pylab.figimage(df, cmap='binary', origin='lower')
+    pylab.figimage(df, cmap='binary', origin='upper')
     fig.savefig(f"{filename}_sorted.png")
 
     plt.show()
@@ -168,7 +175,7 @@ def invert_matrix(matrix, variables, horizontal=True, vertical=True):
     return matrix, variables
 
 
-def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
+def matplotlibvis(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
     Quick visualization with zooming-in-ability, opens a new window and doesn't generate a pdf.
     Generates 4 visualizations of the same sparse matrix.
@@ -183,6 +190,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     """
     title = [str(cipher)[15:-2], str(rounds)]
     filename = f'{title[0]}{title[1]}rounds_bitoriented_{str(bit_oriented)}_{chosen_type.replace(" ", "")}'
+    filename += ''.join([f'{key}_{val}' for key, val in kwargs.items()])
 
     fig, axs = plt.subplots(1, 4)
     fig.canvas.manager.set_window_title(
@@ -192,7 +200,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     ax3 = axs[2]
     ax4 = axs[3]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type, **kwargs)
 
     columns = cipher_instance.M.get_shape()[1]
     rows = cipher_instance.M.get_shape()[0]
@@ -204,7 +212,7 @@ def matplotlibvis(rounds, cipher, bit_oriented, chosen_type):
     df = df.astype("float")
     # print(df)
 
-    pylab.figimage(df, cmap='binary', origin='lower')
+    pylab.figimage(df, cmap='binary', origin='upper')
     fig.savefig(f"{filename}.png")
 
     file = open(f'{filename}_matrix.pkl', 'wb')
@@ -391,17 +399,16 @@ def mainly(fname, A, V, title, *args, **kwargs):
         doc.append(NoEscape("\[\\resizebox{\linewidth}{!}{%\n" + matrix_to_latex_nonzero(A)+vectormilp(V)+"}\n\geq 0\]"))
     """
     doc.append(NewPage())
-    if False:
-        with doc.create(Section("Constraints")):
-            B = constraints(A, V)
-            with doc.create(Alignat(numbering=False, escape=False)) as agn:
-                for i in B:
-                    agn.append(i + "\\\\")
+    with doc.create(Section("Constraints")):
+        B = constraints(A, V)
+        with doc.create(Alignat(numbering=False, escape=False)) as agn:
+            for i in B:
+                agn.append(i + "\\\\")
 
     doc.generate_pdf(clean_tex=False)
 
 
-def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
+def gen_pdf(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -419,7 +426,7 @@ def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
     ax3 = axs[1][0]
     ax4 = axs[1][1]
 
-    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+    cipher_instance = gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type, **kwargs)
     A = cipher_instance.M.copy()
     print(cipher_instance.M.get_shape())
     # sf.d_var_to_beginning(cipher_instance)
@@ -448,7 +455,7 @@ def gen_pdf(rounds, cipher, bit_oriented, chosen_type):
            dpi=300)
 
 
-def no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type):
+def no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
     Generates the plots in matplotlib and calls the function to generate the pdf.
 
@@ -460,5 +467,5 @@ def no_viz_just_testrun(rounds, cipher, bit_oriented, chosen_type):
     cipher  :   class
                 Class of the wanted cipher
     """
-    gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type)
+    gc.new_generate_constraints(rounds, cipher, bit_oriented, chosen_type, **kwargs)
     return True

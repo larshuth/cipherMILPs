@@ -88,7 +88,7 @@ class Aes(Cipher):
         return True
 
     def __init__(self, rounds=1, model_as_bit_oriented=False, cryptanalysis_type='differential',
-                 type_of_modeling='SunEtAl 2013'):
+                 type_of_modeling='SunEtAl 2013', **kwargs):
         """
         Generates initialization and all needed structures for AES and specified number of rounds.
 

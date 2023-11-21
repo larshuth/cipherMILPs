@@ -45,10 +45,10 @@ class LBlock(LBlock):
         if self.orientation == 1:
             for ith_sbox in range(8):
                 sbox_outputs = tuple([output_vars[ith_sbox * 4 + bits] for bits in range(4)])
-                sbox_input_vars = [self.A[ith_sbox*4 + var] for var in range(self.sboxes[ith_sbox].in_bits)]
+                sbox_input_vars = [self.A[ith_sbox * 4 + var] for var in range(self.sboxes[ith_sbox].in_bits)]
                 list_of_sbox_actions.append(SBoxAction(sbox=self.sboxes[ith_sbox], input_vars=sbox_input_vars,
                                                        cipher_instance=self,
-                                                       first_a_position_to_overwrite=4*ith_sbox,
+                                                       first_a_position_to_overwrite=4 * ith_sbox,
                                                        optional_output_vars=sbox_outputs))
         else:
             pass
@@ -63,7 +63,8 @@ class LBlock(LBlock):
         # using the previously written code if just due to laziness
         block_size = int(4 / self.orientation)
         for index, shift in enumerate([+2] * 8):
-            permutation += [((index + shift) * block_size + i) % (8 * block_size) + end_first_half for i in range(block_size)]
+            permutation += [((index + shift) * block_size + i) % (8 * block_size) + end_first_half for i in
+                            range(block_size)]
         # this shifts the elements in self.A such that [0,1,2,3,4,5,6,7 ...] becomes [8,9,10,11,12,13,14,15 ...]
         list_of_bitshift_actions.append(PermutationAction(permutation, self))
         return list_of_bitshift_actions
@@ -95,7 +96,7 @@ class LBlock(LBlock):
         self.round_number += 1
         return True
 
-    def __init__(self, rounds=32, model_as_bit_oriented=True, type_of_modeling='SunEtAl 2013'):
+    def __init__(self, rounds=32, model_as_bit_oriented=True, type_of_modeling='SunEtAl 2013', **kwargs):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 
@@ -108,7 +109,8 @@ class LBlock(LBlock):
                                     Argument on whether LBlock should be modeled as a bit-oriented cipher instead
                                     of as a 4-bit word-oriented cipher.
         """
-        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type="linear", type_of_modeling=type_of_modeling)
+        super().__init__(rounds, model_as_bit_oriented, cryptanalysis_type="linear", type_of_modeling=type_of_modeling,
+                         **kwargs)
 
         self.linear_helper = [None for _ in range(int(self.plaintext_vars / 2))]
         return

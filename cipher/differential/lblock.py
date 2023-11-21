@@ -109,7 +109,7 @@ class LBlock(Cipher):
         return True
 
     def __init__(self, rounds=32, model_as_bit_oriented=True, cryptanalysis_type="differential",
-                 type_of_modeling='SunEtAl 2013'):
+                 type_of_modeling='SunEtAl 2013', **kwargs):
         """
         Generates initialization and all needed structures for LBlock and specified number of rounds.
 

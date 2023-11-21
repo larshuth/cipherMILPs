@@ -71,7 +71,7 @@ class Cipher:
         return
 
     def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
-                                       overwrites=0, equality_overwrites=0, new_keys_every_round=False,
+                                       overwrites=0, equality_overwrites=0, permutations=0, new_keys_every_round=False,
                                        extra_key_round=False, keys_are_used=True):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
@@ -111,6 +111,10 @@ class Cipher:
         overwrite_new_x_vars_per_round = overwrites + equality_overwrites
         overwrite_constraints_per_round = 2 * equality_overwrites
 
+        #   determine output vars from overwriting operations such as ColumnMix in AES
+        permutation_new_x_vars_per_round = permutations
+        permutation_constraints_per_round = 2 * permutations
+
         extra_xor_dummy_variables_per_round = xors_not_in_rounds
         extra_xor_constraints = 4 * xors_not_in_rounds
         extra_xor_new_x_vars = xors_not_in_rounds
@@ -133,8 +137,8 @@ class Cipher:
         sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large = extra_constraint_sboxes_per_round
         sbox_constraints_per_round_following_sun = sboxes_per_round + sum(sbox.in_bits for sbox in self.sboxes) + (
                 bijective_sboxes_per_round * 2) + extra_constraint_sboxes_per_round * (
-                                                               1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(
-                                                           sbox.in_bits for sbox in self.sboxes))
+                                                           1 + sum(sbox.out_bits for sbox in self.sboxes) + sum(
+                                                       sbox.in_bits for sbox in self.sboxes))
 
         if self.type_of_modeling == 'Baksi 2020':
             qijp_variables_per_round = sum([len(sbox.set_of_transition_values) for sbox in self.sboxes])
@@ -150,7 +154,8 @@ class Cipher:
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
                                lt_constraints_per_round +
-                               overwrite_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
+                               overwrite_constraints_per_round +
+                               permutation_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
         number_constraints = int(number_constraints)
         print("# Constraints:", number_constraints)
 
@@ -163,7 +168,7 @@ class Cipher:
                                          lt_new_x_vars_per_round + lt_dummy_variables_per_round +
                                          sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
                                          sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large +
-                                         overwrite_new_x_vars_per_round + baksi_variables_per_round
+                                         overwrite_new_x_vars_per_round + permutation_new_x_vars_per_round + baksi_variables_per_round
                                  ) * self.rounds) + extra_xor_new_x_vars + extra_xor_dummy_variables_per_round + 1
         self.number_variables = int(self.number_variables)
         print("# Variables:", self.number_variables)
@@ -179,7 +184,7 @@ class Cipher:
         # we order M by: x variables (cipher bits), d dummy variables (xor), a dummy variables (bit oriented sboxes),
         # this ordering is self.V = dict of all variables mapping names to entry in self.M
         self.number_x_vars = int(plaintext_vars + extra_xor_new_x_vars + ((
-                                                                                  xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round) * self.rounds))
+                                                                                  xor_new_x_vars_per_round + twf_new_x_vars_per_round + lt_new_x_vars_per_round + sbox_new_x_variables_per_round + overwrite_new_x_vars_per_round + permutation_new_x_vars_per_round) * self.rounds))
         self.number_dx_vars = xor_dummy_variables_per_round * self.rounds + extra_xor_dummy_variables_per_round
         self.number_dt_vars = twf_dummy_variables_per_round * self.rounds
         self.number_dl_vars = lt_dummy_variables_per_round * self.rounds
