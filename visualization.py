@@ -22,6 +22,8 @@ from cipher.linear.gift import Gift64 as Gift64Linear
 
 plt.rcParams.update({'font.size': 5})
 
+GOAL = 'tetrisfold'
+
 
 def rearrange(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     """
@@ -68,15 +70,21 @@ def rearrange(rounds, cipher, bit_oriented, chosen_type, **kwargs):
     elif cipher == AesLinear:
         matrix, variables = sf.tetrisfold_differential_aes_k_round(matrix, variables, k=rounds, **kwargs)
     elif cipher == LBlockDifferential:
-        matrix, variables = sf.tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
-
-        # if chosen_type == 'Baksi 2020':
-        #     matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
-        # else:
-        #     matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
-
+        if GOAL == 'tetrisfold':
+            matrix, variables = sf.tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
+        else:
+            if chosen_type == 'Baksi 2020':
+                matrix, variables = sf.two_stage_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
+            else:
+                matrix, variables = sf.n_fold_differential_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
+    elif cipher == LBlockLinear:
+        matrix, variables = sf.tetrisfold_linear_LBlock_k_rounds(matrix, variables, k=rounds, **kwargs)
     elif cipher == Gift64Differential:
         matrix, variables = sf.tetrisfold_differential_gift64_k_round(matrix, variables, k=rounds, **kwargs)
+    elif cipher == Gift64Linear:
+        matrix, variables = sf.tetrisfold_linear_gift64_k_round(matrix, variables, k=rounds, **kwargs)
+    else:
+        raise Exception('This type of cipher-cryptanalysis does not have a sorting function yet')
 
     columns = matrix.get_shape()[1]
     rows = matrix.get_shape()[0]
