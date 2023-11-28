@@ -892,6 +892,118 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
     return matrix, variables
 
 
+def tetrisfold_linear_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
+    """
+    The following applies for a bit-oriented differential LBlock cryptanalysis
+
+    Args:
+        matrix: constraint matrix of lil_sparse format
+        variables: dictionary mapping variable names to matrix columns and vice versa
+        k: number of rounds the analysis has been constructed for
+
+    Returns:
+        matrix: rearranged matrix to fit the 2-stage structure
+        variables: dictionary mapping variable names to matrix columns and vice versa
+
+    """
+    # The tetris-fold we are looking is made up of a xor block and s-box block in the F-function block. After that, a
+    # block is included for the right-hand xor.
+    # Thereby, the rows are ordered strictly by order of construction. (This requires a reordering as compared to the
+    # current state where S-box constraints additional to those introduced in Sun et al. 2013 are added at the end of
+    # the MILP constraint matrix).
+    # Unlike in the n-fold and 2-stage modeling, blocks representing operations are not further divided into their words
+
+    # built under the assumption that there are no constraints for being used for permutations and only for XOR & S-Box
+
+    # 1. ordering the columns by
+    #   a) looking up variables names and ordering them to fit their first appearance in the cipher
+    #   b) mapping names to matrx indices
+    #   c) sorting actual columns according to new index list
+    new_order_columns = list(range(matrix.get_shape()[1]))
+
+    # starting off with the input to the first F-function as that not already included
+    blocks = [f'x{i}' for i in range(32)]
+
+    for r in range(k):
+        # Add F-stuff
+        # add 3wf dummy var and output variables de-intersected
+        blocks += [f'dt{i + (r * 32)}' for i in range(32)]
+        blocks += [f'x{2 * i + (64 * (r + 1))}' for i in range(32)]
+        blocks += [f'x{(2 * i) + 1 + (64 * (r + 1))}' for i in range(32)]
+        # add sbox dummies
+        blocks += [f'a{i + 8 * r}' for i in range(8)]
+        if r == 0:
+            blocks += [f'x{i}' for i in range(32, 64)]
+
+    for index, var_name in enumerate(blocks):
+        new_order_columns[index] = variables[var_name]
+
+    matrix = permutate_columns(matrix, new_order_columns)
+
+    # 2. ordering the rows according to appearance by
+    #   a) finding the number of constraints per F-function and right-hand xor in the upper part
+    #   b) finding the number of S-box constraints per S-box in the lower part
+    #   c) sorting list by [index of linking constraint] + [the correct mix of first f-function then right-hand xor]
+    #   d) sorting actual rows according to new index list
+
+    # a)
+    number_constraints_twf = 4 * 32
+    number_constraints_sbox = 7 * 8  # could be done nicer, but we are brute counting at this point
+    number_constraints_per_round = (number_constraints_twf +
+                                    number_constraints_sbox)
+
+    list_constraints_twf = [
+        list(range(1 + r * number_constraints_per_round, 1 + r * number_constraints_per_round + number_constraints_twf))
+        for r in range(k)]
+    list_constraints_sbox = [list(range(1 + r * number_constraints_per_round + number_constraints_twf,
+                                        1 + r * number_constraints_per_round + number_constraints_twf + number_constraints_sbox))
+                             for r in range(k)]
+
+    # b)
+    number_all_constraints_upper_part_incl_linking = (number_constraints_per_round * k) + 1
+    number_constraints_in_lower_s_box_part = matrix.get_shape()[0] - number_all_constraints_upper_part_incl_linking
+    number_constraints_in_lower_s_box_part_per_round = int(number_constraints_in_lower_s_box_part / k)
+    number_constraints_in_lower_s_box_part_per_sbox = 12  # unsure, counted by hand; only counted for the
+    # greedy convex hull modeling from Sun et al. 2013
+
+    # The following is a list which includes one list per round including one list per S-box
+    #
+    # list_constraint_indices_lower_sboxes = [[list(range(number_all_constraints_upper_part_incl_linking +
+    #                                                   r * number_constraints_in_lower_s_box_part_per_round +
+    #                                                   sbox * number_constraints_in_lower_s_box_part_per_sbox,
+    #                                                   number_all_constraints_upper_part_incl_linking +
+    #                                                   r * number_constraints_in_lower_s_box_part_per_round +
+    #                                                   (sbox + 1) * number_constraints_in_lower_s_box_part_per_sbox))
+    #                                        for sbox in range(8)] for r in range(k)]
+
+    list_constraint_indices_lower_sboxes = [list(
+        range(1 + number_all_constraints_upper_part_incl_linking + r * number_constraints_in_lower_s_box_part_per_round,
+              1 + number_all_constraints_upper_part_incl_linking + (
+                      r + 1) * number_constraints_in_lower_s_box_part_per_round))
+        for r in range(k)]
+
+    # c)
+    # for each round, we include first the list of xor with key constraints, then the sbox constraints (upper and lower)
+    # and then the right-hand xor constraints
+    list_of_indices = [list_constraints_twf[r] + list_constraints_sbox[r] + list_constraint_indices_lower_sboxes[r] for
+                       r in range(k)]
+
+    list_of_indices = [0] + list(chain.from_iterable(list_of_indices))
+    print(list_of_indices)
+    print(len(list_of_indices), len(set(list_of_indices)))
+    set_of_indices = set()
+    for index in list_of_indices:
+        if index in set_of_indices:
+            print(index)
+        else:
+            set_of_indices.add(index)
+    # TODO: take a look at whether interweaving the s-box constraints looks better
+
+    # d)
+    matrix = permutate_rows(matrix, list_of_indices)
+    return matrix, variables
+
+
 def tetrisfold_differential_aes_k_round(matrix, variables, k=2, **kwargs):
     matrixshape = matrix.get_shape()
     new_order_columns = list(range(matrixshape[1]))
@@ -974,18 +1086,20 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2, **kwargs):
         new_x_variables_so_far += 64
 
         blocks += [[f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in
-                   range(64 * kwargs['permutation_as_constraints'])]]     # permutation
+                    range(64 * kwargs['permutation_as_constraints'])]]  # permutation
         new_x_variables_so_far += 64 * kwargs['permutation_as_constraints']
 
         blocks += [  # xor actions and lin transformation
             [f'k{bit + (32 * r)}' for bit in range(32)] +
             [f'dx{bit + (32 * r)}' for bit in range(32)] +  # mix columns as linear transformation dummy variable
             [f'dl{bit + (7 * r)}' for bit in range(7)] +  # mix columns as linear transformation dummy variable
-            [f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in range(32 + 7)]  # mix columns output variables
+            [f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in range(32 + 7)]
+            # mix columns output variables
         ]
         new_x_variables_so_far += 32 + 7
 
-        blocks += [[f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in range((32 - 7) * kwargs['overwrite_equals'])]]  # mix columns output variables  # equality overwrite
+        blocks += [[f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in
+                    range((32 - 7) * kwargs['overwrite_equals'])]]  # mix columns output variables  # equality overwrite
         new_x_variables_so_far += (32 - 7) * kwargs['overwrite_equals']
 
     blocks = list(chain.from_iterable(blocks))
@@ -1015,9 +1129,9 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2, **kwargs):
     number_constraints_per_round_overwrite_equals = 2 * (32 - 7) * kwargs['overwrite_equals']
 
     number_constraints_per_round = (
-                number_constraints_per_round_sbox_upper + number_constraints_per_round_permutation +
-                number_constraints_per_round_xor + number_constraints_per_round_lin_transformation +
-                number_constraints_per_round_overwrite_equals)
+            number_constraints_per_round_sbox_upper + number_constraints_per_round_permutation +
+            number_constraints_per_round_xor + number_constraints_per_round_lin_transformation +
+            number_constraints_per_round_overwrite_equals)
 
     # b)
     number_all_constraints_upper_part_incl_linking = (number_constraints_per_round * k) + 1
@@ -1033,7 +1147,7 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2, **kwargs):
                                                               r * number_constraints_in_lower_s_box_part_per_round,
                                                               number_all_constraints_upper_part_incl_linking +
                                                               (
-                                                                          r + 1) * number_constraints_in_lower_s_box_part_per_round))
+                                                                      r + 1) * number_constraints_in_lower_s_box_part_per_round))
                                                    for r in range(k)]
 
     # c)
@@ -1073,6 +1187,150 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2, **kwargs):
                    (r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
                    number_constraints_per_round_permutation + number_constraints_per_round_xor +
                    number_constraints_per_round_lin_transformation + number_constraints_per_round_overwrite_equals))
+        for r in range(k)]
+
+    list_of_indices = [
+        list_constraint_indices_sbox_upper_by_round[r] + list_constraint_indices_sbox_lower_by_round[r] +
+        list_constraint_indices_permutation_by_round[r] + list_constraint_indices_xor_by_round[r] +
+        list_constraint_indices_lin_transformation_by_round[r] + list_constraint_indices_overwrite_equals_by_round[
+            r]
+        for r in range(k)]
+
+    list_of_indices = [k * number_constraints_per_round] + list(chain.from_iterable(list_of_indices))
+    print(list_of_indices)
+    print(len(list_of_indices), len(set(list_of_indices)))
+    set_of_indices = set()
+    for index in list_of_indices:
+        if index in set_of_indices:
+            print(index)
+        else:
+            set_of_indices.add(index)
+
+    print(set(range(2525)) - set_of_indices)
+    # TODO: take a look at whether interweaving the s-box constraints looks better
+
+    # d)
+    matrix = permutate_rows(matrix, list_of_indices)
+    return matrix, variables
+
+
+def tetrisfold_linear_gift64_k_round(matrix, variables, k=2, **kwargs):
+    matrixshape = matrix.get_shape()
+    new_order_columns = list(range(matrixshape[1]))
+    print('matrix', matrix.get_shape())
+    print('variables', len(variables))
+
+    blocks = [[f'x{i}' for i in range(64)]]
+    new_x_variables_per_round = (64 + (64 * kwargs['permutation_as_constraints']) + 7 +
+                                 ((64 - 7) * kwargs['overwrite_equals']))
+
+    for r in range(k):
+        new_x_variables_so_far = 64
+
+        blocks += [  # sbox action
+            [f'a{box + (16 * r)}' for box in range(16)] +  # sbox input
+            [f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in range(64)]
+        ]
+        new_x_variables_so_far += 64
+
+        blocks += [[f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in
+                    range(64 * kwargs['permutation_as_constraints'])]]  # permutation
+        new_x_variables_so_far += 64 * kwargs['permutation_as_constraints']
+
+        blocks += [  # xor actions and lin transformation
+            [f'dl{bit + (7 * r)}' for bit in range(7)] +  # mix columns as linear transformation dummy variable
+            [f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in range(7)]
+            # mix columns output variables
+        ]
+        new_x_variables_so_far += 7
+
+        blocks += [[f'x{bit + new_x_variables_so_far + (new_x_variables_per_round * r)}' for bit in
+                    range((64 - 7) * kwargs['overwrite_equals'])]]  # mix columns output variables  # equality overwrite
+        new_x_variables_so_far += (64 - 7) * kwargs['overwrite_equals']
+
+    blocks = list(chain.from_iterable(blocks))
+
+    blocks += ['constant']
+    print(blocks)
+    print(matrix.get_shape())
+
+    for index, var_name in enumerate(blocks):
+        print(index, var_name)
+        new_order_columns[index] = variables[var_name]
+
+    matrix = permutate_columns(matrix, new_order_columns)
+
+    # 2. ordering the rows according to appearance by
+    #   a) finding the number of constraints per layer
+    #   b) plus linkning constraint
+    #   c) leads to constraints in lower part
+    #   d) sorting rows according to chronological appearance by mix and matching lower and upper
+
+    # a)
+    # could be done nicer, but we are brute counting at this point
+    number_constraints_per_round_sbox_upper = 7 * 16
+
+    number_constraints_per_round_permutation = 2 * 64 * kwargs['permutation_as_constraints']
+
+    number_constraints_per_round_lin_transformation = 3 * 7
+    number_constraints_per_round_overwrite_equals = 2 * (64 - 7) * kwargs['overwrite_equals']
+
+    number_constraints_per_round = (
+            number_constraints_per_round_sbox_upper + number_constraints_per_round_permutation +
+            number_constraints_per_round_lin_transformation + number_constraints_per_round_overwrite_equals)
+
+    # b)
+    number_all_constraints_upper_part_incl_linking = (number_constraints_per_round * k) + 1
+    number_constraints_in_lower_s_box_part = matrix.get_shape()[0] - number_all_constraints_upper_part_incl_linking
+    number_constraints_in_lower_s_box_part_per_round = int(number_constraints_in_lower_s_box_part / k)
+
+    assert (number_constraints_in_lower_s_box_part_per_round + number_constraints_per_round) * k + 1 == \
+           matrix.get_shape()[0]
+    number_constraints_in_lower_s_box_part_per_sbox = 12  # unsure, counted by hand; only counted for the
+
+    # greedy convex hull modeling from Sun et al. 2013
+    list_constraint_indices_sbox_lower_by_round = [list(range(number_all_constraints_upper_part_incl_linking +
+                                                              r * number_constraints_in_lower_s_box_part_per_round,
+                                                              number_all_constraints_upper_part_incl_linking +
+                                                              (
+                                                                      r + 1) * number_constraints_in_lower_s_box_part_per_round))
+                                                   for r in range(k)]
+
+    # c)
+    # for each round, we include first the list of xor with key constraints, then the sbox constraints (upper and lower)
+    # and then the right-hand xor constraints
+
+    list_constraint_indices_sbox_upper_by_round = [list(range(r * number_constraints_per_round,
+                                                              r * number_constraints_per_round +
+                                                              number_constraints_per_round_sbox_upper))
+                                                   for r in range(k)]
+
+    list_constraint_indices_permutation_by_round = [
+        list(range((r * number_constraints_per_round) + number_constraints_per_round_sbox_upper,
+                   (r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation))
+        for r in range(k)]
+
+    list_constraint_indices_xor_by_round = [
+        list(range((r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation,
+                   (r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation))
+        for r in range(k)]
+
+    list_constraint_indices_lin_transformation_by_round = [
+        list(range((r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation,
+                   (r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation + number_constraints_per_round_lin_transformation))
+        for r in range(k)]
+
+    list_constraint_indices_overwrite_equals_by_round = [
+        list(range((r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation + number_constraints_per_round_lin_transformation,
+                   (r * number_constraints_per_round) + number_constraints_per_round_sbox_upper +
+                   number_constraints_per_round_permutation + number_constraints_per_round_lin_transformation +
+                   number_constraints_per_round_overwrite_equals))
         for r in range(k)]
 
     list_of_indices = [

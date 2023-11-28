@@ -1,10 +1,21 @@
 from cipher.differential.gift import Gift64
+from cipher.actions.overwriteaction import OverwriteAction
 
 
 class Gift64(Gift64):
     """
     Class in which all functions for AES are defined.
     """
+
+    def generate_equality_overwrite_actions(self):
+        list_of_equality_overwrite_actions = list()
+        set_of_xor_positions = set()
+        set_of_single_bit_xor_positions = {3, 7, 11, 15, 19, 23, self.plaintextsize - 1}
+        list_of_equality_overwrite_positions = set(range(self.plaintextsize)) - (
+                set_of_xor_positions | set_of_single_bit_xor_positions)
+        list_of_equality_overwrite_actions = [
+            OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
+        return list_of_equality_overwrite_actions
 
     def run_round(self):
         print(f"Round {self.round_number} start")
@@ -17,6 +28,10 @@ class Gift64(Gift64):
 
         for single_bit_xor_action in self.generate_single_bit_xor_actions():
             single_bit_xor_action.run_action()
+
+        if self.overwrite_equals:
+            for equality_overwrite_action in self.generate_equality_overwrite_actions():
+                equality_overwrite_action.run_action()
 
         print(f"Round {self.round_number} end")
         self.round_number += 1

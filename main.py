@@ -139,7 +139,7 @@ def generate_rijndael_convex_hull():
 
 def rearrange_matrix():
     arguments = {'rounds': 4,
-                 'cipher': Gift64Differential,
+                 'cipher': LBlockLinear,
                  'viz': 1,
                  'bit_oriented': True,
                  'chosen_type': "Logical condition modeling"}
@@ -155,12 +155,12 @@ if __name__ == "__main__":
 
     # if DEBUG:
     #     arguments = {'rounds': 4,
-    #                  'cipher': Gift64Differential,
+    #                  'cipher': LBlockLinear,
     #                  'viz': 1,
     #                  'bit_oriented': True,
     #                  'chosen_type': "Logical condition modeling"}
     #
-    #     keyworded_arguments_for_ciphers = {"overwrite_equals": True,
+    #     keyworded_arguments_for_ciphers = {"overwrite_equals": False,
     #                                        "permutation_as_constraints": False}
     #     main(**arguments, **keyworded_arguments_for_ciphers)
     # else:
