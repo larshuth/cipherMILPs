@@ -103,9 +103,11 @@ class Cipher:
         twf_new_x_vars_per_round = twf_per_round
 
         #   determine self.linear transformation output vars, dummy vars, and constraints
+        input_bits = [i for i, _ in lt_per_round]
+        output_bits = [o for _, o in lt_per_round]
         lt_dummy_variables_per_round = len(lt_per_round)
-        lt_constraints_per_round = 2 * sum(lt_per_round) + len(lt_per_round)
-        lt_new_x_vars_per_round = sum(lt_per_round)
+        lt_constraints_per_round = sum(input_bits) + sum(output_bits) + len(lt_per_round)
+        lt_new_x_vars_per_round = sum(output_bits)
 
         #   determine output vars from overwriting operations such as ColumnMix in AES
         overwrite_new_x_vars_per_round = overwrites + equality_overwrites

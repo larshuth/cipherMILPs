@@ -132,7 +132,7 @@ class Aes(Cipher):
             twf_per_round = int(0 / self.orientation)
 
         #   determine self.linear transformation output vars, dummy vars, and constraints
-        lt_per_round = [4 * int(8 / self.orientation) for _ in range(4)]
+        lt_per_round = [(4 * int(8 / self.orientation), 4 * int(8 / self.orientation)) for _ in range(4)]
 
         #   determine sbox output vars, dummy vars, and constraints
         if self.orientation == 1:

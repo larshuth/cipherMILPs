@@ -876,7 +876,7 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
     list_of_indices = [list_constraints_xor_in_f_function[r] + list_constraints_sbox_in_f_function[r] +
                        list_constraint_indices_lower_sboxes[r] + list_constraints_right_hand_xor[r] for r in range(k)]
 
-    list_of_indices = [0] + list(chain.from_iterable(list_of_indices))
+    list_of_indices = list(chain.from_iterable(list_of_indices))
     print(list_of_indices)
     print(len(list_of_indices), len(set(list_of_indices)))
     set_of_indices = set()
