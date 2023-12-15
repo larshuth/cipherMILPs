@@ -48,8 +48,6 @@ class Aes(Cipher):
     def generate_mix_columns_actions_for_round(self):
         list_of_mix_columns_actions = list()
         if self.orientation == 1:
-            # TODO: Calculate Branch number for Aes MixColumns byte oriented and bit-oriented
-            # TODO: add Boura and xyz Section 3 matrix jamming
             for row in range(4):
                 row_positions = [row * 4 * 8 + i for i in range(4 * 8)]
                 current_row = list(self.A[pos] for pos in row_positions)

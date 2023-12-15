@@ -9,7 +9,15 @@ from cipher.actions.overwriteaction import OverwriteAction
 
 class Template(Cipher):
     """
-    Class in which all functions for AES are defined.
+    Template for a class in which all functions for some cipher would be defined.
+    This template has been structured as follows:
+    1. Functions which generate constraints by round, further divided into
+        a. Functions generating actions using modules from cipherMILPS/cipher/actions
+        b. Calling functions for generating and executing actions
+    2. Initialization of everything required to generate said constraints
+
+    Someone looking to implement a cipher within this framework should start out with 2. and then move on to the
+    functions in 1., where again one should start with b. and only then continue on to b.
     """
 
     def generate_sbox_actions_for_round(self):
@@ -190,7 +198,7 @@ class Template(Cipher):
         # LINEAR TRANSFORMATIONS (LT)
         # Linear transformations are linear function applied to a number of input bits. E.g. AES' MIxColumns action
         # takes 4 bytes as input and gives 4 bytes as output. On the other hand, Gift64 flips bits, which can be seen as
-        # as an addition of a constant (i.e. 1) to a single bit input.
+        # the addition of a constant (i.e. 1) to a single bit input.
 
         # For lt_per_round we want a list of the number of in- and output variables per linear transformation performed.
         # Below as an example, would be a cipher which has
@@ -199,27 +207,72 @@ class Template(Cipher):
         # performed over the course of a round
         lt_per_round = [(1, 1), (16, 8)]
 
-        #
+        # S-BOXES
+        # v*w Substitution-Boxes (aka S-Boxes) are mappings with v input bits and w output bits. A (non-linear) mapping
+        # s: F_2^v -> F_2^w is then performed.
+
+        # For self.sboxes, we want a list of SBox objects/instances with one entry per S-Box used. We recommend to use
+        # the objects/instances call-by-reference as to save computational effort that would be redundant.
+
+        # create a variable storing a dictionary mapping from input to output. Instead of bit-strings to bit-strings, we
+        # map integer to integer. The number of input and output bits will be noted when creating an instance.
+
+        # Examples of S-box creation
         sbox_gift_subs = {index: value for index, value in
                           enumerate(
                               [1, 10, 4, 12, 6, 15, 3, 9, 2, 13, 11, 7, 5, 0, 8, 14])}
-        self.sbox = SBox(sbox_gift_subs, 4, 4, self, extract_sun_inequalities=self.extract_sun_inequalities)
+        sbox1 = SBox(sbox_gift_subs, 4, 4, self, extract_sun_inequalities=self.extract_sun_inequalities)
 
-        self.sboxes = [self.sbox] * 16
+        sbox2 = SBox(substitutions={0: 1, 1: 5, 2: 7, 3: 2, 4: 4, 5: 0, 6: 6, 7: 3}, in_bits=3, out_bits=3,
+                     cipher_instance=self, extract_sun_inequalities=False)
 
+        self.sboxes = [sbox1, sbox2]
+
+        # OVERWRITES
+        # This tool offers overwriting variables with new ones. Overwriting can be split into:
+        # - equality overwrites, where for a variables x we just introduce a new (redundant) variable x' and the
+        #   constraints x <= x' as well as x' <= x. This is used mostly for achieving nicer structures such as in Gift64
+        #   and should according to Sebastian Berndt eb likely removed during the kernelization process (unsure if this
+        #   counts as kernelization) of MILP solvers.
+        # - independent overwrites, aka non-equality overwrites, which have been introduced for modeling in which a new
+        #   variable x' takes over for a variable x but there are no connections between the previous and the new
+        #   variable. This can also be used as a (horribly performing) catch-all for operations which are out of scope
+        #   of being modeled by us/someone.
+
+        # So far we have not encountered any cipher with independent overwrites, just used them in debugging so this
+        # variable will likely stay 0
         non_equality_overwrites = 0
+
+        # This is an example showing how the number of equality overwrites is calculated in Gift64 where we divide the
+        # SPN cleanly into layers (S-boxes, permutations, xor+lt) and to do so use overwrite equals for all bits in the
+        # xor+lt part which are not xored or flipped (linear transformation of (variable + 1) in F_2). As this number
+        # changes depending on which type of cryptanalysis we are bounding -- there are no constraints for xors in
+        # linear cryptanalysis and therefore more overwrites happen in that setting -- this is questioned.
+
+        # Furthermore, just after the super.init call previously, we introduced self.overwrite_equals and
+        # self.permutation_as_constraints using kwargs. This is in case someone is interested in flexibly creating the
+        # different matrices which use and do not use the different optional constraints and variables
 
         if self.overwrite_equals:
             equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
         else:
             equality_overwrites = 0
 
+        # PERMUTATIONS
+        # For permutations, we can, as stated just before, optionally use constraints. Say for example [x0, x1, x2, x3]
+        # is permuted to [x1, x3, x0, x2], then we can either go through the effort of keeping track of these (and
+        # convolute the matrix) or overwrite [x1, x3, x0, x2] with [x4, x5, x6, x7] and set constraints x1 <= x4 and
+        # x4 <= x1, etc.
         if self.permutation_as_constraints:
             permutations = 64
         else:
             permutations = 0
 
-        self.prepare_for_type_of_modeling()
+        # key_variable_usage should be set to True if the variables corresponding to the key bits are used in any
+        # constraints. Otherwise, it just results in empty columns so in case of doubt set to True.
+
+        # In the following example, key variables are only used in xor constraints and therefore only in differential
+        # cryptanalysis bounding.
 
         if self.cryptanalysis_type == 'differential':
             key_variable_usage = True
@@ -228,12 +281,21 @@ class Template(Cipher):
         else:
             key_variable_usage = True
 
+        # Calling prepare_for_type_of_modeling from the "cipher" super class which simply constructs everything required
+        # of the cipher's S-boxes for the chose analysis' bound
+        self.prepare_for_type_of_modeling()
+
+        # With all of these values set, we call calculate_vars_and_constraints from the "cipher" super class
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
                                             permutations=permutations, new_keys_every_round=True,
                                             keys_are_used=key_variable_usage)
 
+        # CONSTRAINT TO AVOID THE TRIVIAL SOLUTION
+        # In order to avoid the trivial solution
+
         # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
+        # TODO: CHECK CORRECTNESS OF SUM OVER S-BOX DUMMY VARIABLES VS. INPUT NEQ ZERO
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
 
         for sbox_dummy in sbox_dummy_variables:
