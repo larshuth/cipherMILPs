@@ -1,5 +1,6 @@
 from cipher.differential.gift import Gift64
 from cipher.actions.overwriteaction import OverwriteAction
+from cipher.actions.bitflipaction import BitFlipAction
 
 
 class Gift64(Gift64):
@@ -16,6 +17,14 @@ class Gift64(Gift64):
         list_of_equality_overwrite_actions = [
             OverwriteAction(list_of_equality_overwrite_positions, cipher_instance=self, equality=True)]
         return list_of_equality_overwrite_actions
+
+    def generate_single_bit_xor_actions(self):
+        list_of_single_bit_xor_actions = list()
+        single_bit_xor_positions = [3, 7, 11, 15, 19, 23, self.plaintextsize - 1]
+        for pos in single_bit_xor_positions:
+            list_of_single_bit_xor_actions.append(
+                BitFlipAction(inputs=[self.A[pos]], cipher_instance=self, a_positions_to_overwrite=[pos]))
+        return list_of_single_bit_xor_actions
 
     def run_round(self):
         print(f"Round {self.round_number} start")

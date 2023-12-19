@@ -292,12 +292,23 @@ class Template(Cipher):
                                             keys_are_used=key_variable_usage)
 
         # CONSTRAINT TO AVOID THE TRIVIAL SOLUTION
-        # In order to avoid the trivial solution
+        # In order to avoid the trivial solution, we add a constraint saying that at least one S-box is active.
+        # Depending on whether we are in an analysis looking at multiple variables as input per S-box or just one
+        # variable, see byte-oriented cryptanalysis of AES in Mouha et al. vs bit-oriented analysis in Sun et al.,
+        # either a dummy-variable is taken to represent the S-box being active (i.e. at least one input or output bit
+        # variable are set to 1).
+        # Generally, we name the dummy variables for S-boxes "a" followed by a number, in the word-oriented ciphers, the
+        # user is required to find the corresponding variables which are both in- and output by hand (reference
+        # Mouha et al.).
 
-        # making sure we have at least one active sbox (minimizing active sboxes to zero is possible)
         # TODO: CHECK CORRECTNESS OF SUM OVER S-BOX DUMMY VARIABLES VS. INPUT NEQ ZERO
+        # List of all S-box dummy variables for a word-oriented cipher
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
 
+        # Taking the last line/row of the constraint matrix and setting each entry corresponding to the column of the
+        # respective dummy variable to 1 such that it equals the sum over all S-box dummies (minus 1 in the constant)
+        # \\geq 0.
+        # Reminder that each row can be seen as the factors in a large sum over all variables \\geq 0.
         for sbox_dummy in sbox_dummy_variables:
             self.M[self.M.get_shape()[0] - 1, self.V[sbox_dummy]] = 1
         self.M[self.M.get_shape()[0] - 1, self.V['constant']] = -1
@@ -305,6 +316,7 @@ class Template(Cipher):
         # adding a set to include the matrices of possible convex hull
         self.sbox_inequality_matrices = list()
 
+        # some final preparations for the instance
         self.line = 0
         self.round_number = 1
         return

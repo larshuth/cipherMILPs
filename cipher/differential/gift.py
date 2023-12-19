@@ -43,13 +43,6 @@ class Gift64(Cipher):
                 xors_so_far += 1
         return list_of_key_xor_actions
 
-    def generate_single_bit_xor_actions(self):
-        list_of_single_bit_xor_actions = list()
-        single_bit_xor_positions = [3, 7, 11, 15, 19, 23, self.plaintextsize - 1]
-        for pos in single_bit_xor_positions:
-            list_of_single_bit_xor_actions.append(LinTransformationAction([self.A[pos]], self, 1, [pos]))
-        return list_of_single_bit_xor_actions
-
     def generate_equality_overwrite_actions(self):
         list_of_equality_overwrite_actions = list()
         set_of_xor_positions = {4 * i for i in range(16)} | {(4 * i) + 1 for i in range(16)}
@@ -71,9 +64,6 @@ class Gift64(Cipher):
 
         for keyaction in self.generate_key_xor_actions_for_round():
             keyaction.run_action()
-
-        for single_bit_xor_action in self.generate_single_bit_xor_actions():
-            single_bit_xor_action.run_action()
 
         if self.overwrite_equals:
             for equality_overwrite_action in self.generate_equality_overwrite_actions():
@@ -129,7 +119,10 @@ class Gift64(Cipher):
             twf_per_round = 0
 
         #   determine linear transformation output vars, dummy vars, and constraints
-        lt_per_round = [1 for _ in range(7)]
+        if self.cryptanalysis_type == 'differential':
+            lt_per_round = list()
+        else:  # self.cryptanalysis_type == 'linear':
+            lt_per_round = [1 for _ in range(7)]
 
         #   determine sbox output vars, dummy vars, and constraints
         # instantiating all SBoxes

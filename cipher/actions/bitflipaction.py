@@ -1,13 +1,9 @@
 from cipher.action import CipherAction
 
-
 class BitFlipAction(CipherAction):
     """
-    A class to perform tasks of overwriting variables and creating inequalities as they would be required by a bitflip
-     in a linear or differential cryptanalysis.
-
-    All the following examples are taken from the linear transformation perfomred in the first round of a linear
-    cryptanalysis on Enocoro-128v2 as seen in Mouha et al. 2011.
+    A class to perform tasks of overwriting variables and creating inequalities as they would be required by a bit-flip
+    in a linear or differential cryptanalysis.
     """
     def __init__(self, inputs, cipher_instance, a_positions_to_overwrite=None) -> None:
         """
@@ -47,21 +43,24 @@ class BitFlipAction(CipherAction):
 
         Which holds
         """
-        # print("run", self.type_of_action, self.input_list, self.dummy_var)
-        dummy_var_pos_in_matrix = self.cipher_instance.V[self.dummy_var]
-
-        all_io_variables = self.input_list + self.output_list
-        # starting with (1.)
-        self.set_all_to_value(list_of_variables=all_io_variables, value=1)
-        self.cipher_instance.M[self.cipher_instance.line, dummy_var_pos_in_matrix] = - self.branch_number
-        self.cipher_instance.line += 1
-
-        # then (2.) and (3.)
-        self.for_each_var_set_to_value_plus_dummy(
-            list_of_variables=all_io_variables, var_value=-1,
-            dummy_pos=dummy_var_pos_in_matrix, dum_value=self.branch_number)
+        map_input_to_output = zip(self.input_list, self.output_list)
+        # for all input-output-pairs apply (1.) and (2.)
+        for in_bit, out_bit in map_input_to_output:
+            # (1.)
+            in_bit_pos = self.cipher_instance.V[in_bit]
+            out_bit_pos = self.cipher_instance.V[out_bit]
+            constant_pos = self.cipher_instance.V['constant']
+            self.cipher_instance.M[self.cipher_instance.line, in_bit_pos] = 1
+            self.cipher_instance.M[self.cipher_instance.line, out_bit_pos] = 1
+            self.cipher_instance.M[self.cipher_instance.line, constant_pos] = - 1
+            self.cipher_instance.line += 1
+            # (2.)
+            self.cipher_instance.M[self.cipher_instance.line, in_bit_pos] = -1
+            self.cipher_instance.M[self.cipher_instance.line, out_bit_pos] = -1
+            self.cipher_instance.M[self.cipher_instance.line, constant_pos] = 1
+            self.cipher_instance.line += 1
 
         if self.a_positions_to_overwrite:
             for index, pos in enumerate(self.a_positions_to_overwrite):
                 self.cipher_instance.A[pos] = self.output_list[index]
-        return
+        return map_input_to_output
