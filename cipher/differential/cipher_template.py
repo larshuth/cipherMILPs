@@ -197,15 +197,19 @@ class Template(Cipher):
 
         # LINEAR TRANSFORMATIONS (LT)
         # Linear transformations are linear function applied to a number of input bits. E.g. AES' MIxColumns action
-        # takes 4 bytes as input and gives 4 bytes as output. On the other hand, Gift64 flips bits, which can be seen as
-        # the addition of a constant (i.e. 1) to a single bit input.
+        # takes 4 bytes as input and gives 4 bytes as output.
 
         # For lt_per_round we want a list of the number of in- and output variables per linear transformation performed.
         # Below as an example, would be a cipher which has
-        # - a bit-flip and
         # - a multiplication over two bytes leading to a one byte output
         # performed over the course of a round
-        lt_per_round = [(1, 1), (16, 8)]
+
+        lt_per_round = [(4, 4), (16, 8)]
+
+        # BIT FLIPS / XORING WITH 1 / ONE BIT LINEAR TRANSFORMATION
+        # Gift64 flips bits (or rather xors them with 1), which can be seen as the addition of a constant (i.e. 1) to a
+        # single bit input.
+        bitflips_per_round = 0
 
         # S-BOXES
         # v*w Substitution-Boxes (aka S-Boxes) are mappings with v input bits and w output bits. A (non-linear) mapping
@@ -254,7 +258,7 @@ class Template(Cipher):
         # different matrices which use and do not use the different optional constraints and variables
 
         if self.overwrite_equals:
-            equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round))
+            equality_overwrites = self.plaintext_vars - (xors_per_round + len(lt_per_round) + bitflips_per_round)
         else:
             equality_overwrites = 0
 
@@ -289,7 +293,7 @@ class Template(Cipher):
         self.calculate_vars_and_constraints(xors_per_round, twf_per_round,
                                             lt_per_round, extra_xors, non_equality_overwrites, equality_overwrites,
                                             permutations=permutations, new_keys_every_round=True,
-                                            keys_are_used=key_variable_usage)
+                                            keys_are_used=key_variable_usage, bitflips_per_round=bitflips_per_round)
 
         # CONSTRAINT TO AVOID THE TRIVIAL SOLUTION
         # In order to avoid the trivial solution, we add a constraint saying that at least one S-box is active.
@@ -301,7 +305,7 @@ class Template(Cipher):
         # user is required to find the corresponding variables which are both in- and output by hand (reference
         # Mouha et al.).
 
-        # TODO: CHECK CORRECTNESS OF SUM OVER S-BOX DUMMY VARIABLES VS. INPUT NEQ ZERO
+        # TODO: CHECK CORRECTNESS OF SUM OVER S-BOX DUMMY VARIABLES VS. INPUT GEQ ZERO
         # List of all S-box dummy variables for a word-oriented cipher
         sbox_dummy_variables = ["a" + str(i) for i in range(self.number_a_vars)]
 

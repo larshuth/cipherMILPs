@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from scipy.sparse import lil_matrix
 from itertools import chain
 
@@ -72,7 +74,7 @@ class Cipher:
 
     def calculate_vars_and_constraints(self, xors_per_round, twf_per_round, lt_per_round, xors_not_in_rounds=0,
                                        overwrites=0, equality_overwrites=0, permutations=0, new_keys_every_round=False,
-                                       extra_key_round=False, keys_are_used=True):
+                                       extra_key_round=False, keys_are_used=True, bitflips_per_round=0):
         # with mouha, every round, there are
         #   1 dummy + 1 output per XOR, 1 dummy per self.linear transformation, dummy + 2 output per 3-way fork,
         #   and 1 dummy + v output per w*v sbox
@@ -108,6 +110,9 @@ class Cipher:
         lt_dummy_variables_per_round = len(lt_per_round)
         lt_constraints_per_round = sum(input_bits) + sum(output_bits) + len(lt_per_round)
         lt_new_x_vars_per_round = sum(output_bits)
+
+        bitflip_constraints_per_round = 2 * bitflips_per_round
+        bitflip_new_x_vars_per_round = bitflips_per_round
 
         #   determine output vars from overwriting operations such as ColumnMix in AES
         overwrite_new_x_vars_per_round = overwrites + equality_overwrites
@@ -156,6 +161,7 @@ class Cipher:
                                twf_constraints_per_round +
                                sbox_constraints_per_round_following_sun +
                                lt_constraints_per_round +
+                               bitflip_constraints_per_round +
                                overwrite_constraints_per_round +
                                permutation_constraints_per_round) * self.rounds) + extra_xor_constraints + 1
         number_constraints = int(number_constraints)
@@ -168,6 +174,7 @@ class Cipher:
                                          xor_new_x_vars_per_round + xor_dummy_variables_per_round +
                                          twf_new_x_vars_per_round + twf_dummy_variables_per_round +
                                          lt_new_x_vars_per_round + lt_dummy_variables_per_round +
+                                         bitflip_new_x_vars_per_round +
                                          sbox_new_x_variables_per_round + sbox_dummy_variables_per_round +
                                          sbox_dummy_variables_per_round_if_not_invertible_or_branch_number_large +
                                          overwrite_new_x_vars_per_round + permutation_new_x_vars_per_round + baksi_variables_per_round
@@ -248,20 +255,25 @@ class Cipher:
             qijlp_vars = list()
 
         self.V |= {
-            f'a{qijp_var[0]}p{qijp_var[1]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars
+            f'a{qijp_var[0]}p{qijp_var[1]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars +
+                                             self.number_ds_vars + key_vars
             for i, qijp_var in enumerate(qijp_vars)}
         self.V |= {
-            i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars: f'a{qijp_var[0]}p{qijp_var[1]}'
+            i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars:
+                f'a{qijp_var[0]}p{qijp_var[1]}'
             for i, qijp_var in
             enumerate(qijp_vars)}
 
         self.V |= {
-            f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}': i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars + len(
-                qijp_vars) for i, qijlp_var in
+            f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}': i + self.number_x_vars + self.number_d_vars +
+                                                              self.number_a_vars + self.number_ds_vars + key_vars +
+                                                              len(qijp_vars)
+            for i, qijlp_var in
             enumerate(qijlp_vars)}
         self.V |= {
-            i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars + len(
-                qijp_vars): f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}' for i, qijlp_var in enumerate(qijlp_vars)}
+            i + self.number_x_vars + self.number_d_vars + self.number_a_vars + self.number_ds_vars + key_vars +
+            len(qijp_vars): f'a{qijlp_var[0]}p{qijlp_var[1]}l{qijlp_var[3]}'
+            for i, qijlp_var in enumerate(qijlp_vars)}
 
         self.V['constant'] = self.M.get_shape()[1] - 1
         self.V[self.M.get_shape()[1] - 1] = 'constant'
@@ -269,6 +281,10 @@ class Cipher:
         print(self.V)
 
         return sbox_dummy_variables_per_round
+
+    @abstractmethod
+    def run_round(self):
+        pass
 
     def prepare_for_type_of_modeling(self):
         for sbox in self.sboxes:

@@ -564,7 +564,7 @@ def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
     # 3. permuting according to said list of indices
     new_order_columns = list(range(matrix.get_shape()[1]))
 
-    # Blocks for a S-box contain variables x input, x output, a dummy, k xor prior, x xor
+    # Blocks for an S-box contain variables x input, x output, a dummy, k xor prior, x xor
     start_new_x_values = lambda n: 64 + (n * 96)
 
     # First we construct a list with the name of variables in the order we want their corresponding matrix columns to be
@@ -637,6 +637,9 @@ def n_fold_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
     new_rows = the_ultimate_linking_constraint + linking_constraints
     for round_k in range(k):
         new_rows += rows_of_standard_sbox_constraints[round_k] + rows_of_extra_sbox_constraints[round_k]
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
 
     # permute rows according to list
     matrix = permutate_rows(matrix, new_rows)
@@ -754,6 +757,9 @@ def two_stage_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
         new_rows += rows_of_standard_sbox_constraints[round_k] + rearrange_extra_constraints(
             rows_of_extra_sbox_constraints[round_k])
     matrix = permutate_rows(matrix, new_rows)
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
 
     return matrix, variables
 
@@ -889,6 +895,9 @@ def tetrisfold_differential_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
 
     # d)
     matrix = permutate_rows(matrix, list_of_indices)
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
     return matrix, variables
 
 
@@ -1001,6 +1010,9 @@ def tetrisfold_linear_LBlock_k_rounds(matrix, variables, k=2, **kwargs):
 
     # d)
     matrix = permutate_rows(matrix, list_of_indices)
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
     return matrix, variables
 
 
@@ -1211,6 +1223,9 @@ def tetrisfold_differential_gift64_k_round(matrix, variables, k=2, **kwargs):
 
     # d)
     matrix = permutate_rows(matrix, list_of_indices)
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
     return matrix, variables
 
 
@@ -1355,4 +1370,7 @@ def tetrisfold_linear_gift64_k_round(matrix, variables, k=2, **kwargs):
 
     # d)
     matrix = permutate_rows(matrix, list_of_indices)
+
+    variables = {index: var_name for index, var_name in enumerate(blocks)} | {var_name: index for index, var_name in
+                                                                              enumerate(blocks)}
     return matrix, variables

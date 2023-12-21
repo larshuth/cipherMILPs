@@ -35,6 +35,8 @@ def calculate_Aes_MixCoumns_branch_number():
         all_numbers = p.map(branch_number_to_x_val, input_vals)
     branch_number = min(branch_number, min(all_numbers))
 
+    # can be improved significantly by going over all pairs by ascending number of active bits and going until a first
+    # one is reached
     for i in range(1, (2**(4*8) // (2**10)) + 1):
         input_vals = list(range(i*(2**10), (i+1)*(2**10)))
         with multiprocessing.Pool(8) as p:
@@ -44,7 +46,7 @@ def calculate_Aes_MixCoumns_branch_number():
     return branch_number
 
 
-def bloxks_to_matrices(inequalities):
+def blocks_to_matrices(inequalities):
     for multipliers, _, _ in inequalities:
         string = ''
         for index, m in enumerate(multipliers):
